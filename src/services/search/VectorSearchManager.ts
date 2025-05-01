@@ -67,7 +67,7 @@ export const performVectorSearch = async (
     const queryEmbedding = getTextEmbedding(query);
     
     // 使用向量引擎搜索
-    const results = await vectorEngine.search(queryEmbedding);
+    const results = await vectorEngine.search(queryEmbedding,5);
     
     logger.debug(`Found ${results.length} results from vector search`);
     return results;

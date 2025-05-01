@@ -30,9 +30,21 @@ export class CompassSearchProvider implements SearchProvider {
         throw new Error(errorMsg);
       }
 
-      const data = await response.json();
-      logger.debug(`Received ${data.length} results from COMPASS API`);
-      return data as MCPServerResponse[];
+      const data:[{
+        title: string;
+        description: string;
+        github_url: string;
+        score:number
+      }] = await response.json();
+      logger.debug(`Received ${data.length} results from COMPASS API`); 
+      const res = []
+      for (let d of data){
+        res.push({
+          similarity:d.score + 0.3,
+          ...d
+        })
+      }   
+      return res as MCPServerResponse[];
     } catch (error) {
       logger.error(`Error fetching from COMPASS API: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
