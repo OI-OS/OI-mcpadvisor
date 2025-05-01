@@ -12,7 +12,7 @@ import {
 import { 
   processAndIndexData, 
   performVectorSearch 
-} from './oceanbaseSearchProvider.js';
+} from './VectorSearchManager.js';
 import logger from '../../utils/logger.js';
 
 /**

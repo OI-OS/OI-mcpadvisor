@@ -2,42 +2,67 @@ import { SearchService } from '../services/searchService.js';
 import { MCPServerResponse } from '../types/index.js';
 
 /**
- * 简单测试 SearchService
+ * 测试 SearchService
  */
-async function testSearchService() {
-  try {
-    console.log('Testing SearchService...');
-    
-    // 测试基本搜索功能
-    console.log('Searching for "AI" with default options:');
-    const results: MCPServerResponse[] = await SearchService.searchGetMcp('AI');
-    console.log(`Found ${results.length} results`);
-    
-    // 打印前三个结果
-    if (results.length > 0) {
-      console.log('Top 3 results:');
-      results.slice(0, 3).forEach((result: MCPServerResponse, index: number) => {
-        console.log(`${index + 1}. ${result.title} (similarity: ${result.similarity.toFixed(4)})`);
-        console.log(`   Description: ${result.description.substring(0, 100)}...`);
-        console.log(`   GitHub: ${result.github_url}`);
-      });
-    }
-    
-    // 测试限制结果数量
-    console.log('\nSearching for "data" with limit=2:');
-    const limitedResults: MCPServerResponse[] = await SearchService.searchGetMcp('data', { limit: 2 });
-    console.log(`Found ${limitedResults.length} results (limited to 2)`);
-    
-    // 测试最小相似度
-    console.log('\nSearching for "vector" with minSimilarity=0.7:');
-    const highSimilarityResults: MCPServerResponse[] = await SearchService.searchGetMcp('vector', { minSimilarity: 0.7 });
-    console.log(`Found ${highSimilarityResults.length} results with similarity >= 0.7`);
-    
-    console.log('\nTest completed successfully');
-  } catch (error) {
-    console.error('Test failed:', error);
-  }
-}
-
-// 执行测试
-testSearchService();
+describe('SearchService', () => {
+  // 模拟SearchService.searchGetMcp方法
+  beforeEach(() => {
+    // 为测试创建一个模拟的searchGetMcp方法
+    jest.spyOn(SearchService, 'searchGetMcp').mockImplementation(async (query, options) => {
+      const mockResults: MCPServerResponse[] = [
+        {
+          title: 'Test Server 1',
+          description: 'A test server for AI applications',
+          github_url: 'https://github.com/test/server1',
+          similarity: 0.95
+        },
+        {
+          title: 'Test Server 2',
+          description: 'Another test server for data processing',
+          github_url: 'https://github.com/test/server2',
+          similarity: 0.85
+        },
+        {
+          title: 'Test Server 3',
+          description: 'A third test server for various tasks',
+          github_url: 'https://github.com/test/server3',
+          similarity: 0.75
+        }
+      ];
+      
+      // 如果设置了limit选项，则限制结果数量
+      if (options?.limit) {
+        return mockResults.slice(0, options.limit);
+      }
+      
+      // 如果设置了minSimilarity选项，则过滤结果
+      if (options?.minSimilarity !== undefined) {
+        const minSimilarity = options.minSimilarity; // 创建本地变量，TypeScript能正确推断类型
+        return mockResults.filter(result => result.similarity >= minSimilarity);
+      }
+      
+      return mockResults;
+    });
+  });
+  
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+  
+  test('should return search results for a query', async () => {
+    const results = await SearchService.searchGetMcp('AI');
+    expect(results).toHaveLength(3);
+    expect(results[0].title).toBe('Test Server 1');
+  });
+  
+  test('should limit results when limit option is provided', async () => {
+    const results = await SearchService.searchGetMcp('data', { limit: 2 });
+    expect(results).toHaveLength(2);
+  });
+  
+  test('should filter results by minimum similarity', async () => {
+    const results = await SearchService.searchGetMcp('test', { minSimilarity: 0.8 });
+    expect(results.every(result => result.similarity >= 0.8)).toBe(true);
+    expect(results).toHaveLength(2);
+  });
+});

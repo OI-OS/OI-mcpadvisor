@@ -7,7 +7,17 @@ import { oceanBaseClient } from '../services/database/oceanbase/controller.js';
 import { OceanBaseVectorEngine } from '../services/database/oceanbase/vectorEngine.js';
 import { getTextEmbedding } from '../utils/embedding.js';
 import { MCPServerResponse } from '../types/index.js';
-import logger from '../utils/logger.js';
+
+// 模拟logger避免测试中的实际日志记录
+jest.mock('../utils/logger.js', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
 
 /**
  * 测试数据
@@ -33,109 +43,100 @@ const testData: MCPServerResponse[] = [
   }
 ];
 
-/**
- * 测试 OceanBase 连接和初始化
- */
-async function testOceanBaseConnection() {
-  try {
-    console.log('Testing OceanBase connection...');
-    await oceanBaseClient.connect();
-    console.log('Connection successful!');
-    
-    console.log('Initializing database schema...');
-    await oceanBaseClient.initDatabase();
-    console.log('Schema initialized successfully!');
-    
-    return true;
-  } catch (error) {
-    console.error('Connection test failed:', error instanceof Error ? error.message : String(error));
-    return false;
-  }
-}
+// 跳过实际数据库测试，除非明确启用
+const ENABLE_DB_TESTS = process.env.ENABLE_DB_TESTS === 'true';
 
-/**
- * 测试 OceanBase 向量引擎
- */
-async function testOceanBaseVectorEngine() {
-  try {
-    console.log('\nTesting OceanBase vector engine...');
-    const vectorEngine = new OceanBaseVectorEngine();
-    
-    // 清除现有数据
-    console.log('Clearing existing data...');
-    await vectorEngine.clear();
-    
-    // 添加测试数据
-    console.log('Adding test data...');
-    for (let i = 0; i < testData.length; i++) {
-      const item = testData[i];
-      const embedding = getTextEmbedding(`${item.title} ${item.description}`);
-      await vectorEngine.addEntry(`test${i+1}`, embedding, item);
-      console.log(`Added: ${item.title}`);
+describe('OceanBase Integration', () => {
+  // 如果数据库测试被禁用，则跳过所有测试
+  beforeAll(() => {
+    if (!ENABLE_DB_TESTS) {
+      console.log('Database tests are disabled. Set ENABLE_DB_TESTS=true to enable.');
     }
-    
-    // 执行搜索测试
-    console.log('\nPerforming search tests:');
-    
-    // 测试 1: 搜索 AI 相关
-    const aiQuery = 'AI assistant for chatbots';
-    console.log(`\nSearch query: "${aiQuery}"`);
-    const aiResults = await vectorEngine.search(getTextEmbedding(aiQuery), 3);
-    console.log(`Found ${aiResults.length} results:`);
-    aiResults.forEach((result, i) => {
-      console.log(`${i+1}. ${result.title} (similarity: ${result.similarity.toFixed(4)})`);
-      console.log(`   ${result.description}`);
+  });
+
+  describe('Connection Tests', () => {
+    it('should connect to OceanBase successfully', async () => {
+      if (!ENABLE_DB_TESTS) {
+        return;
+      }
+      
+      try {
+        const client = oceanBaseClient;
+        await client.connect();
+        expect(true).toBe(true); // 如果没有抛出异常，则测试通过
+      } catch (error) {
+        // 如果连接失败，则测试失败
+        fail(`Connection test failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     });
     
-    // 测试 2: 搜索向量相关
-    const vectorQuery = 'vector similarity search';
-    console.log(`\nSearch query: "${vectorQuery}"`);
-    const vectorResults = await vectorEngine.search(getTextEmbedding(vectorQuery), 3);
-    console.log(`Found ${vectorResults.length} results:`);
-    vectorResults.forEach((result, i) => {
-      console.log(`${i+1}. ${result.title} (similarity: ${result.similarity.toFixed(4)})`);
-      console.log(`   ${result.description}`);
+    it('should initialize database schema', async () => {
+      if (!ENABLE_DB_TESTS) {
+        return;
+      }
+      
+      try {
+        const client = oceanBaseClient;
+        await client.initDatabase();
+        expect(true).toBe(true); // 如果没有抛出异常，则测试通过
+      } catch (error) {
+        fail(`Schema initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     });
-    
-    console.log('\nVector engine test completed successfully!');
-    return true;
-  } catch (error) {
-    console.error('Vector engine test failed:', error instanceof Error ? error.message : String(error));
-    return false;
-  } finally {
-    // 断开连接
-    try {
-      await oceanBaseClient.disconnect();
-      console.log('Database connection closed');
-    } catch (err) {
-      console.error('Error disconnecting:', err instanceof Error ? err.message : String(err));
-    }
-  }
-}
-
-/**
- * 运行所有测试
- */
-async function runTests() {
-  console.log('=== OceanBase Integration Test ===\n');
+  });
   
-  try {
-    // 测试连接
-    const connectionSuccess = await testOceanBaseConnection();
-    if (!connectionSuccess) {
-      console.error('Connection test failed, aborting further tests');
-      return;
-    }
-    
-    // 测试向量引擎
-    await testOceanBaseVectorEngine();
-    
-    console.log('\n=== Test Suite Completed ===');
-  } catch (error) {
-    console.error('Test suite failed with unexpected error:', 
-      error instanceof Error ? error.message : String(error));
-  }
-}
-
-// 执行测试
-runTests();
+  describe('Vector Engine Tests', () => {
+    it('should store and retrieve vectors', async () => {
+      if (!ENABLE_DB_TESTS) {
+        return;
+      }
+      
+      try {
+        // 创建向量引擎实例
+        const vectorEngine = new OceanBaseVectorEngine();
+        
+        // 为测试数据生成嵌入向量
+        const embeddedData = await Promise.all(
+          testData.map(async (server) => {
+            const searchableText = `${server.title} ${server.description}`;
+            const embedding = await getTextEmbedding(searchableText);
+            return {
+              ...server,
+              vector: embedding
+            };
+          })
+        );
+        
+        // 存储向量数据
+        for (const data of embeddedData) {
+          await vectorEngine.addEntry(
+            data.github_url.split('/').pop() || 'unknown',
+            data.vector,
+            data
+          );
+        }
+        
+        // 测试相似度搜索
+        const queryText = 'AI assistant for data processing';
+        const queryEmbedding = await getTextEmbedding(queryText);
+        const searchResults = await vectorEngine.search(queryEmbedding, 3);
+        
+        // 验证搜索结果
+        expect(searchResults).toBeDefined();
+        expect(Array.isArray(searchResults)).toBe(true);
+        
+        if (searchResults.length > 0) {
+          // 验证结果格式
+          const firstResult = searchResults[0];
+          expect(firstResult).toHaveProperty('title');
+          expect(firstResult).toHaveProperty('description');
+          expect(firstResult).toHaveProperty('github_url');
+          expect(firstResult).toHaveProperty('similarity');
+          expect(typeof firstResult.similarity).toBe('number');
+        }
+      } catch (error) {
+        fail(`Vector engine test failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    });
+  });
+});
