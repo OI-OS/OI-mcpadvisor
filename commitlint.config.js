@@ -18,7 +18,7 @@ export default {
         'revert'    // Reverts a previous commit
       ]
     ],
-    'type-case': [2, 'always', 'lower'],
+    'type-case': [2, 'always', 'lowerCase'],
     'type-empty': [2, 'never'],
     'subject-case': [2, 'always', 'sentence-case'],
     'subject-empty': [2, 'never'],
