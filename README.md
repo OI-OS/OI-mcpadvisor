@@ -2,16 +2,17 @@
 
 [![Model Context Protocol](https://img.shields.io/badge/Model%20Context%20Protocol-purple)](https://modelcontextprotocol.org)
 
+<a href="https://glama.ai/mcp/servers/@istarwyh/mcpadvisor">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@istarwyh/mcpadvisor/badge" alt="Advisor MCP server" />
+</a>
 
 ## MCP Advisor & Installation
 
 ### Experience MCP Advisor 
 
-
 ## What is this? 
 
-MCP Advisor is a discovery & recommendation service that helps you explore Model Context Protocol servers. It acts as a smart guide that helps AI assistants find and understand available MCP services out there based on **natural language queries**, making it easier to discover and utilize the right tools for specific tasks.
-
+MCP Advisor is a discovery & recommendation service that helps you explore Model Context Protocol servers. It acts as a smart guide that helps AI assistants find and understand available MCP services out there based on **natural language queries**, making it easier to discover and utilize the right tools for specific tasks. 
 
 ## Features 
 
