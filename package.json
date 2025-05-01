@@ -5,8 +5,7 @@
   "main": "build/index.js",
   "type": "module",
   "bin": {
-    "mcp-advisor": "./build/index.js",
-    "@liuyoshio/mcp-advisor": "./build/index.js"
+    "mcp-advisor": "./build/index.js"
   },
   "keywords": [
     "mcp",
@@ -25,7 +24,9 @@
     "@types/express": "^5.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "mysql2": "^3.14.1",
     "pino-pretty": "^13.0.0",
+    "ts-node": "^10.9.2",
     "winston": "^3.17.0",
     "zod": "^3.24.1"
   },

@@ -4,6 +4,7 @@ import { SearchService } from './services/searchService.js';
 import { CompassSearchProvider } from './services/search/CompassSearchProvider.js';
 import { ServerService, TransportType, TransportConfig } from './services/serverService.js';
 import logger from './utils/logger.js';
+import { GetMcpSearchProvider } from './services/search/GetMcpSearchProvider.js';
 
 const DEFAULT_TRANSPORT_CONFIG: TransportConfig = {
   port: parseInt(process.env.SERVER_PORT || '3000', 10),
@@ -21,7 +22,8 @@ async function main() {
   try {
     logger.info('Starting MCP Compass application');
     const compassSearchProvider = new CompassSearchProvider();
-    const searchService = new SearchService([compassSearchProvider]);
+    const getMcpSearchProvider = new GetMcpSearchProvider();
+    const searchService = new SearchService([getMcpSearchProvider]);
     let transportType = TransportType.STDIO;
     if (process.env.TRANSPORT_TYPE === 'sse') {
       transportType = TransportType.SSE;

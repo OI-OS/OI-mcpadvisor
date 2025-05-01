@@ -4,7 +4,18 @@
  */
 
 import { MCPServerResponse, SearchOptions, SearchProvider } from '../types/index.js';
+import { SearchProviderType } from './search/searchProviderFactory.js';
+import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
+import { CompassSearchProvider } from './search/CompassSearchProvider.js';
 import logger from '../utils/logger.js';
+
+/**
+ * 默认搜索选项
+ */
+const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
+  limit: 10,
+  minSimilarity: 0.5
+};
 
 /**
  * Search service that can use multiple search providers
@@ -64,6 +75,9 @@ export class SearchService {
     }
 
     try {
+      // 合并默认选项
+      const mergedOptions = { ...DEFAULT_SEARCH_OPTIONS, ...options };
+      
       logger.info(`Searching with ${this.providers.length} providers for query: ${query}`);
       
       // Collect results from all providers in parallel
@@ -93,20 +107,70 @@ export class SearchService {
       mergedResults.sort((a, b) => b.similarity - a.similarity);
       
       // Apply filtering based on options
-      if (options?.minSimilarity !== undefined) {
+      if (mergedOptions.minSimilarity !== undefined) {
         mergedResults = mergedResults.filter(
-          server => server.similarity >= options.minSimilarity!
+          server => server.similarity >= mergedOptions.minSimilarity!
         );
       }
       
-      if (options?.limit !== undefined && options.limit > 0) {
-        mergedResults = mergedResults.slice(0, options.limit);
+      if (mergedOptions.limit !== undefined && mergedOptions.limit > 0) {
+        mergedResults = mergedResults.slice(0, mergedOptions.limit);
       }
       
       logger.debug(`Merged results: ${mergedResults.length} servers after filtering`);
       return mergedResults;
     } catch (error) {
       logger.error(`Error in search service: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * 使用 GetMCP 搜索提供者搜索
+   * 便捷方法，直接使用 GetMcpSearchProvider
+   */
+  static async searchGetMcp(
+    query: string, 
+    options: SearchOptions = {}
+  ): Promise<MCPServerResponse[]> {
+    try {
+      logger.info(`Searching GetMCP with query: "${query}"`);
+      
+      // 创建 GetMcpSearchProvider 实例
+      const provider = new GetMcpSearchProvider();
+      
+      // 创建 SearchService 实例
+      const service = new SearchService([provider]);
+      
+      // 执行搜索
+      return service.search(query, options);
+    } catch (error) {
+      logger.error(`Error searching GetMCP: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * 使用 Compass 搜索提供者搜索
+   * 便捷方法，直接使用 CompassSearchProvider
+   */
+  static async searchCompass(
+    query: string, 
+    options: SearchOptions = {}
+  ): Promise<MCPServerResponse[]> {
+    try {
+      logger.info(`Searching Compass with query: "${query}"`);
+      
+      // 创建 CompassSearchProvider 实例
+      const provider = new CompassSearchProvider();
+      
+      // 创建 SearchService 实例
+      const service = new SearchService([provider]);
+      
+      // 执行搜索
+      return service.search(query, options);
+    } catch (error) {
+      logger.error(`Error searching Compass: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }

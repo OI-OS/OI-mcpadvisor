@@ -19,6 +19,8 @@ MCP Advisor is a discovery & recommendation service that helps you explore Model
 -  **Rich Metadata**: Get detailed information about each service
 -  **Real-time Updates**: Always up-to-date with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
 -  **Easy Integration**: Simple to integrate with any MCP-compatible AI assistant
+-  **Vector Search**: Powered by OceanBase for high-performance semantic search
+-  **Modular Architecture**: Clean separation of concerns for maintainability and extensibility
 
 ## Architecture
 
@@ -27,9 +29,10 @@ graph TD
     Client[AI Assistant/Client] --> |Query| Server[MCP Advisor Server]
     Server --> |Request| SearchService[Search Service]
     SearchService --> |Query| Provider1[Compass Search Provider]
-    SearchService --> |Query| Provider2[Custom Search Provider]
+    SearchService --> |Query| Provider2[GetMCP Search Provider]
     Provider1 --> |API Call| ExternalAPI[External MCP Registry API]
-    Provider2 --> |Custom Logic| LocalDB[Local Database/Cache]
+    Provider2 --> |Fetch Data| GetMCPAPI[GetMCP API]
+    Provider2 --> |Vector Search| OceanBase[OceanBase Vector DB]
     SearchService --> |Results| Server
     Server --> |Response| Client
 
@@ -38,6 +41,12 @@ graph TD
         SearchService
         Provider1
         Provider2
+    end
+
+    subgraph "Data Layer"
+        GetMCPAPI
+        OceanBase
+        ExternalAPI
     end
 
     subgraph "Transport Options"
@@ -49,6 +58,25 @@ graph TD
     Server --> Stdio
     Server --> SSE
     Server --> REST
+```
+
+### Data Flow
+
+```mermaid
+sequenceDiagram
+    participant Client as AI Assistant
+    participant Service as SearchService
+    participant Provider as GetMcpSearchProvider
+    participant DB as OceanBase
+
+    Client->>Service: Query Request
+    Service->>Provider: search(query)
+    
+    Provider->>Provider: Generate Query Embedding
+    Provider->>DB: Vector Similarity Search
+    DB-->>Provider: Return Similar Servers
+    Provider-->>Service: Return Formatted Results
+    Service-->>Client: Return Combined Results
 ```
 
 ## Quick Start 
@@ -93,21 +121,6 @@ Add to your AI assistant's MCP configuration to enable service discovery capabil
       "command": "npx",
       "args": [
          "-y",
-         "/path/to/repo/build/index.js"
-      ]
-   }
-}
-}
-```
-
-or
-
-``` json
-{
-"mcpServers": {
-   "mcp-advisor": {
-      "command": "node",
-      "args": [
          "/path/to/repo/build/index.js"
       ]
    }
