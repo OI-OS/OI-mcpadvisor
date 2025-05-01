@@ -14,7 +14,6 @@
     "discovery",
     "recommendation"
   ],
-  "author": "Yoshio Liu",
   "license": "MIT",
   "packageManager": "pnpm@9.15.0",
   "dependencies": {
@@ -59,10 +58,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/istarwyh/mcp-advisor.git"
+    "url": "https://github.com/istarwyh/mcpadvisor.git"
   },
   "bugs": {
-    "url": "https://github.com/istarwyh/mcp-advisor/issues"
+    "url": "https://github.com/istarwyh/mcpadvisor/issues"
   },
-  "homepage": "https://github.com/istarwyh/mcp-advisor#readme"
+  "homepage": "https://github.com/istarwyh/mcpadvisor#readme"
 }

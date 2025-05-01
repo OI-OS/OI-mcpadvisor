@@ -4,7 +4,6 @@
  */
 
 import { MCPServerResponse, SearchOptions, SearchProvider } from '../types/index.js';
-import { SearchProviderType } from './search/searchProviderFactory.js';
 import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { CompassSearchProvider } from './search/CompassSearchProvider.js';
 import logger from '../utils/logger.js';
