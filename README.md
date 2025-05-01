@@ -135,7 +135,7 @@ Use this for remote servers or web-based integrations. Start the server with:
 
 ```bash
 # Start with SSE transport on port 3000
-TRANSPORT_TYPE=sse SERVER_PORT=3000  ENABLE_FILE_LOGGING=true node build/index.js
+OCEANBASE_URL=mysql://xxx TRANSPORT_TYPE=sse SERVER_PORT=3000  ENABLE_FILE_LOGGING=true node build/index.js
 ```
 
 Environment variables for SSE configuration:
