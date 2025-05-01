@@ -7,12 +7,13 @@ import { MCPServerResponse, SearchOptions, SearchProvider } from '../types/index
 import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { CompassSearchProvider } from './search/CompassSearchProvider.js';
 import logger from '../utils/logger.js';
+import { filterFromEndUntilLimit } from '../utils/ListUtils.js';
 
 /**
  * 默认搜索选项
  */
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
-  limit: 10,
+  limit: 5,
   minSimilarity: 0.5
 };
 
@@ -88,10 +89,11 @@ export class SearchService {
       );
       
       const providerResults = await Promise.all(providerPromises);
-      
+
       // Merge results from all providers
       let mergedResults = providerResults.flat();
-      
+      logger.info(`${JSON.stringify(mergedResults)}`);
+
       // Remove duplicates based on github_url
       const uniqueUrls = new Set<string>();
       mergedResults = mergedResults.filter(server => {
@@ -106,16 +108,15 @@ export class SearchService {
       mergedResults.sort((a, b) => b.similarity - a.similarity);
       
       // Apply filtering based on options
-      if (mergedOptions.minSimilarity !== undefined) {
-        mergedResults = mergedResults.filter(
-          server => server.similarity >= mergedOptions.minSimilarity!
-        );
+      if (mergedOptions.minSimilarity !== undefined && mergedResults.length > 5) {
+        mergedResults = filterFromEndUntilLimit(mergedResults,  server => server.similarity >= mergedOptions.minSimilarity!,5)
       }
       
       if (mergedOptions.limit !== undefined && mergedOptions.limit > 0) {
         mergedResults = mergedResults.slice(0, mergedOptions.limit);
       }
-      
+      logger.info(`${JSON.stringify(mergedResults)}`);
+
       logger.debug(`Merged results: ${mergedResults.length} servers after filtering`);
       return mergedResults;
     } catch (error) {
@@ -174,3 +175,4 @@ export class SearchService {
     }
   }
 }
+

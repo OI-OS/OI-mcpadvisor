@@ -23,7 +23,7 @@ async function main() {
     logger.info('Starting MCP Compass application');
     const compassSearchProvider = new CompassSearchProvider();
     const getMcpSearchProvider = new GetMcpSearchProvider();
-    const searchService = new SearchService([getMcpSearchProvider]);
+    const searchService = new SearchService([compassSearchProvider,getMcpSearchProvider]);
     let transportType = TransportType.STDIO;
     if (process.env.TRANSPORT_TYPE === 'sse') {
       transportType = TransportType.SSE;

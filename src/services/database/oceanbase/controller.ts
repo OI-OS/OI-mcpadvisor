@@ -1,7 +1,6 @@
-import mysql, { Pool, RowDataPacket, ResultSetHeader, FieldPacket } from 'mysql2/promise';
-import fs from 'fs';
+import mysql, { Pool, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { IVectorDBClient, SearchResult } from '../../interfaces/vectorDBClient.js';
-import { OCEANBASE_URL, DB_MAX_CONNECTIONS, DB_TABLE_NAME, CERT_PATH } from '../../../config/constants.js';
+import { OCEANBASE_URL, DB_MAX_CONNECTIONS, DB_TABLE_NAME } from '../../../config/constants.js';
 import logger from '../../../utils/logger.js';
 
 /**
