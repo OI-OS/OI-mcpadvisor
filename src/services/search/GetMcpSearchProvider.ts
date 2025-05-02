@@ -1,7 +1,7 @@
 import { MCPServerResponse, SearchProvider } from '../../types/index.js';
 import { ICache } from '../interfaces/cache.js';
 import { MemoryCache } from '../cache/memoryCache.js';
-import { IVectorSearchEngine } from '../interfaces/vectorSearchEngine.js';
+import { IVectorSearchEngine } from '../interfaces/vectorSearchEngines.js';
 import { VectorEngineFactory } from '../database/vectorEngineFactory.js';
 import { GETMCP_API_URL, CACHE_TTL_MS } from '../../config/constants.js';
 import { 
@@ -55,7 +55,8 @@ export class GetMcpSearchProvider implements SearchProvider {
       logger.debug(`Found ${results.length} results from GetMCP API`);
       return results;
     } catch (error) {
-      logger.error(`Error searching GetMCP API: ${error instanceof Error ? error.message : String(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Error searching GetMCP API: ${message}`);
       throw error;
     }
   }
@@ -85,7 +86,8 @@ export class GetMcpSearchProvider implements SearchProvider {
         GetMcpResourceFetcher.createSearchableText
       );
     } catch (error) {
-      logger.error(`Error loading GetMCP data: ${error instanceof Error ? error.message : String(error)}`);
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Error loading GetMCP data: ${message}`);
       throw error;
     }
   }

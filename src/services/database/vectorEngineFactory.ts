@@ -1,6 +1,7 @@
-import { IVectorSearchEngine } from '../interfaces/vectorSearchEngine.js';
+import { IVectorSearchEngine } from '../interfaces/vectorSearchEngines.js';
 import { InMemoryVectorEngine } from './memory/vectorEngine.js';
 import { OceanBaseVectorEngine } from './oceanbase/vectorEngine.js';
+import { MeilisearchVectorEngine } from './meilisearch/vectorEngine.js';
 import { VECTOR_ENGINE_TYPE } from '../../config/constants.js';
 import logger from '../../utils/logger.js';
 
@@ -9,7 +10,8 @@ import logger from '../../utils/logger.js';
  */
 export enum VectorEngineType {
   MEMORY = 'memory',
-  OCEANBASE = 'oceanbase'
+  OCEANBASE = 'oceanbase',
+  MEILISEARCH = 'meilisearch'
 }
 
 /**
@@ -18,6 +20,9 @@ export enum VectorEngineType {
 const parseEngineType = (typeString: string): VectorEngineType => {
   if (typeString === 'oceanbase') {
     return VectorEngineType.OCEANBASE;
+  }
+  if (typeString === 'meilisearch') {
+    return VectorEngineType.MEILISEARCH;
   }
   return VectorEngineType.MEMORY;
 };
@@ -39,6 +44,14 @@ const createOceanBaseEngine = (): IVectorSearchEngine => {
 };
 
 /**
+ * 创建 Meilisearch 向量引擎
+ */
+const createMeilisearchEngine = (): IVectorSearchEngine => {
+  logger.info('Creating Meilisearch vector engine');
+  return new MeilisearchVectorEngine();
+};
+
+/**
  * 向量引擎工厂
  */
 export class VectorEngineFactory {
@@ -52,6 +65,9 @@ export class VectorEngineFactory {
     switch (engineType) {
       case VectorEngineType.OCEANBASE:
         return createOceanBaseEngine();
+      
+      case VectorEngineType.MEILISEARCH:
+        return createMeilisearchEngine();
       
       case VectorEngineType.MEMORY:
       default:

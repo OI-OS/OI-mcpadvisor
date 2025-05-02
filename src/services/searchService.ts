@@ -6,6 +6,7 @@
 import { MCPServerResponse, SearchOptions, SearchProvider } from '../types/index.js';
 import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { CompassSearchProvider } from './search/CompassSearchProvider.js';
+import { MeilisearchSearchProvider } from './search/MeilisearchSearchProvider.js';
 import logger from '../utils/logger.js';
 import { filterFromEndUntilLimit } from '../utils/ListUtils.js';
 
@@ -174,5 +175,29 @@ export class SearchService {
       throw error;
     }
   }
+  
+  /**
+   * 使用 Meilisearch 搜索提供者搜索
+   * 便捷方法，直接使用 MeilisearchSearchProvider
+   */
+  static async searchMeilisearch(
+    query: string, 
+    options: SearchOptions = {}
+  ): Promise<MCPServerResponse[]> {
+    try {
+      logger.info(`Searching Meilisearch with query: "${query}"`);
+      
+      // 创建 MeilisearchSearchProvider 实例
+      const provider = new MeilisearchSearchProvider();
+      
+      // 创建 SearchService 实例
+      const service = new SearchService([provider]);
+      
+      // 执行搜索
+      return service.search(query, options);
+    } catch (error) {
+      logger.error(`Error searching Meilisearch: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
 }
-
