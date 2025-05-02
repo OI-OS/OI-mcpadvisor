@@ -10,12 +10,12 @@ export const MEILISEARCH_CONFIG = {
   /**
    * Meilisearch 服务器地址
    */
-  host: 'https://ms-1c8c8f2b0bc7-1.lon.meilisearch.io',
+  host: 'https://edge.meilisearch.com',
   
   /**
    * API 密钥（只读权限）
    */
-  apiKey: '',
+  apiKey: 'e43e778dabc417c862cafbe4da7cdd6f7fcb80ba36b63adb1e470527e76061f0',
   
   /**
    * 索引名称
