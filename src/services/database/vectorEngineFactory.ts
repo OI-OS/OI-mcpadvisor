@@ -2,7 +2,7 @@ import { IVectorSearchEngine } from '../interfaces/vectorSearchEngines.js';
 import { InMemoryVectorEngine } from './memory/vectorEngine.js';
 import { OceanBaseVectorEngine } from './oceanbase/vectorEngine.js';
 import { MeilisearchVectorEngine } from './meilisearch/vectorEngine.js';
-import { VECTOR_ENGINE_TYPE } from '../../config/constants.js';
+import { VECTOR_ENGINE_TYPE, OCEANBASE_URL } from '../../config/constants.js';
 import logger from '../../utils/logger.js';
 
 /**
@@ -64,6 +64,11 @@ export class VectorEngineFactory {
     
     switch (engineType) {
       case VectorEngineType.OCEANBASE:
+        // 如果选择了 OceanBase 但未配置 URL，则回退到内存引擎
+        if (!OCEANBASE_URL) {
+          logger.warn('OCEANBASE_URL is not set, falling back to in-memory vector engine');
+          return createMemoryEngine();
+        }
         return createOceanBaseEngine();
       
       case VectorEngineType.MEILISEARCH:
