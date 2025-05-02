@@ -34,6 +34,7 @@ coverage/
 
 # private docs
 recommend-mcp-prd.md
+scripts/
 
 # Optional: package manager locks
 # Uncomment if you want to ignore these
