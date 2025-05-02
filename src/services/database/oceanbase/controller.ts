@@ -8,6 +8,7 @@ import logger from '../../../utils/logger.js';
  */
 const getClient = async (): Promise<Pool> => {
   if (!OCEANBASE_URL) {
+    logger.warn('OCEANBASE_URL is not set, OceanBase client will not be available');
     return Promise.reject('OCEANBASE_URL is not set');
   }
 

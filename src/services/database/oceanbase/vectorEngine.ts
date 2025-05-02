@@ -1,6 +1,7 @@
 import { MCPServerResponse } from '../../../types/index.js';
 import { IWritableVectorSearchEngine } from '../../interfaces/vectorSearchEngines.js';
 import { oceanBaseClient } from './controller.js';
+import { OCEANBASE_URL } from '../../../config/constants.js';
 import logger from '../../../utils/logger.js';
 
 /**
@@ -34,13 +35,19 @@ const searchResultToServerResponse = (result: {
  * 实现 IWritableVectorSearchEngine 接口，支持读写操作
  */
 export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
+  private isInitialized: boolean = false;
+
   /**
    * 构造函数
    */
   constructor() {
-    this.initDatabase().catch(error => {
-      this.handleError(error, 'initializing OceanBase');
-    });
+    if (OCEANBASE_URL) {
+      this.initDatabase().catch(error => {
+        this.handleError(error, 'initializing OceanBase');
+      });
+    } else {
+      logger.warn('OCEANBASE_URL is not set, OceanBase vector engine will not be initialized');
+    }
   }
 
   /**
@@ -50,6 +57,7 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
     try {
       await oceanBaseClient.connect();
       await oceanBaseClient.initDatabase();
+      this.isInitialized = true;
       logger.info('OceanBase vector engine initialized');
     } catch (error) {
       this.handleError(error, 'OceanBase initialization');
@@ -60,6 +68,11 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
    * 添加向量条目
    */
   async addEntry(id: string, vector: number[], data: MCPServerResponse): Promise<void> {
+    if (!OCEANBASE_URL || !this.isInitialized) {
+      logger.warn('OceanBase vector engine is not initialized, cannot add entry');
+      return;
+    }
+    
     try {
       const metadata = serverResponseToMetadata(data);
       await oceanBaseClient.addVector(id, vector, metadata);
@@ -73,6 +86,11 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
    * 向量相似度搜索
    */
   async search(queryVector: number[], limit: number = 10): Promise<MCPServerResponse[]> {
+    if (!OCEANBASE_URL || !this.isInitialized) {
+      logger.warn('OceanBase vector engine is not initialized, returning empty search results');
+      return [];
+    }
+    
     try {
       const results = await oceanBaseClient.searchVectors(queryVector, limit);
       const serverResponses = results.map(searchResultToServerResponse);
@@ -88,6 +106,11 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
    * 清除所有向量数据
    */
   async clear(): Promise<void> {
+    if (!OCEANBASE_URL || !this.isInitialized) {
+      logger.warn('OceanBase vector engine is not initialized, cannot clear entries');
+      return;
+    }
+    
     try {
       await oceanBaseClient.deleteAll();
       logger.info('Cleared all vector entries');
