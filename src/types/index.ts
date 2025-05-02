@@ -6,10 +6,12 @@
  * Response structure from the COMPASS API
  */
 export interface MCPServerResponse {
+  id?: string;
   title: string;
   description: string;
   github_url: string;
   similarity: number;
+  installations?: Record<string, any>;
 }
 
 /**

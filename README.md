@@ -20,7 +20,9 @@ MCP Advisor is a discovery & recommendation service that helps you explore Model
 -  **Rich Metadata**: Get detailed information about each service
 -  **Real-time Updates**: Always up-to-date with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
 -  **Easy Integration**: Simple to integrate with any MCP-compatible AI assistant
--  **Vector Search**: Powered by OceanBase for high-performance semantic search
+-  **Multiple Search Backends**: 
+   - **OceanBase**: High-performance vector database for semantic search
+   - **Meilisearch**: Fast, lightweight search engine with typo-tolerance
 -  **Modular Architecture**: Clean separation of concerns for maintainability and extensibility
 
 ## Architecture
@@ -31,9 +33,11 @@ graph TD
     Server --> |Request| SearchService[Search Service]
     SearchService --> |Query| Provider1[Compass Search Provider]
     SearchService --> |Query| Provider2[GetMCP Search Provider]
+    SearchService --> |Query| Provider3[Meilisearch Search Provider]
     Provider1 --> |API Call| ExternalAPI[External MCP Registry API]
     Provider2 --> |Fetch Data| GetMCPAPI[GetMCP API]
     Provider2 --> |Vector Search| OceanBase[OceanBase Vector DB]
+    Provider3 --> |Search| Meilisearch[Meilisearch]
     SearchService --> |Results| Server
     Server --> |Response| Client
 
@@ -42,11 +46,13 @@ graph TD
         SearchService
         Provider1
         Provider2
+        Provider3
     end
 
     subgraph "Data Layer"
         GetMCPAPI
         OceanBase
+        Meilisearch
         ExternalAPI
     end
 
@@ -67,16 +73,26 @@ graph TD
 sequenceDiagram
     participant Client as AI Assistant
     participant Service as SearchService
-    participant Provider as GetMcpSearchProvider
-    participant DB as OceanBase
+    participant Provider1 as GetMcpSearchProvider
+    participant Provider2 as MeilisearchSearchProvider
+    participant DB1 as OceanBase
+    participant DB2 as Meilisearch
 
     Client->>Service: Query Request
-    Service->>Provider: search(query)
     
-    Provider->>Provider: Generate Query Embedding
-    Provider->>DB: Vector Similarity Search
-    DB-->>Provider: Return Similar Servers
-    Provider-->>Service: Return Formatted Results
+    par Vector Search
+        Service->>Provider1: search(query)
+        Provider1->>Provider1: Generate Query Embedding
+        Provider1->>DB1: Vector Similarity Search
+        DB1-->>Provider1: Return Similar Servers
+        Provider1-->>Service: Return Results
+    and Text Search
+        Service->>Provider2: search(query)
+        Provider2->>DB2: Text Search
+        DB2-->>Provider2: Return Matching Servers
+        Provider2-->>Service: Return Results
+    end
+    
     Service-->>Client: Return Combined Results
 ```
 
@@ -135,7 +151,7 @@ Use this for remote servers or web-based integrations. Start the server with:
 
 ```bash
 # Start with SSE transport on port 3000
-OCEANBASE_URL=mysql://xxx TRANSPORT_TYPE=sse SERVER_PORT=3000  ENABLE_FILE_LOGGING=true node build/index.js
+OCEANBASE_URL=mysql://xxx TRANSPORT_TYPE=sse SERVER_PORT=3000 ENABLE_FILE_LOGGING=true node build/index.js
 ```
 
 Environment variables for SSE configuration:
@@ -153,7 +169,7 @@ Connect to the server using:
 #### 3. REST Transport
 
 ```sh
-TRANSPORT_TYPE=rest SERVER_PORT=3000  ENABLE_FILE_LOGGING=true node build/index.js
+TRANSPORT_TYPE=rest SERVER_PORT=3000 ENABLE_FILE_LOGGING=true node build/index.js
 ```
 
 ## Examples
@@ -237,6 +253,33 @@ MCP Advisor can be configured using the following environment variables:
 | `DEBUG` | Enable debug logging | `false` | No |
 | `ENABLE_FILE_LOGGING` | Enable logging to files | `false` | No |
 | `LOG_LEVEL` | Log level (debug, info, warn, error) | `info` | No |
+| `ENABLE_MEILISEARCH_TESTS` | Enable Meilisearch tests | `false` | No |
+| `VECTOR_ENGINE_TYPE` | Vector engine type (`memory`, `oceanbase`, `meilisearch`) | `memory` | No |
+
+## Search Providers
+
+MCP Advisor supports multiple search providers that can be used simultaneously:
+
+### 1. Compass Search Provider
+Uses the Compass API to retrieve MCP server information.
+
+### 2. GetMCP Search Provider
+Uses the GetMCP API and vector search for semantic matching.
+
+### 3. Meilisearch Search Provider
+Uses Meilisearch for fast, typo-tolerant text search.
+
+## Meilisearch Configuration
+
+Meilisearch integration can be configured in `src/config/meilisearch.ts`:
+
+```typescript
+export const MEILISEARCH_CONFIG = {
+  host: 'https://ms-1c8c8f2b0bc7-1.lon.meilisearch.io',
+  apiKey: '', // API key with read permissions
+  indexName: 'mcp_server_info_from_getmcp_io'
+};
+```
 
 ## API Documentation
 

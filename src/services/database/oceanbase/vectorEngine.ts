@@ -1,5 +1,5 @@
 import { MCPServerResponse } from '../../../types/index.js';
-import { IVectorSearchEngine } from '../../interfaces/vectorSearchEngine.js';
+import { IWritableVectorSearchEngine } from '../../interfaces/vectorSearchEngines.js';
 import { oceanBaseClient } from './controller.js';
 import logger from '../../../utils/logger.js';
 
@@ -22,6 +22,7 @@ const searchResultToServerResponse = (result: {
   similarity: number;
   metadata: Record<string, any>;
 }): MCPServerResponse => ({
+  id: result.id,
   title: result.metadata.title,
   description: result.metadata.description,
   github_url: result.metadata.github_url,
@@ -30,14 +31,15 @@ const searchResultToServerResponse = (result: {
 
 /**
  * OceanBase 向量搜索引擎实现
+ * 实现 IWritableVectorSearchEngine 接口，支持读写操作
  */
-export class OceanBaseVectorEngine implements IVectorSearchEngine {
+export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
   /**
    * 构造函数
    */
   constructor() {
     this.initDatabase().catch(error => {
-      logger.error(`Failed to initialize OceanBase: ${error instanceof Error ? error.message : String(error)}`);
+      this.handleError(error, 'initializing OceanBase');
     });
   }
 
@@ -50,8 +52,7 @@ export class OceanBaseVectorEngine implements IVectorSearchEngine {
       await oceanBaseClient.initDatabase();
       logger.info('OceanBase vector engine initialized');
     } catch (error) {
-      logger.error(`OceanBase initialization error: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+      this.handleError(error, 'OceanBase initialization');
     }
   }
 
@@ -64,8 +65,7 @@ export class OceanBaseVectorEngine implements IVectorSearchEngine {
       await oceanBaseClient.addVector(id, vector, metadata);
       logger.debug(`Added vector entry for server: ${data.title}`);
     } catch (error) {
-      logger.error(`Error adding vector entry: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+      this.handleError(error, 'adding vector entry');
     }
   }
 
@@ -80,8 +80,7 @@ export class OceanBaseVectorEngine implements IVectorSearchEngine {
       logger.debug(`Found ${serverResponses.length} results from vector search`);
       return serverResponses;
     } catch (error) {
-      logger.error(`Error in vector search: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+      this.handleError(error, 'vector search');
     }
   }
 
@@ -93,8 +92,16 @@ export class OceanBaseVectorEngine implements IVectorSearchEngine {
       await oceanBaseClient.deleteAll();
       logger.info('Cleared all vector entries');
     } catch (error) {
-      logger.error(`Error clearing vector entries: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+      this.handleError(error, 'clearing vector entries');
     }
+  }
+  
+  /**
+   * 统一错误处理
+   */
+  private handleError(error: unknown, operation: string): never {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Error in ${operation}: ${message}`);
+    throw error;
   }
 }

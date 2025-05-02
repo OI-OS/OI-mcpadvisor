@@ -1,10 +1,10 @@
 /**
- * OceanBase 搜索提供者实现模块
- * 提供基于 OceanBase 的向量搜索功能
+ * 向量搜索管理器模块
+ * 提供向量搜索相关的功能函数
  */
 
 import { MCPServerResponse } from '../../types/index.js';
-import { IVectorSearchEngine } from '../interfaces/vectorSearchEngine.js';
+import { IVectorSearchEngine, IWritableVectorSearchEngine } from '../interfaces/vectorSearchEngines.js';
 import { getTextEmbedding } from '../../utils/embedding.js';
 import { GetMcpApiResponse, GetMcpServerEntry } from '../api/getMcpResourceFetcher.js';
 import logger from '../../utils/logger.js';
@@ -17,6 +17,7 @@ export const convertToServerResponse = (
   server: GetMcpServerEntry
 ): MCPServerResponse => {
   return {
+    id: key,
     title: server.display_name,
     description: server.description,
     github_url: server.repository.url,
@@ -26,33 +27,50 @@ export const convertToServerResponse = (
 
 /**
  * 处理并索引数据
+ * 如果提供的引擎不支持写操作，将记录警告并跳过索引步骤
  */
 export const processAndIndexData = async (
   data: GetMcpApiResponse,
   vectorEngine: IVectorSearchEngine,
   createSearchableText: (server: GetMcpServerEntry) => string
 ): Promise<void> => {
-  // 清除现有索引
-  await vectorEngine.clear();
+  // 检查引擎是否支持写操作
+  const writableEngine = vectorEngine as IWritableVectorSearchEngine;
+  const supportsWriteOperations = typeof writableEngine.addEntry === 'function' && 
+                                typeof writableEngine.clear === 'function';
   
-  // 处理每个服务器条目
-  const entries = Object.entries(data);
-  
-  for (const [key, server] of entries) {
-    // 创建可搜索文本
-    const searchableText = createSearchableText(server);
-    
-    // 获取文本嵌入
-    const embedding = getTextEmbedding(searchableText);
-    
-    // 转换为 MCPServerResponse 格式
-    const serverResponse = convertToServerResponse(key, server);
-    
-    // 添加到向量索引
-    await vectorEngine.addEntry(key, embedding, serverResponse);
+  if (!supportsWriteOperations) {
+    logger.warn('Vector engine does not support write operations, skipping indexing');
+    return;
   }
   
-  logger.info(`Indexed ${entries.length} MCP servers`);
+  try {
+    // 清除现有索引
+    await writableEngine.clear();
+    
+    // 处理每个服务器条目
+    const entries = Object.entries(data);
+    
+    for (const [key, server] of entries) {
+      // 创建可搜索文本
+      const searchableText = createSearchableText(server);
+      
+      // 获取文本嵌入
+      const embedding = getTextEmbedding(searchableText);
+      
+      // 转换为 MCPServerResponse 格式
+      const serverResponse = convertToServerResponse(key, server);
+      
+      // 添加到向量索引
+      await writableEngine.addEntry(key, embedding, serverResponse);
+    }
+    
+    logger.info(`Indexed ${entries.length} MCP servers`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Error indexing data: ${message}`);
+    throw error;
+  }
 };
 
 /**
@@ -67,12 +85,13 @@ export const performVectorSearch = async (
     const queryEmbedding = getTextEmbedding(query);
     
     // 使用向量引擎搜索
-    const results = await vectorEngine.search(queryEmbedding,5);
+    const results = await vectorEngine.search(queryEmbedding, 5);
     
     logger.debug(`Found ${results.length} results from vector search`);
     return results;
   } catch (error) {
-    logger.error(`Error in vector search: ${error instanceof Error ? error.message : String(error)}`);
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`Error in vector search: ${message}`);
     throw error;
   }
 };
