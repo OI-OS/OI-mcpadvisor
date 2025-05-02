@@ -19,10 +19,18 @@ import { formatServersToMCPContent } from '../utils/formatter.js';
 import { SearchService } from './searchService.js';
 import logger from '../utils/logger.js';
 import { RestServerTransport } from "@chatmcp/sdk/server/rest.js";
+import { InstallationGuideService } from "./installation/installationGuideService.js";
 
 // Define Zod schemas for validation
 const GeneralArgumentsSchema = z.object({
-  query: z.string().min(1),
+  query: z.string().min(1).optional(),
+  mcpName: z.string().min(1).optional(),
+  githubUrl: z.string().url().optional(),
+}).refine(data => {
+  // 确保至少有一个参数存在
+  return !!(data.query || (data.mcpName && data.githubUrl));
+}, {
+  message: "At least query or both mcpName and githubUrl must be provided"
 });
 
 /**
@@ -88,19 +96,102 @@ export class ServerService {
       logger.debug('Handling ListTools request');
       return {
         tools: [
-          {
-            name: "recommend-mcp-servers",
-            description: `
+          this.recommendMcpServerTool(),
+          this.installMcpServerTool(),
+        ],
+      };
+    });
+
+    // Handle tool execution
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      logger.info(`Handling tool call: ${name}`);
+
+      try {
+        if (name === "recommend-mcp-servers") {
+          const parsedArgs = GeneralArgumentsSchema.parse(args);
+          const query = parsedArgs.query;
+          
+          if (!query) {
+            return {
+              content: [{
+                type: "text",
+                text: "Error: Query parameter is required for recommend-mcp-servers tool"
+              }],
+            };
+          }
+          
+          logger.info(`Processing recommend-mcp-servers request with query: ${query}`);
+          
+          const servers = await this.searchService.search(query);
+          logger.debug(`Found ${servers.length} servers matching query`);
+          
+          return {
+            content: formatServersToMCPContent(servers),
+          };
+        } 
+        else if (name === "install-mcp-server") {
+          const parsedArgs = GeneralArgumentsSchema.parse(args);
+          const mcpName = parsedArgs.mcpName;
+          const githubUrl = parsedArgs.githubUrl;
+          
+          if (!mcpName || !githubUrl) {
+            return {
+              content: [{
+                type: "text",
+                text: "Error: Both mcpName and githubUrl parameters are required for install-mcp-server tool"
+              }],
+            };
+          }
+          
+          logger.info(`Processing install-mcp-server request with mcpName: ${mcpName}, githubUrl: ${githubUrl}`);
+          
+          // 获取 GitHub README 内容
+          const installationGuideService = new InstallationGuideService();
+          const installationGuide = await installationGuideService.generateInstallationGuide(githubUrl, mcpName);
+          
+          return {
+            content: [{
+              type: "text",
+              text: installationGuide
+            }],
+          };
+        } else {
+          const errorMsg = `Unknown tool: ${name}`;
+          logger.error(errorMsg);
+          return {
+            content: [{
+              type: "text",
+              text: errorMsg
+            }],
+          };
+        }
+      } catch (error) {
+        logger.error(`Error handling request: ${error instanceof Error ? error.message : String(error)}`);
+        return {
+          content: [{
+            type: "text",
+            text: `Error: ${error instanceof Error ? error.message : String(error)}`
+          }],
+        };
+      }
+    });
+  }
+
+  private recommendMcpServerTool(): { [x: string]: unknown; name: string; inputSchema: { [x: string]: unknown; type: "object"; properties?: { [x: string]: unknown; } | undefined; }; description?: string | undefined; annotations?: { [x: string]: unknown; title?: string | undefined; readOnlyHint?: boolean | undefined; destructiveHint?: boolean | undefined; idempotentHint?: boolean | undefined; openWorldHint?: boolean | undefined; } | undefined; } {
+    return {
+      name: "recommend-mcp-servers",
+      description: `
               此工具用于寻找合适且专业MCP服务器。
               基于您的具体需求，从互联网资源库以及内部MCP库中筛选并推荐最适合的MCP服务器解决方案。
               返回结果包含服务器名称、功能描述、所属类别，为您的业务成功提供精准技术支持。
               `,
-            inputSchema: {
-              type: "object",
-              properties: {
-                query: {
-                  type: "string",
-                  description: `
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: `
                     请提供所需MCP服务器的精确描述。
                     
                     有效查询示例：
@@ -116,41 +207,35 @@ export class ServerService {
                     1. 业务流程（如产品定价、核保、理赔、准备金计算等）
                     2. 具体功能需求（如风险分析、策略部署、策略研发、特征研发等）
                     `,
-                },
-              },
-              required: ["query"],
-            },
-          }
-        ],
-      };
-    });
+          },
+        },
+        required: ["query"],
+      },
+    };
+  }
 
-    // Handle tool execution
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      logger.info(`Handling tool call: ${name}`);
-
-      try {
-        if (name === "recommend-mcp-servers") {
-          const { query } = GeneralArgumentsSchema.parse(args);
-          logger.info(`Processing recommend-mcp-servers request with query: ${query}`);
-          
-          const servers = await this.searchService.search(query);
-          logger.debug(`Found ${servers.length} servers matching query`);
-          
-          return {
-            content: formatServersToMCPContent(servers),
-          };
-        } else {
-          const errorMsg = `Unknown tool: ${name}`;
-          logger.error(errorMsg);
-          throw new Error(errorMsg);
-        }
-      } catch (error) {
-        logger.error(`Error handling request: ${error instanceof Error ? error.message : String(error)}`);
-        throw error;
-      }
-    });
+  private installMcpServerTool(): { [x: string]: unknown; name: string; inputSchema: { [x: string]: unknown; type: "object"; properties?: { [x: string]: unknown; } | undefined; }; description?: string | undefined; annotations?: { [x: string]: unknown; title?: string | undefined; readOnlyHint?: boolean | undefined; destructiveHint?: boolean | undefined; idempotentHint?: boolean | undefined; openWorldHint?: boolean | undefined; } | undefined; } {
+    return {
+      name: "install-mcp-server",
+      description: `
+              此工具用于安装MCP服务器。
+              请告诉我您想要安装哪个 MCP 以及其 githubUrl,我将会告诉您如何安装对应的 MCP
+              `,
+      inputSchema: {
+        type: "object",
+        properties: {
+          mcpName: {
+            type: "string",
+            description: `请输入您想要安装的MCP名称。`,
+          },
+          githubUrl: {
+            type: "string",
+            description: `请输入您想要安装的MCP的githubUrl。`,
+          },
+        },
+        required: ["mcpName", "githubUrl"],
+      },
+    };
   }
 
   /**
