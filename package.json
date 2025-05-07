@@ -1,11 +1,11 @@
 {
-  "name": "mcp-advisor",
-  "version": "1.0.7",
+  "name": "@xiaohui-wang/mcpadvisor",
+  "version": "1.0.0",
   "description": "MCP Advisor & Installation - Find the right MCP server for your needs",
   "main": "build/index.js",
   "type": "module",
   "bin": {
-    "mcp-advisor": "./build/index.js"
+    "mcpadvisor": "build/index.js"
   },
   "keywords": [
     "mcp",
@@ -65,7 +65,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/istarwyh/mcpadvisor.git"
+    "url": "git+https://github.com/istarwyh/mcpadvisor.git"
   },
   "bugs": {
     "url": "https://github.com/istarwyh/mcpadvisor/issues"
