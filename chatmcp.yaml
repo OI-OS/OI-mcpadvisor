@@ -1,0 +1,63 @@
+params:
+  type: object
+  properties:
+    mode:
+      type: string
+      description: Transport mode (stdio, sse, rest)
+      enum: [stdio, sse, rest]
+    port:
+      type: string
+      description: Port for HTTP server when using sse or rest mode
+    host:
+      type: string
+      description: Host for HTTP server when using sse or rest mode
+    path:
+      type: string
+      description: SSE path for HTTP server when using sse mode
+    messagePath:
+      type: string
+      description: Message path for HTTP server when using sse mode
+    endpoint:
+      type: string
+      description: REST endpoint for HTTP server when using rest mode
+
+rest:
+  name: mcpadvisor
+  port: 3000
+  endpoint: /rest
+
+npx:
+  command: |
+    npx -y @xiaohui-wang/mcpadvisor
+  config: |
+    {
+      "mcpServers": {
+        "mcpadvisor": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "@xiaohui-wang/mcpadvisor"
+          ],
+          "env": {}
+        }
+      }
+    }
+
+docker:
+  command: |
+    docker run -i --rm mcp/mcpadvisor
+  config: |
+    {
+      "mcpServers": {
+        "mcpadvisor": {
+          "command": "docker",
+          "args": [
+            "run",
+            "-i",
+            "--rm",
+            "mcp/mcpadvisor"
+          ],
+          "env": {}
+        }
+      }
+    }

@@ -10,6 +10,7 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { getParamValue, getAuthValue } from "@chatmcp/sdk/utils/index.js";
 import { z } from "zod";
 import express, { Request, Response } from "express";
 import cors from "cors";
@@ -126,6 +127,7 @@ export class ServerService {
                 type: "text",
                 text: "Error: Query parameter is required for recommend-mcp-servers tool"
               }],
+              isError: true
             };
           }
           
@@ -136,6 +138,7 @@ export class ServerService {
           
           return {
             content: formatServersToMCPContent(servers),
+            isError: false
           };
         } 
         else if (name === "install-mcp-server") {
@@ -149,6 +152,7 @@ export class ServerService {
                 type: "text",
                 text: "Error: Both mcpName and githubUrl parameters are required for install-mcp-server tool"
               }],
+              isError: true
             };
           }
           
@@ -163,6 +167,7 @@ export class ServerService {
               type: "text",
               text: installationGuide
             }],
+            isError: false
           };
         } else {
           const errorMsg = `Unknown tool: ${name}`;
@@ -172,6 +177,7 @@ export class ServerService {
               type: "text",
               text: errorMsg
             }],
+            isError: true
           };
         }
       } catch (error) {
@@ -181,6 +187,7 @@ export class ServerService {
             type: "text",
             text: `Error: ${error instanceof Error ? error.message : String(error)}`
           }],
+          isError: true
         };
       }
     });
