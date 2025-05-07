@@ -1,0 +1,57 @@
+{
+  "server": {
+    "name": "mcpadvisor",
+    "version": "1.0.0",
+    "port": 3000,
+    "host": "localhost"
+  },
+  "api": {
+    "compass": {
+      "baseUrl": "https://registry.mcphub.io",
+      "timeout": 30000
+    },
+    "oceanbase": {
+      "baseUrl": "https://registry.mcphub.io",
+      "timeout": 30000
+    }
+  },
+  "logging": {
+    "level": "info",
+    "format": "json"
+  },
+  "mcp_sources": {
+    "remote_urls": [
+      "https://getmcp.io/api/servers.json"
+    ],
+    "local_files": []
+  },
+  "mcp_index_fields": {
+    "name": [
+        "name",
+        "server_name",
+        "serverName"
+    ],
+    "description": [
+        "description",
+        "server_description",
+        "serverDescription"
+    ],
+    "installations": [
+        "installation",
+        "installations",
+        "install_command",
+        "installCommand"
+    ],
+    "categories": [
+        "category",
+        "categories",
+        "server_category",
+        "serverCategory"
+    ],
+    "tags": [
+        "tags",
+        "server_tags",
+        "serverTags"
+    ]
+  }
+} 
