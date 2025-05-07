@@ -1,12 +1,54 @@
 # MCP Advisor 
 
 [![Model Context Protocol](https://img.shields.io/badge/Model%20Context%20Protocol-purple)](https://modelcontextprotocol.org)
+[![npm version](https://img.shields.io/npm/v/@xiaohui-wang/mcpadvisor.svg)](https://www.npmjs.com/package/@xiaohui-wang/mcpadvisor)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <a href="https://glama.ai/mcp/servers/@istarwyh/mcpadvisor">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@istarwyh/mcpadvisor/badge" alt="Advisor MCP server" />
 </a>
 
 ## MCP Advisor & Installation
+
+### NPM Installation
+
+You can install MCP Advisor directly from npm:
+
+```bash
+# Using npm
+npm install @xiaohui-wang/mcpadvisor
+
+# Using yarn
+yarn add @xiaohui-wang/mcpadvisor
+
+# Using pnpm
+pnpm add @xiaohui-wang/mcpadvisor
+```
+
+### Usage
+
+#### As a Command Line Tool
+
+```bash
+# Run directly with npx
+npx @xiaohui-wang/mcpadvisor
+
+# Or if installed globally
+mcpadvisor
+```
+
+#### As a Library
+
+```javascript
+import { SearchService } from '@xiaohui-wang/mcpadvisor';
+
+// Initialize the search service
+const searchService = new SearchService();
+
+// Search for MCP servers
+const results = await searchService.search('vector database integration');
+console.log(results);
+```
 
 ### Experience MCP Advisor 
 
