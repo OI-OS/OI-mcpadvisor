@@ -1,0 +1,18 @@
+{
+  "mcp_sources": {
+    "remote_urls": [
+      "https://example.com/api/mcpservers",
+      "https://another-domain.org/mcpdata"
+    ],
+    "local_files": [
+      "./data/local-servers.json",
+      "/absolute/path/to/custom-servers.json"
+    ]
+  },
+  "mcp_index_fields": {
+    "name": ["name", "title", "id"],
+    "description": ["description", "desc", "summary", "info"],
+    "category": ["category", "type", "group", "classification"],
+    "tags": ["tags", "labels", "keywords"]
+  }
+} 

@@ -20,6 +20,7 @@ import { SearchService } from './searchService.js';
 import logger from '../utils/logger.js';
 import { RestServerTransport } from "@chatmcp/sdk/server/rest.js";
 import { InstallationGuideService } from "./installation/installationGuideService.js";
+import { addAdditionalSources, McpSources } from './loadService.js';
 
 // Define Zod schemas for validation
 const GeneralArgumentsSchema = z.object({
@@ -31,6 +32,13 @@ const GeneralArgumentsSchema = z.object({
   return !!(data.query || (data.mcpName && data.githubUrl));
 }, {
   message: "At least query or both mcpName and githubUrl must be provided"
+});
+
+// Schema for additional sources
+const SourcesSchema = z.object({
+  remote_urls: z.array(z.string()).optional(),
+  local_files: z.array(z.string()).optional(),
+  field_map: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 /**
@@ -331,6 +339,31 @@ export class ServerService {
       if (!this.expressApp) {
         throw new Error('Express app not initialized');
       }
+      
+      // Add endpoint for adding sources dynamically
+      this.expressApp.post('/api/sources', express.json(), async (req: Request, res: Response) => {
+        try {
+          const { remote_urls, local_files, field_map } = SourcesSchema.parse(req.body);
+          
+          const sources: Partial<McpSources> = {};
+          if (remote_urls?.length) sources.remote_urls = remote_urls;
+          if (local_files?.length) sources.local_files = local_files;
+          
+          const items = await addAdditionalSources(sources, field_map);
+          
+          res.status(200).json({
+            success: true,
+            message: 'Sources added successfully',
+            itemCount: items.length
+          });
+        } catch (error) {
+          logger.error(`Error adding sources: ${error instanceof Error ? error.message : String(error)}`);
+          res.status(400).json({
+            success: false,
+            error: error instanceof Error ? error.message : 'Invalid request',
+          });
+        }
+      });
       
       // Start the HTTP server
       this.expressApp.listen(port, host, () => {
