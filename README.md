@@ -1,4 +1,4 @@
-# MCP Advisor 
+# MCP Advisor
 
 [![Model Context Protocol](https://img.shields.io/badge/Model%20Context%20Protocol-purple)](https://modelcontextprotocol.org)
 [![npm version](https://img.shields.io/npm/v/@xiaohui-wang/mcpadvisor.svg)](https://www.npmjs.com/package/@xiaohui-wang/mcpadvisor)
@@ -8,38 +8,103 @@
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@istarwyh/mcpadvisor/badge" alt="Advisor MCP server" />
 </a>
 
-## MCP Advisor & Installation
+## What is MCP Advisor?
 
-### NPM Installation
+MCP Advisor is a discovery & recommendation service that helps AI assistants explore Model Context Protocol (MCP) servers using natural language queries. It makes it easier to find and utilize the right MCP tools for specific tasks.
 
-You can install MCP Advisor directly from npm:
+## User Guide
 
+### Quick Integration
+
+The fastest way to integrate MCP Advisor with your AI assistant is through the MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "mcpadvisor": {
+      "command": "npx",
+      "args": ["-y", "@xiaohui-wang/mcpadvisor"]
+    }
+  }
+}
+```
+
+Add this configuration to your AI assistant's MCP settings file:
+
+- MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%AppData%\Claude\claude_desktop_config.json`
+
+### Features
+
+- **Natural Language Search**: Find MCP services using conversational queries
+- **Rich Metadata**: Get detailed information about each service
+- **Real-time Updates**: Always up-to-date with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
+- **Easy Integration**: Simple configuration for any MCP-compatible AI assistant
+
+### Alternative Installation Methods
+
+#### NPM Package
 ```bash
-# Using npm
 npm install @xiaohui-wang/mcpadvisor
-
-# Using yarn
+# or
 yarn add @xiaohui-wang/mcpadvisor
-
-# Using pnpm
+# or
 pnpm add @xiaohui-wang/mcpadvisor
 ```
 
-### Usage
-
-#### As a Command Line Tool
-
+#### Direct Usage
 ```bash
-# Run directly with npx
+# Run with npx
 npx @xiaohui-wang/mcpadvisor
 
 # Or if installed globally
 mcpadvisor
 ```
 
-#### As a Library
+## Developer Guide
 
-```javascript
+### Architecture
+
+MCP Advisor follows a modular architecture with clean separation of concerns:
+
+#### Core Components
+
+1. **Search Service Layer**
+   - Unified search interface
+   - Multiple search provider support
+   - Configurable search options
+
+2. **Search Providers**
+   - OceanBase Vector Engine (semantic search)
+   - Meilisearch Provider (text search)
+   - GetMCP Provider (API integration)
+
+3. **Transport Layer**
+   - Stdio (default for CLI)
+   - SSE (for web integration)
+   - REST API endpoints
+
+### Development Setup
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Configure environment variables:
+   ```bash
+   # Required for vector search
+   OCEANBASE_URL=mysql://your_connection_string
+   
+   # Optional for SSE transport
+   TRANSPORT_TYPE=sse
+   SERVER_PORT=3000
+   ENABLE_FILE_LOGGING=true
+   ```
+
+### Library Usage
+
+```typescript
 import { SearchService } from '@xiaohui-wang/mcpadvisor';
 
 // Initialize the search service
@@ -50,158 +115,97 @@ const results = await searchService.search('vector database integration');
 console.log(results);
 ```
 
-### Experience MCP Advisor 
-
-## What is this? 
-
-MCP Advisor is a discovery & recommendation service that helps you explore Model Context Protocol servers. It acts as a smart guide that helps AI assistants find and understand available MCP services out there based on **natural language queries**, making it easier to discover and utilize the right tools for specific tasks. 
-
-## Features 
-
--  **Smart Search**: Find MCP services using natural language queries
--  **Rich Metadata**: Get detailed information about each service
--  **Real-time Updates**: Always up-to-date with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
--  **Easy Integration**: Simple to integrate with any MCP-compatible AI assistant
--  **Multiple Search Backends**: 
-   - **OceanBase**: High-performance vector database for semantic search
-   - **Meilisearch**: Fast, lightweight search engine with typo-tolerance
--  **Modular Architecture**: Clean separation of concerns for maintainability and extensibility
-
-## Architecture
-
-```mermaid
-graph TD
-    Client[AI Assistant/Client] --> |Query| Server[MCP Advisor Server]
-    Server --> |Request| SearchService[Search Service]
-    SearchService --> |Query| Provider1[Compass Search Provider]
-    SearchService --> |Query| Provider2[GetMCP Search Provider]
-    SearchService --> |Query| Provider3[Meilisearch Search Provider]
-    Provider1 --> |API Call| ExternalAPI[External MCP Registry API]
-    Provider2 --> |Fetch Data| GetMCPAPI[GetMCP API]
-    Provider2 --> |Vector Search| OceanBase[OceanBase Vector DB]
-    Provider3 --> |Search| Meilisearch[Meilisearch]
-    SearchService --> |Results| Server
-    Server --> |Response| Client
-
-    subgraph "MCP Advisor Core"
-        Server
-        SearchService
-        Provider1
-        Provider2
-        Provider3
-    end
-
-    subgraph "Data Layer"
-        GetMCPAPI
-        OceanBase
-        Meilisearch
-        ExternalAPI
-    end
-
-    subgraph "Transport Options"
-        Stdio[Stdio Transport]
-        SSE[SSE Transport]
-        REST[REST Transport]
-    end
-
-    Server --> Stdio
-    Server --> SSE
-    Server --> REST
-```
-
-### Data Flow
-
-```mermaid
-sequenceDiagram
-    participant Client as AI Assistant
-    participant Service as SearchService
-    participant Provider1 as GetMcpSearchProvider
-    participant Provider2 as MeilisearchSearchProvider
-    participant DB1 as OceanBase
-    participant DB2 as Meilisearch
-
-    Client->>Service: Query Request
-    
-    par Vector Search
-        Service->>Provider1: search(query)
-        Provider1->>Provider1: Generate Query Embedding
-        Provider1->>DB1: Vector Similarity Search
-        DB1-->>Provider1: Return Similar Servers
-        Provider1-->>Service: Return Results
-    and Text Search
-        Service->>Provider2: search(query)
-        Provider2->>DB2: Text Search
-        DB2-->>Provider2: Return Matching Servers
-        Provider2-->>Service: Return Results
-    end
-    
-    Service-->>Client: Return Combined Results
-```
-
-## Quick Start 
-
-### Usage
-
-1. Clone the repository
-
-or 
-
-2. Use `npx`
-
-
-### Installation
-
-For Claude Desktop, edit your `claude_desktop_config.json` file:
-
-#### MacOS/Linux
-``` bash
-code ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
-
-#### Windows
-``` bash
-code $env:AppData\Claude\claude_desktop_config.json
-```
-
 ### Transport Options
-
-MCP Advisor supports two transport methods:
 
 #### 1. Stdio Transport (Default)
 
-Use this for command-line tools and direct integrations.
+Ideal for command-line tools and direct integrations:
 
-Add to your AI assistant's MCP configuration to enable service discovery capabilities:
+```javascript
+// index.js
+const { createServer } = require('@xiaohui-wang/mcpadvisor');
+const server = createServer({ transport: 'stdio' });
+server.start();
+```
 
-``` json
-{
-"mcpServers": {
-   "mcp-advisor": {
-      "command": "npx",
-      "args": [
-         "-y",
-         "/path/to/repo/build/index.js"
-      ]
-   }
+#### 2. SSE Transport
+
+For web-based integrations:
+
+```javascript
+// server.js
+const { createServer } = require('@xiaohui-wang/mcpadvisor');
+const server = createServer({
+  transport: 'sse',
+  port: 3000
+});
+server.start();
+```
+
+### Contributing
+
+1. Follow the commit message convention:
+   - Use lowercase types (feat, fix, docs, etc.)
+   - Write descriptive messages in sentence format
+
+2. Ensure code quality:
+   - Run tests: `npm test`
+   - Check types: `npm run type-check`
+   - Lint code: `npm run lint`
+
+3. Submit a pull request with:
+   - Clear description of changes
+   - Updated tests if needed
+   - Documentation updates if needed
+
+### API Documentation
+
+#### SearchService
+
+```typescript
+class SearchService {
+  constructor(options?: SearchOptions);
+  search(query: string): Promise<SearchResult[]>;
 }
+
+interface SearchOptions {
+  limit?: number;
+  minSimilarity?: number;
+}
+
+interface SearchResult {
+  id: string;
+  name: string;
+  description: string;
+  similarity: number;
 }
 ```
 
-#### 2. SSE Transport (HTTP Server)
+#### Server Configuration
 
-Use this for remote servers or web-based integrations. Start the server with:
-
-```bash
-# Start with SSE transport on port 3000
-OCEANBASE_URL=mysql://xxx TRANSPORT_TYPE=sse SERVER_PORT=3000 ENABLE_FILE_LOGGING=true node build/index.js
+```typescript
+interface ServerConfig {
+  transport: 'stdio' | 'sse';
+  port?: number;  // Required for SSE
+  enableFileLogging?: boolean;
+}
 ```
+### Environment Variables
 
-Environment variables for SSE configuration:
-- `TRANSPORT_TYPE`: Set to `sse` to use SSE transport (default is stdio)
+#### Required
+- `OCEANBASE_URL`: Connection string for OceanBase vector database
+
+#### Optional
+- `TRANSPORT_TYPE`: Transport method (`stdio` or `sse`, default: `stdio`)
 - `SERVER_PORT`: HTTP server port (default: 3000)
 - `SERVER_HOST`: HTTP server host (default: localhost)
 - `SSE_PATH`: SSE endpoint path (default: /sse)
 - `MESSAGE_PATH`: Messages endpoint path (default: /messages)
+- `ENABLE_FILE_LOGGING`: Enable file logging (default: false)
+
+### License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 Connect to the server using:
 - SSE endpoint: `http://localhost:3000/sse`
