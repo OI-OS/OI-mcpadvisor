@@ -149,7 +149,6 @@ graph TD
     
     Filtering --> |"minSimilarity: 0.5"| FinalResults["Final Results"]
     Filtering --> |"Fallback"| TopResults["Top 5 Results"]
-```
     
     Providers->>ExternalAPIs: API Requests
     ExternalAPIs->>Providers: API Responses
