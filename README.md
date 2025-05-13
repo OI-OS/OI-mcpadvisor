@@ -109,23 +109,42 @@ graph TD
 
 ```mermaid
 flowchart LR
-    Query["User Query"] --> Embedding["Embedding Generation"]
-    Query --> KeywordExtraction["Keyword Extraction"]
+    User([User]) --> |"Natural Language Query"| Agent([AI Agent])
+    Agent --> |"Search Request"| MCP["MCP Advisor"]
     
-    subgraph "Search Process"
-        Embedding --> VectorSearch["Vector Search"]
-        KeywordExtraction --> TextSearch["Text Search"]
+    subgraph "MCP Advisor System"
+        MCP --> QueryProcessor["Query Processor"]
         
-        VectorSearch --> |"Similarity Scores"| ResultMerging
-        TextSearch --> |"Match Scores"| ResultMerging["Result Merging"]
+        QueryProcessor --> |"Query Text"| KeywordExtraction["Keyword Extraction"]
+        QueryProcessor --> |"Query Text"| Embedding["Embedding Generation"]
         
-        ResultMerging --> |"Combined Results"| Deduplication["Deduplication"]
-        Deduplication --> |"Unique Results"| Prioritization["Provider Prioritization"]
-        Prioritization --> |"Prioritized Results"| SimilarityFiltering["Similarity Filtering"]
-        SimilarityFiltering --> |"Filtered Results"| Limiting["Result Limiting"]
+        subgraph "Parallel Search Execution"
+            KeywordExtraction --> |"Keywords"| TextSearch["Text-Based Search"]
+            Embedding --> |"Vector"| Normalization["Vector Normalization"]
+            Normalization --> |"Unit Vector"| VectorSearch["Vector Similarity Search"]
+            
+            TextSearch --> |"Provider: Compass"| CompassResults["Compass Results"]
+            TextSearch --> |"Provider: GetMCP"| GetMcpResults["GetMCP Results"]
+            TextSearch --> |"Provider: Offline"| OfflineTextResults["Offline Text Results"]
+            
+            VectorSearch --> |"Provider: Meilisearch"| MeilisearchResults["Meilisearch Results"]
+            VectorSearch --> |"Provider: Offline"| OfflineVectorResults["Offline Vector Results"]
+        end
+        
+        subgraph "Result Processing Pipeline"
+            CompassResults & GetMcpResults & OfflineTextResults & MeilisearchResults & OfflineVectorResults --> ResultMerging["Smart Result Merging"]
+            
+            ResultMerging --> |"Combined Results"| Deduplication["URL-based Deduplication"]
+            Deduplication --> |"Unique Results"| Prioritization["Provider Priority Ranking"]
+            Prioritization --> |"Prioritized Results"| SimilarityFiltering["Adaptive Similarity Filtering"]
+            SimilarityFiltering --> |"Quality Results"| Limiting["Result Count Limiting"]
+        end
+        
+        Limiting --> |"Final Results"| ResponseFormatter["Response Formatter"]
     end
     
-    Limiting --> |"Final Results"| Response["Response to User"]
+    ResponseFormatter --> |"MCP Server Recommendations"| Agent
+    Agent --> |"Recommendations with Context"| User
 ```
 
 #### Search Strategy
@@ -140,9 +159,23 @@ graph TD
     TextBias --> |"textMatchWeight: 0.7"| HybridSearch1["Hybrid Search Engine"]
     VectorBias --> |"textMatchWeight: 0.3"| HybridSearch2["Hybrid Search Engine"]
     
+    subgraph "Vector Processing"
+        RawVector["Raw Embedding Vector"] --> Normalization["Vector Normalization"]
+        Normalization --> |"Unit Vector"| IndexedSearch["HNSW Index Search"]
+        IndexedSearch --> |"Cosine Similarity"| VectorResults["Vector Results"]
+    end
+    
+    subgraph "Text Processing"
+        Keywords["Extracted Keywords"] --> ExactMatch["Exact Matching"]
+        Keywords --> FuzzyMatch["Fuzzy Matching"]
+        ExactMatch & FuzzyMatch --> |"Match Scores"| TextResults["Text Results"]
+    end
+    
     subgraph "Hybrid Search Process"
         HybridSearch1 & HybridSearch2 --> |"Parallel Execution"| Providers["Multiple Providers"]
+        VectorResults & TextResults --> WeightedMerge["Weighted Result Merging"]
         Providers --> |"Raw Results"| Merging["Smart Merging"]
+        WeightedMerge --> Merging
         Merging --> |"Provider Priority"| Prioritization["Priority-Based Selection"]
         Prioritization --> |"Unique Results"| Filtering["Adaptive Filtering"]
     end
@@ -315,69 +348,31 @@ The enhanced logging system provides detailed visibility into system operations:
    - Provider-specific result tracking
    - Detailed error context for debugging
 
-### Vector Search Optimizations
+#### Advanced Search Techniques
 
-#### Vector Normalization
-
-MCP Advisor implements vector normalization to improve search accuracy and consistency:
-
-```mermaid
-graph LR
-    Input["Input Vector"] --> Normalize["Normalize Vector"]
-    Normalize --> |"Unit Vector"| Store["Store in Database"]
-    
-    Query["Query Vector"] --> NormalizeQuery["Normalize Query Vector"]
-    NormalizeQuery --> |"Unit Vector"| Search["Search Database"]
-    
-    Store --> |"Indexed Vectors"| Search
-    Search --> |"Cosine Similarity"| Results["Search Results"]
-```
-
-1. **Vector Normalization Process**
+1. **Vector Normalization**
    - All vectors are normalized to unit length (magnitude = 1)
    - Ensures consistent cosine similarity calculations
    - Improves search precision by focusing on direction, not magnitude
    - Reduces the impact of vector dimension variations
+   - Implementation uses Euclidean norm with zero-division protection
 
-2. **Implementation Details**
-   - Euclidean norm calculation for vector magnitude
-   - Division of each component by the magnitude
-   - Validation to prevent division by zero
-   - Logging of normalization effects for debugging
-
-#### Hybrid Search Strategy
-
-MCP Advisor combines vector similarity and text matching for more accurate results:
-
-```mermaid
-graph TD
-    Query["User Query"] --> |"Text"| TextSearch["Metadata Text Search"]
-    Query --> |"Embedding"| VectorSearch["Vector Similarity Search"]
-    
-    TextSearch --> |"Text Results"| Merge["Merge Results"]
-    VectorSearch --> |"Vector Results"| Merge
-    
-    Merge --> |"Combined Ranking"| Filter["Apply Filters"]
-    Filter --> |"Category/Tag Filtering"| Sort["Sort by Final Score"]
-    Sort --> Results["Final Results"]
-```
-
-1. **Parallel Search Execution**
+2. **Parallel Search Execution**
    - Vector search and text search run concurrently
    - Leverages Promise.all for optimal performance
    - Fallback mechanisms if either search fails
 
-2. **Weighted Result Merging**
-   - Vector similarity: 70% weight
-   - Text matching: 30% weight
-   - Configurable weighting through environment variables
-   - Deduplication based on unique identifiers
+3. **Weighted Result Merging**
+   - Configurable weighting between vector and text results
+   - Default: Vector similarity (70%), Text matching (30%)
+   - Dynamic adjustment based on query characteristics
+   - Intelligent provider priority system for result ranking
 
-3. **Advanced Filtering**
-   - Category and tag-based filtering
-   - Minimum similarity threshold (default: 0.3)
-   - Result count limiting with intelligent selection
-   - Sorting by combined relevance score
+4. **Advanced Filtering Pipeline**
+   - Smart deduplication preserving highest similarity results
+   - Provider-aware prioritization for result ranking
+   - Adaptive similarity threshold with minimum result guarantee
+   - Intelligent result limiting with quality preservation
 
 ### Development Setup
 
