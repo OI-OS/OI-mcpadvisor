@@ -31,13 +31,35 @@ const colors = {
 // Add colors to winston
 winston.addColors(colors);
 
-// Define log format
-const format = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
-  winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`,
-  ),
+// Create a custom format for console output (with colors)
+const consoleFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
+  winston.format.colorize({ all: false }),
+  winston.format.printf((info) => {
+    // Add context information if available
+    const context = info.context ? ` [${info.context}]` : '';
+    return `${info.timestamp} ${info.level}${context}: ${info.message}`;
+  })
+);
+
+// Create a custom format for file output (without colors)
+const fileFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
+  winston.format.uncolorize(),
+  winston.format.printf((info) => {
+    // Add context information if available
+    const context = info.context ? ` [${info.context}]` : '';
+    // Add structured data if available
+    let structuredData = '';
+    if (info.data) {
+      try {
+        structuredData = ` | ${typeof info.data === 'string' ? info.data : JSON.stringify(info.data)}`;
+      } catch (e) {
+        structuredData = ' | [Unserializable data]';
+      }
+    }
+    return `${info.timestamp} ${info.level}${context}: ${info.message}${structuredData}`;
+  })
 );
 
 // Define transports based on mode
@@ -61,10 +83,12 @@ if (isMainApplication || process.env.ENABLE_FILE_LOGGING === 'true') {
         new winston.transports.File({
           filename: path.join(logsDir, 'error.log'),
           level: 'error',
+          format: fileFormat
         }),
         // File transport for all logs
         new winston.transports.File({ 
-          filename: path.join(logsDir, 'all.log') 
+          filename: path.join(logsDir, 'all.log'),
+          format: fileFormat 
         })
       );
     }
@@ -73,10 +97,12 @@ if (isMainApplication || process.env.ENABLE_FILE_LOGGING === 'true') {
   }
 }
 
-// Always add a silent console transport to prevent "no transport" warnings
+// Add a console transport (silent by default unless explicitly enabled)
+const isConsoleEnabled = process.env.ENABLE_CONSOLE_LOGGING === 'true';
 transports.push(
   new winston.transports.Console({
-    silent: true, // This prevents any output
+    format: consoleFormat,
+    silent: !isConsoleEnabled && !isMainApplication,
     handleExceptions: false
   })
 );
@@ -85,13 +111,47 @@ transports.push(
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   levels,
-  format,
+  defaultMeta: { service: 'mcpadvisor' },
   transports,
   silent: !isMainApplication && process.env.ENABLE_FILE_LOGGING !== 'true', // Silence all logging when used as a dependency
   exitOnError: false // Don't crash on logging errors
 });
 
+// Add helper methods for structured logging
+interface LogMethod {
+  (message: string): void;
+  (message: string, data: any): void;
+  (message: string, context: string, data?: any): void;
+}
+
+// Extend the base logger with enhanced methods
+const enhancedLogger = {
+  ...logger,
+  error: createLogMethod('error'),
+  warn: createLogMethod('warn'),
+  info: createLogMethod('info'),
+  http: createLogMethod('http'),
+  debug: createLogMethod('debug'),
+};
+
+// Helper function to create enhanced log methods
+function createLogMethod(level: string): LogMethod {
+  return function(message: string, contextOrData?: any, data?: any): void {
+    // Check if second argument is context or data
+    if (typeof contextOrData === 'string') {
+      // If third argument exists, it's data
+      logger.log(level, message, { context: contextOrData, data });
+    } else if (contextOrData !== undefined) {
+      // If second argument exists but isn't a string, it's data
+      logger.log(level, message, { data: contextOrData });
+    } else {
+      // Just the message
+      logger.log(level, message);
+    }
+  };
+}
+
 // Suppress logger errors by adding a no-op error handler
 logger.on('error', () => {});
 
-export default logger;
+export default enhancedLogger;
