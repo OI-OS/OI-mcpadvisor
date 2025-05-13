@@ -4,13 +4,23 @@
  */
 
 import { MCPServerResponse, SearchOptions, SearchProvider } from '../types/index.js';
-import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { CompassSearchProvider } from './search/CompassSearchProvider.js';
+import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { MeilisearchSearchProvider } from './search/MeilisearchSearchProvider.js';
 import { OfflineSearchProvider } from './search/OfflineSearchProvider.js';
 import logger from '../utils/logger.js';
 import { filterFromEndUntilLimit } from '../utils/ListUtils.js';
 import config from 'config';
+
+/**
+ * 提供者优先级配置
+ */
+const PROVIDER_PRIORITIES: Record<string, number> = {
+  'OfflineSearchProvider': 10,  // 离线提供者优先级最高
+  'GetMcpSearchProvider': 5,    
+  'CompassSearchProvider': 8,  
+  'MeilisearchSearchProvider': 9  
+};
 
 /**
  * 默认搜索选项
@@ -224,37 +234,54 @@ export class SearchService {
         });
       });
       
-      // Merge results from all providers
-      const providerResults = namedProviderResults.map(npr => npr.results);
-      let mergedResults = providerResults.flat();
+      // 优化：使用 Map 直接构建去重结果，同时考虑提供者优先级
+      const resultsMap = new Map<string, MCPServerResponse & { providerPriority?: number }>(); 
+      const duplicates: string[] = [];
+      
+      // 处理每个提供者的结果
+      for (const { providerName, results } of namedProviderResults) {
+        // 获取提供者优先级
+        const priority = PROVIDER_PRIORITIES[providerName] || 0;
+        
+        for (const result of results) {
+          // 为结果添加提供者优先级信息
+          const resultWithPriority = { ...result, providerPriority: priority };
+          
+          // 如果 github_url 为空，使用标题作为键
+          const key = result.github_url || `title:${result.title}`;
+          
+          if (!resultsMap.has(key)) {
+            // 新结果，直接添加
+            resultsMap.set(key, resultWithPriority);
+          } else {
+            // 已存在结果，检查是否需要替换
+            const existingResult = resultsMap.get(key)!;
+            
+            // 在相似度相同的情况下，优先级高的提供者的结果排在前面
+            if ((existingResult.similarity < result.similarity) ||
+                (existingResult.similarity === result.similarity && 
+                 (existingResult.providerPriority || 0) < priority)) {
+              resultsMap.set(key, resultWithPriority);
+            }
+            
+            // 记录重复项
+            duplicates.push(key);
+          }
+        }
+      }
+      
+      // 转换为数组
+      let mergedResults = Array.from(resultsMap.values());
       
       logger.info(`Merged ${mergedResults.length} total results from all providers`, 'SearchService', { 
         totalResults: mergedResults.length 
       });
 
-      // Log pre-deduplication count
-      logger.info(`Starting deduplication process with ${mergedResults.length} results`, 'Deduplication', {
-        initialCount: mergedResults.length
-      });
-      
-      // Remove duplicates based on github_url
-      const uniqueUrls = new Set<string>();
-      const duplicates: string[] = [];
-      
-      mergedResults = mergedResults.filter(server => {
-        if (uniqueUrls.has(server.github_url)) {
-          duplicates.push(server.github_url);
-          return false;
-        }
-        uniqueUrls.add(server.github_url);
-        return true;
-      });
-      
       // Log deduplication results
       logger.info(`Deduplication complete: removed ${duplicates.length} duplicates`, 'Deduplication', {
         removedCount: duplicates.length,
         remainingCount: mergedResults.length,
-        duplicateUrls: duplicates.length > 0 ? duplicates : undefined
+        duplicateUrls: duplicates.length > 0 ? [...new Set(duplicates)] : undefined
       });
       
       // Log pre-sorting information
@@ -278,18 +305,27 @@ export class SearchService {
       let filteredCount = 0;
       let originalCount = mergedResults.length;
       
-      // Apply minimum similarity filter
-      if (mergedOptions.minSimilarity !== undefined && mergedResults.length > 5) {
+      // 优化：简化相似度过滤逻辑
+      if (mergedOptions.minSimilarity !== undefined && mergedResults.length > 0) {
         logger.info(`Applying minimum similarity filter: ${mergedOptions.minSimilarity}`, 'Filtering', {
           minSimilarity: mergedOptions.minSimilarity,
           beforeCount: mergedResults.length
         });
         
-        mergedResults = filterFromEndUntilLimit(
-          mergedResults,  
-          server => server.similarity >= mergedOptions.minSimilarity!,
-          5
+        // 保存原始排序的结果，以便在过滤后结果太少时使用
+        const originalResults = [...mergedResults];
+        
+        // 首先按相似度过滤
+        mergedResults = mergedResults.filter(
+          server => server.similarity >= mergedOptions.minSimilarity!
         );
+        
+        // 如果过滤后结果太少，保留至少5个最相似的结果
+        if (mergedResults.length < 5 && originalResults.length > 5) {
+          // 使用原始排序的前5个结果
+          mergedResults = mergedResults.length > 0 ? mergedResults : 
+                          originalResults.slice(0, Math.min(5, originalResults.length));
+        }
         
         filteredCount += (originalCount - mergedResults.length);
         originalCount = mergedResults.length;
