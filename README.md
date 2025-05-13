@@ -108,43 +108,46 @@ graph TD
 #### Data Flow Diagram
 
 ```mermaid
-flowchart LR
-    User([User]) --> |"Natural Language Query"| Agent([AI Agent])
-    Agent --> |"Search Request"| MCP["MCP Advisor"]
+sequenceDiagram
+    participant User
+    participant Agent as AI Agent
+    participant MCP as MCP Advisor
+    participant QP as Query Processor
+    participant Search as Search Providers
+    participant Results as Result Processor
     
-    subgraph "MCP Advisor System"
-        MCP --> QueryProcessor["Query Processor"]
-        
-        QueryProcessor --> |"Query Text"| KeywordExtraction["Keyword Extraction"]
-        QueryProcessor --> |"Query Text"| Embedding["Embedding Generation"]
-        
-        subgraph "Parallel Search Execution"
-            KeywordExtraction --> |"Keywords"| TextSearch["Text-Based Search"]
-            Embedding --> |"Vector"| Normalization["Vector Normalization"]
-            Normalization --> |"Unit Vector"| VectorSearch["Vector Similarity Search"]
-            
-            TextSearch --> |"Provider: Compass"| CompassResults["Compass Results"]
-            TextSearch --> |"Provider: GetMCP"| GetMcpResults["GetMCP Results"]
-            TextSearch --> |"Provider: Offline"| OfflineTextResults["Offline Text Results"]
-            
-            VectorSearch --> |"Provider: Meilisearch"| MeilisearchResults["Meilisearch Results"]
-            VectorSearch --> |"Provider: Offline"| OfflineVectorResults["Offline Vector Results"]
-        end
-        
-        subgraph "Result Processing Pipeline"
-            CompassResults & GetMcpResults & OfflineTextResults & MeilisearchResults & OfflineVectorResults --> ResultMerging["Smart Result Merging"]
-            
-            ResultMerging --> |"Combined Results"| Deduplication["URL-based Deduplication"]
-            Deduplication --> |"Unique Results"| Prioritization["Provider Priority Ranking"]
-            Prioritization --> |"Prioritized Results"| SimilarityFiltering["Adaptive Similarity Filtering"]
-            SimilarityFiltering --> |"Quality Results"| Limiting["Result Count Limiting"]
-        end
-        
-        Limiting --> |"Final Results"| ResponseFormatter["Response Formatter"]
+    User->>Agent: Natural Language Query
+    Agent->>MCP: Search Request
+    MCP->>QP: Process Query
+    
+    par Parallel Processing
+        QP->>QP: Extract Keywords
+        QP->>QP: Generate Embeddings
     end
     
-    ResponseFormatter --> |"MCP Server Recommendations"| Agent
-    Agent --> |"Recommendations with Context"| User
+    par Parallel Search Execution
+        QP->>Search: Text-Based Search (Keywords)
+        Note over Search: Compass Provider
+        Note over Search: GetMCP Provider
+        Note over Search: Offline Provider
+        
+        QP->>QP: Normalize Vector
+        QP->>Search: Vector Similarity Search
+        Note over Search: Meilisearch Provider
+        Note over Search: Offline Vector Search
+    end
+    
+    Search->>Results: All Search Results
+    
+    Results->>Results: Smart Result Merging
+    Results->>Results: URL-based Deduplication
+    Results->>Results: Provider Priority Ranking
+    Results->>Results: Adaptive Similarity Filtering
+    Results->>Results: Result Count Limiting
+    
+    Results->>MCP: Processed Results
+    MCP->>Agent: MCP Server Recommendations
+    Agent->>User: Recommendations with Context
 ```
 
 #### Search Strategy
@@ -183,14 +186,18 @@ graph TD
     Filtering --> |"minSimilarity: 0.5"| FinalResults["Final Results"]
     Filtering --> |"Fallback"| TopResults["Top 5 Results"]
     
-    Providers->>ExternalAPIs: API Requests
-    ExternalAPIs->>Providers: API Responses
+    ExternalAPIs["External APIs"] 
+    SearchSvc["Search Service"]
+    Logger["Logger"]
+    Client["Client"]
     
-    Providers->>SearchSvc: All Provider Results
-    SearchSvc->>SearchSvc: Merge & Deduplicate Results
-    SearchSvc->>SearchSvc: Sort & Filter Results
-    SearchSvc->>Logger: Log Search Results
-    SearchSvc->>Client: Final Results
+    Providers-->ExternalAPIs
+    ExternalAPIs-->Providers
+    
+    Providers-->SearchSvc
+    SearchSvc-->SearchSvc
+    SearchSvc-->Logger
+    SearchSvc-->Client
 ```
 
 #### Core Components
@@ -712,33 +719,33 @@ MCP Advisor is evolving from a simple recommendation system to an intelligent ag
 ```mermaid
 gantt
     title MCP Advisor Evolution Roadmap
-    dateFormat  YYYY-Q[Q]
-    axisFormat  %Y-Q%Q
+    dateFormat  YYYY-MM-DD
+    axisFormat  %Y-%m
     
     section Foundation
-    Enhanced Search & Recommendation ✓       :done, 2025-Q1, 90d
-    Hybrid Search Engine ✓                   :done, 2025-Q1, 90d
-    Provider Priority System ✓               :done, 2025-Q2, 60d
+    Enhanced Search & Recommendation ✓       :done, 2025-01-01, 90d
+    Hybrid Search Engine ✓                   :done, 2025-01-01, 90d
+    Provider Priority System ✓               :done, 2025-04-01, 60d
     
     section Intelligence Layer
-    Feedback Collection System               :active, 2025-Q2, 90d
-    Agent Interaction Analytics             :2025-Q3, 120d
-    Usage Pattern Recognition               :2025-Q3, 90d
+    Feedback Collection System               :active, 2025-04-01, 90d
+    Agent Interaction Analytics             :2025-07-01, 120d
+    Usage Pattern Recognition               :2025-07-01, 90d
     
     section Learning Systems
-    Reinforcement Learning Framework         :2025-Q4, 180d
-    Contextual Bandit Implementation         :2025-Q4, 120d
-    Multi-Agent Reward Modeling             :2026-Q1, 90d
+    Reinforcement Learning Framework         :2025-10-01, 180d
+    Contextual Bandit Implementation         :2025-10-01, 120d
+    Multi-Agent Reward Modeling             :2026-01-01, 90d
     
     section Advanced Features
-    Task Decomposition Engine               :2026-Q1, 120d
-    Dynamic Planning System                 :2026-Q2, 150d
-    Adaptive MCP Orchestration              :2026-Q2, 120d
+    Task Decomposition Engine               :2026-01-01, 120d
+    Dynamic Planning System                 :2026-04-01, 150d
+    Adaptive MCP Orchestration              :2026-04-01, 120d
     
     section Ecosystem
-    Developer SDK & API                     :2026-Q3, 90d
-    Custom MCP Training Tools               :2026-Q3, 120d
-    Enterprise Integration Framework        :2026-Q4, 150d
+    Developer SDK & API                     :2026-07-01, 90d
+    Custom MCP Training Tools               :2026-07-01, 120d
+    Enterprise Integration Framework        :2026-10-01, 150d
 ```
 
 ### Phase 1: Intelligence Layer (2025 Q2-Q3)
