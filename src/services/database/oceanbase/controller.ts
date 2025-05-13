@@ -6,7 +6,7 @@ import logger from '../../../utils/logger.js';
 /**
  * 获取数据库连接池
  */
-const getClient = async (): Promise<Pool> => {
+export const getClient = async (): Promise<Pool> => {
   if (!OCEANBASE_URL) {
     logger.warn('OCEANBASE_URL is not set, OceanBase client will not be available');
     return Promise.reject('OCEANBASE_URL is not set');
@@ -451,6 +451,15 @@ export class OceanBaseClient implements IVectorDBClient {
    */
   async initDatabase(): Promise<void> {
     await initDatabaseSchema();
+    
+    // 初始化更新信息表
+    try {
+      const { DataUpdateManager } = await import('./dataUpdateManager.js');
+      await DataUpdateManager.initUpdateInfoTable();
+    } catch (error) {
+      logger.error(`Error initializing update info table: ${error instanceof Error ? error.message : String(error)}`);
+      // 不抛出错误，允许应用继续运行
+    }
   }
 }
 
