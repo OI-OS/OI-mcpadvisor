@@ -55,8 +55,16 @@ export class GetMcpSearchProvider implements SearchProvider {
       logger.debug(`Found ${results.length} results from GetMCP API`);
       return results;
     } catch (error) {
+      // 使用增强的日志记录方式，传递完整错误对象
       const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Error searching GetMCP API: ${message}`);
+      logger.error(`Error searching GetMCP API: ${message}`, {
+        error,
+        data: {
+          query,
+          provider: 'GetMcpSearchProvider',
+          errorType: error instanceof Error ? error.constructor.name : typeof error
+        }
+      });
       throw error;
     }
   }
@@ -86,8 +94,16 @@ export class GetMcpSearchProvider implements SearchProvider {
         GetMcpResourceFetcher.createSearchableText
       );
     } catch (error) {
+      // 使用增强的日志记录方式，传递完整错误对象
       const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Error loading GetMCP data: ${message}`);
+      logger.error(`Error loading GetMCP data: ${message}`, {
+        error,
+        data: {
+          provider: 'GetMcpSearchProvider',
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          apiUrl: this.resourceFetcher instanceof GetMcpResourceFetcher ? this.resourceFetcher['apiUrl'] : 'unknown'
+        }
+      });
       throw error;
     }
   }

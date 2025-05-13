@@ -79,8 +79,14 @@ export class GetMcpResourceFetcher implements IGetMcpResourceFetcher {
       
       if (!response.ok) {
         const errorMsg = `GetMCP API request failed with status ${response.status}`;
-        logger.error(errorMsg);
-        throw new Error(errorMsg);
+        const responseError = new Error(errorMsg);
+        // 添加响应状态和文本信息
+        (responseError as any).status = response.status;
+        (responseError as any).statusText = response.statusText;
+        
+        // 使用增强的日志记录方式，传递完整错误对象
+        logger.error(errorMsg, { error: responseError, data: { url: this.apiUrl } });
+        throw responseError;
       }
       
       const data: GetMcpApiResponse = await response.json();
@@ -88,7 +94,11 @@ export class GetMcpResourceFetcher implements IGetMcpResourceFetcher {
       
       return data;
     } catch (error) {
-      logger.error(`Error fetching MCP data: ${error instanceof Error ? error.message : String(error)}`);
+      // 使用增强的日志记录方式，传递完整错误对象
+      logger.error(`Error fetching MCP data: ${error instanceof Error ? error.message : String(error)}`, {
+        error,
+        data: { url: this.apiUrl }
+      });
       throw error;
     }
   }

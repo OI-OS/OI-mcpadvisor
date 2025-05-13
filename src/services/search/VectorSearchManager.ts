@@ -109,14 +109,24 @@ export const processAndIndexData = async (
       }
     }
   } catch (error) {
+    // 使用增强的日志记录方式，传递完整错误对象
     const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Error indexing data: ${message}`);
+    logger.error(`Error indexing data: ${message}`, {
+      error,
+      data: {
+        dataSize: Object.keys(data).length,
+        engineType: vectorEngine.constructor.name,
+        forceUpdate,
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      }
+    });
     throw error;
   }
 };
 
 /**
  * 执行向量搜索
+ * 同时使用向量相似度和文本查询来提高搜索质量
  */
 export const performVectorSearch = async (
   query: string,
@@ -126,14 +136,29 @@ export const performVectorSearch = async (
     // 获取查询嵌入
     const queryEmbedding = getTextEmbedding(query);
     
-    // 使用向量引擎搜索
-    const results = await vectorEngine.search(queryEmbedding, 5);
+    // 设置搜索选项，包括最小相似度和文本查询
+    const searchOptions = {
+      minSimilarity: 0.3, // 降低相似度阈值，确保能返回结果
+      textQuery: query   // 使用原始查询作为文本查询
+    };
     
-    logger.debug(`Found ${results.length} results from vector search`);
+    // 使用向量引擎搜索，传递向量、结果数量和搜索选项
+    const results = await vectorEngine.search(queryEmbedding, 5, searchOptions);
+    
+    logger.debug(`Found ${results.length} results from hybrid vector search`);
     return results;
   } catch (error) {
+    // 使用增强的日志记录方式，传递完整错误对象
     const message = error instanceof Error ? error.message : String(error);
-    logger.error(`Error in vector search: ${message}`);
+    logger.error(`Error in vector search: ${message}`, {
+      error,
+      data: {
+        query,
+        minSimilarity: 0.3,
+        useTextQuery: true,
+        errorType: error instanceof Error ? error.constructor.name : typeof error
+      }
+    });
     throw error;
   }
 };

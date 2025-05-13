@@ -2,6 +2,8 @@ import mysql, { Pool, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
 import { IVectorDBClient, SearchResult } from '../../interfaces/vectorDBClient.js';
 import { OCEANBASE_URL, DB_MAX_CONNECTIONS, DB_TABLE_NAME } from '../../../config/constants.js';
 import logger from '../../../utils/logger.js';
+import { DataUpdateManager } from './dataUpdateManager.js';
+import { normalizeVector } from '../../../utils/vectorUtils.js';
 
 /**
  * 获取数据库连接池
@@ -17,14 +19,6 @@ export const getClient = async (): Promise<Pool> => {
   }
 
   try {
-    // 检查证书文件是否存在
-    /*
-    if (!fs.existsSync(CERT_PATH)) {
-      logger.error(`SSL certificate not found at ${CERT_PATH}`);
-      throw new Error(`SSL certificate not found at ${CERT_PATH}`);
-    }
-    */
-
     // 解析连接URL以获取配置参数
     const connectionConfig = new URL(OCEANBASE_URL);
     const host = connectionConfig.hostname;
@@ -110,7 +104,7 @@ const buildInsertValues = (values: ValuesProps[]): string => {
 /**
  * 执行自定义 SQL 查询
  */
-const executeQuery = async <T extends RowDataPacket[]>(sql: string): Promise<T> => {
+export const executeQuery = async <T extends RowDataPacket[]>(sql: string): Promise<T> => {
   const client = await getClient();
   const start = Date.now();
   
@@ -132,13 +126,19 @@ const executeQuery = async <T extends RowDataPacket[]>(sql: string): Promise<T> 
 /**
  * 插入数据
  */
-const insertData = async (values: ValuesProps[]): Promise<{ insertId: string }> => {
+const insertData = async (values: ValuesProps): Promise<{ insertId: string }> => {
   if (values.length === 0) {
     return { insertId: '' };
   }
 
-  const fields = values[0].map((item) => item.key).join(',');
-  const sql = `INSERT INTO ${DB_TABLE_NAME} (${fields}) VALUES ${buildInsertValues(values)}`;
+  const fields = values.map((item) => item.key).join(',');
+  const valuesStr = values.map(item => 
+    typeof item.value === 'number' 
+      ? item.value 
+      : `'${String(item.value).replace(/\'/g, '"')}'`
+  ).join(',');
+  
+  const sql = `INSERT INTO ${DB_TABLE_NAME} (${fields}) VALUES (${valuesStr})`;
 
   try {
     const client = await getClient();
@@ -169,53 +169,201 @@ const deleteData = async (where: WhereProps): Promise<void> => {
 };
 
 /**
- * 向量相似度搜索
+ * 搜索结果类型
  */
-const searchVectorsByInnerProduct = async (
-  vector: number[], 
-  limit: number = 10
-): Promise<Array<{
+type SearchResultItem = {
   id: string;
   server_id: string;
   server_name: string;
   github_url: string;
   description: string;
+  categories?: string;
+  tags?: string;
   score: number;
-}>> => {
+};
+
+/**
+ * 基于元数据搜索
+ * 使用关键词匹配搜索标题、描述、分类和标签
+ */
+const searchByMetadata = async (
+  query: string,
+  limit: number = 10,
+  categories?: string[]
+): Promise<SearchResultItem[]> => {
   try {
-    // 由于 OceanBase 返回的结果结构特殊，这里需要特殊处理
-    const client = await getClient();
-    const [results] = await client.query<RowDataPacket[][]>(
-      `BEGIN;
-        SET ob_hnsw_ef_search = ${global.systemEnv?.hnswEfSearch || 100};
-        SELECT id, server_id, server_name, github_url, description, inner_product(vector, [${vector}]) AS score
-          FROM ${DB_TABLE_NAME}
-          ORDER BY score DESC APPROXIMATE LIMIT ${limit};
-      COMMIT;`
+    if (!query.trim()) {
+      return [];
+    }
+    
+    // 将查询分解为关键词
+    const keywords = query.trim().split(/\s+/).filter(k => k.length > 1);
+    if (keywords.length === 0) {
+      return [];
+    }
+    
+    // 构建基本查询
+    let sql = `
+      SELECT id, server_id, server_name, github_url, description, categories, tags, 0 AS score
+      FROM ${DB_TABLE_NAME}
+      WHERE 
+    `;
+    
+    // 构建关键词匹配条件
+    const keywordConditions = keywords.map(keyword => 
+      `(server_name LIKE '%${keyword}%' OR description LIKE '%${keyword}%')`
+    ).join(' OR ');
+    
+    sql += `(${keywordConditions})`;
+    
+    // 添加分类过滤条件（如果有）
+    if (categories && categories.length > 0) {
+      const categoryConditions = categories.map(cat => `categories LIKE '%${cat}%'`).join(' OR ');
+      sql += ` AND (${categoryConditions})`;
+    }
+    
+    // 添加限制
+    sql += ` LIMIT ${limit}`;
+    
+    // 执行查询
+    const startTime = Date.now();
+    const results = await executeQuery<(SearchResultItem & RowDataPacket)[]>(sql);
+    const queryTime = Date.now() - startTime;
+    
+    // 计算相关度分数
+    const scoredResults = results.map(item => {
+      // 简单的相关度计算：基于关键词匹配数量
+      let score = 0;
+      keywords.forEach(keyword => {
+        if (item.server_name.toLowerCase().includes(keyword.toLowerCase())) score += 0.5;
+        if (item.description.toLowerCase().includes(keyword.toLowerCase())) score += 0.3;
+        if (item.categories && item.categories.toLowerCase().includes(keyword.toLowerCase())) score += 0.2;
+        if (item.tags && item.tags.toLowerCase().includes(keyword.toLowerCase())) score += 0.2;
+      });
+      
+      // 归一化分数到 0-1 范围
+      score = Math.min(1, score / Math.max(1, keywords.length));
+      
+      return { ...item, score };
+    });
+    
+    // 按分数排序
+    scoredResults.sort((a, b) => b.score - a.score);
+    
+    logger.debug(`Metadata search: query="${query}", keywords=${keywords.length}, results=${results.length}, time=${queryTime}ms`);
+    
+    return scoredResults;
+  } catch (error) {
+    logger.error(`OceanBase metadata search error: ${error instanceof Error ? error.message : String(error)}`);
+    return [];
+  }
+};
+
+/**
+ * 向量相似度搜索
+ * 使用内积计算归一化向量之间的相似度
+ */
+const searchVectorsByInnerProduct = async (
+  vector: number[], 
+  limit: number = 10,
+  categories?: string[],
+  minSimilarity: number = 0.5
+): Promise<SearchResultItem[]> => {
+  try {
+    // 动态调整 ef_search 参数，基于查询复杂度
+    // 向量维度越高，ef_search 参数应越大
+    const vectorDimension = vector.length;
+    const efSearch = Math.max(
+      global.systemEnv?.hnswEfSearch || 100,
+      Math.min(200, Math.ceil(vectorDimension / 10))
     );
     
+    // 构建基本查询
+    let query = `
+      BEGIN;
+        SET ob_hnsw_ef_search = ${efSearch};
+        SELECT id, server_id, server_name, github_url, description, categories, tags, inner_product(vector, [${vector}]) AS score
+          FROM ${DB_TABLE_NAME}
+    `;
+    
+    // 添加分类过滤条件（如果有）
+    if (categories && categories.length > 0) {
+      const categoryConditions = categories.map(cat => `categories LIKE '%${cat}%'`).join(' OR ');
+      query += `WHERE (${categoryConditions}) `;
+    }
+    
+    // 添加排序和限制
+    query += `
+          ORDER BY score DESC APPROXIMATE 
+          LIMIT ${limit * 2}; -- 获取更多结果，然后基于相似度过滤
+      COMMIT;
+    `;
+    
+    // 执行查询
+    const startTime = Date.now();
+    const client = await getClient();
+    const [results] = await client.query<RowDataPacket[][]>(query);
+    const queryTime = Date.now() - startTime;
+    
     // 结果在第三个数组中（BEGIN 和 SET 语句后）
-    const rows = results[2] as unknown as Array<{
-      id: string;
-      server_id: string;
-      server_name: string;
-      github_url: string;
-      description: string;
-      score: number;
-    } & RowDataPacket>;
+    const rows = results[2] as unknown as Array<SearchResultItem & RowDataPacket>;
 
-    return rows.map((item) => ({
+    // 过滤相似度低于阈值的结果
+    const filteredRows = rows.filter(item => item.score >= minSimilarity);
+    
+    // 只返回请求的数量
+    const limitedRows = filteredRows.slice(0, limit);
+    
+    // 记录查询性能信息
+    logger.debug(`Vector search: ef_search=${efSearch}, query_time=${queryTime}ms, results=${rows.length}, filtered=${filteredRows.length}, returned=${limitedRows.length}`);
+
+    return limitedRows.map((item) => ({
       id: String(item.id),
       server_id: item.server_id,
       server_name: item.server_name,
       github_url: item.github_url,
       description: item.description,
+      categories: item.categories,
+      tags: item.tags,
       score: item.score
     }));
   } catch (error) {
     logger.error(`OceanBase vector search error: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
+};
+
+/**
+ * 合并搜索结果
+ * 将向量搜索和元数据搜索的结果合并，并根据相关度排序
+ */
+const mergeSearchResults = (vectorResults: SearchResultItem[], metadataResults: SearchResultItem[], limit: number = 10): SearchResultItem[] => {
+  // 创建结果映射，以server_id为键
+  const resultMap = new Map<string, SearchResultItem>();
+  
+  // 先添加向量搜索结果
+  vectorResults.forEach(item => {
+    resultMap.set(item.server_id, { ...item, score: item.score * 0.7 }); // 向量搜索结果权重70%
+  });
+  
+  // 合并元数据搜索结果
+  metadataResults.forEach(item => {
+    if (resultMap.has(item.server_id)) {
+      // 如果已存在，合并分数（向量搜索权重70%，元数据搜索权重30%）
+      const existingItem = resultMap.get(item.server_id)!;
+      existingItem.score = existingItem.score + (item.score * 0.3);
+    } else {
+      // 如果不存在，添加新结果（元数据搜索结果权重30%）
+      resultMap.set(item.server_id, { ...item, score: item.score * 0.3 });
+    }
+  });
+  
+  // 转换为数组并按分数排序
+  const mergedResults = Array.from(resultMap.values());
+  mergedResults.sort((a, b) => b.score - a.score);
+  
+  // 限制结果数量
+  return mergedResults.slice(0, limit);
 };
 
 /**
@@ -232,114 +380,74 @@ const initDatabaseSchema = async (): Promise<void> => {
         server_name VARCHAR(100) NOT NULL,
         description TEXT,
         github_url VARCHAR(255) NOT NULL,
+        categories VARCHAR(255),
+        tags VARCHAR(255),
         createtime TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // 检查并添加categories列
-    try {
-      // 检查列是否存在
-      const checkCategoriesColumn = await executeQuery(`
-        SELECT COUNT(*) as count FROM information_schema.columns 
-        WHERE table_name = '${DB_TABLE_NAME}' 
-        AND column_name = 'categories';
-      `);
-      
-      const checkTagsColumn = await executeQuery(`
-        SELECT COUNT(*) as count FROM information_schema.columns 
-        WHERE table_name = '${DB_TABLE_NAME}' 
-        AND column_name = 'tags';
-      `);
-      
-      // 如果列不存在，则添加
-      if (checkCategoriesColumn[0].count === 0) {
-        await executeQuery(`ALTER TABLE ${DB_TABLE_NAME} ADD COLUMN categories VARCHAR(255);`);
-        logger.info('Added categories column');
-      }
-      
-      if (checkTagsColumn[0].count === 0) {
-        await executeQuery(`ALTER TABLE ${DB_TABLE_NAME} ADD COLUMN tags VARCHAR(255);`);
-        logger.info('Added tags column');
-      }
-    } catch (error) {
-      logger.warn(`Could not check or add columns: ${error instanceof Error ? error.message : String(error)}`);
-      // 列操作失败不应该阻止整个初始化过程
-    }
-
     // 创建向量索引
     try {
-      // 检查向量索引是否存在
-      const checkVectorIndex = await executeQuery(`
+      // 先检查索引是否存在
+      const checkIndexSql = `
         SELECT COUNT(*) as count FROM information_schema.statistics 
-        WHERE table_name = '${DB_TABLE_NAME}' 
-        AND index_name = 'vector_index';
-      `);
+        WHERE table_schema = DATABASE() AND table_name = '${DB_TABLE_NAME}' AND index_name = 'vector_hnsw_idx';
+      `;
       
-      // 只有在索引不存在时才创建
-      if (checkVectorIndex[0].count === 0) {
+      const [checkResult] = await executeQuery<RowDataPacket[]>(checkIndexSql);
+      
+      if (checkResult[0].count === 0) {
         try {
-          await executeQuery(
-            `CREATE VECTOR INDEX vector_index ON ${DB_TABLE_NAME}(vector) WITH (distance=inner_product, type=hnsw, m=32, ef_construction=128);`
-          );
-          logger.info('Created vector index successfully');
-        } catch (indexError) {
-          logger.warn(`Could not create vector index: ${indexError instanceof Error ? indexError.message : String(indexError)}`);
-          // 向量索引创建失败不应该阻止整个初始化过程
+          // 尝试使用标准 HNSW 语法
+          await executeQuery(`
+            CREATE INDEX vector_hnsw_idx ON ${DB_TABLE_NAME} (vector) USING HNSW;
+          `);
+          logger.info(`HNSW index created on ${DB_TABLE_NAME} using standard syntax`);
+        } catch (indexError1) {
+          logger.warn(`Standard HNSW syntax failed: ${indexError1 instanceof Error ? indexError1.message : String(indexError1)}`);
+          
+          try {
+            // 尝试使用替代语法
+            await executeQuery(`
+              ALTER TABLE ${DB_TABLE_NAME} ADD INDEX vector_hnsw_idx (vector) ALGORITHM=HNSW;
+            `);
+            logger.info(`HNSW index created on ${DB_TABLE_NAME} using ALTER TABLE syntax`);
+          } catch (indexError2) {
+            logger.warn(`ALTER TABLE HNSW syntax failed: ${indexError2 instanceof Error ? indexError2.message : String(indexError2)}`);
+            logger.info('Proceeding without vector index - vector search performance will be degraded');
+          }
         }
       } else {
-        logger.info('Vector index already exists, skipping creation');
+        logger.info(`HNSW index already exists on ${DB_TABLE_NAME}`);
       }
     } catch (error) {
-      logger.warn(`Could not check vector index existence: ${error instanceof Error ? error.message : String(error)}`);
-      // 检查索引失败不应该阻止整个初始化过程
+      logger.warn(`Could not create or verify vector index: ${error instanceof Error ? error.message : String(error)}`);
+      // 索引创建失败不应该阻止整个初始化过程
     }
-
-    // 创建普通索引
+    
+    // 创建服务器ID索引
     try {
-      // 检查server_id索引是否存在
-      const checkServerIdIndex = await executeQuery(`
-        SELECT COUNT(*) as count FROM information_schema.statistics 
-        WHERE table_name = '${DB_TABLE_NAME}' 
-        AND index_name = 'server_id_index';
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS server_id_idx ON ${DB_TABLE_NAME} (server_id);
       `);
-      
-      // 检查createtime索引是否存在
-      const checkCreateTimeIndex = await executeQuery(`
-        SELECT COUNT(*) as count FROM information_schema.statistics 
-        WHERE table_name = '${DB_TABLE_NAME}' 
-        AND index_name = 'create_time_index';
-      `);
-      
-      // 只有在索引不存在时才创建
-      if (checkServerIdIndex[0].count === 0) {
-        try {
-          await executeQuery(`CREATE INDEX server_id_index ON ${DB_TABLE_NAME}(server_id);`);
-          logger.info('Created server_id index successfully');
-        } catch (indexError) {
-          logger.warn(`Could not create server_id index: ${indexError instanceof Error ? indexError.message : String(indexError)}`);
-        }
-      } else {
-        logger.info('server_id index already exists, skipping creation');
-      }
-      
-      if (checkCreateTimeIndex[0].count === 0) {
-        try {
-          await executeQuery(`CREATE INDEX create_time_index ON ${DB_TABLE_NAME}(createtime);`);
-          logger.info('Created createtime index successfully');
-        } catch (indexError) {
-          logger.warn(`Could not create createtime index: ${indexError instanceof Error ? indexError.message : String(indexError)}`);
-        }
-      } else {
-        logger.info('createtime index already exists, skipping creation');
-      }
+      logger.info(`Server ID index created or already exists on ${DB_TABLE_NAME}`);
     } catch (error) {
-      logger.warn(`Could not check or create regular indexes: ${error instanceof Error ? error.message : String(error)}`);
-      // 普通索引创建失败不应该阻止整个初始化过程
+      logger.warn(`Could not create server_id index: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // 创建分类索引
+    try {
+      await executeQuery(`
+        CREATE INDEX IF NOT EXISTS categories_idx ON ${DB_TABLE_NAME} (categories);
+      `);
+      logger.info(`Categories index created or already exists on ${DB_TABLE_NAME}`);
+    } catch (error) {
+      logger.warn(`Could not create categories index: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    logger.info('OceanBase database schema initialized successfully');
+    logger.info('OceanBase database schema initialized');
   } catch (error) {
-    logger.error(`OceanBase schema initialization error: ${error instanceof Error ? error.message : String(error)}`);
+    logger.error(`Error initializing database schema: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 };
@@ -348,11 +456,14 @@ const initDatabaseSchema = async (): Promise<void> => {
  * OceanBase 客户端实现
  */
 export class OceanBaseClient implements IVectorDBClient {
+  private isInitialized: boolean = false;
+  
   /**
    * 连接到数据库
    */
   async connect(): Promise<void> {
     await getClient();
+    this.isInitialized = true;
   }
   
   /**
@@ -362,59 +473,88 @@ export class OceanBaseClient implements IVectorDBClient {
     if (global.obClient) {
       await global.obClient.end();
       global.obClient = undefined;
+      this.isInitialized = false;
       logger.info('OceanBase disconnected');
     }
   }
   
   /**
    * 添加向量到数据库
+   * @param id 服务器ID
+   * @param vector 向量数据
+   * @param metadata 元数据，包括服务器信息、分类和标签
    */
   async addVector(id: string, vector: number[], metadata: Record<string, any>): Promise<void> {
+    if (!this.isInitialized) {
+      await this.connect();
+    }
+    
     try {
+      // 对向量进行归一化处理
+      const normalizedVector = normalizeVector(vector);
+      logger.debug(`Vector normalized from magnitude ${this.calculateMagnitude(vector).toFixed(4)} to ${this.calculateMagnitude(normalizedVector).toFixed(4)}`);
+      
+      // 处理分类信息，确保存储为字符串
+      let categories = '';
+      if (metadata.categories) {
+        if (Array.isArray(metadata.categories)) {
+          categories = metadata.categories.join(',');
+        } else if (typeof metadata.categories === 'string') {
+          categories = metadata.categories;
+        }
+      }
+      
+      // 处理标签信息，确保存储为字符串
+      let tags = '';
+      if (metadata.tags) {
+        if (Array.isArray(metadata.tags)) {
+          tags = metadata.tags.join(',');
+        } else if (typeof metadata.tags === 'string') {
+          tags = metadata.tags;
+        }
+      }
+      
       // 基本字段，这些是必须的
-      const baseValues = [
-        { key: 'vector', value: `[${vector}]` },
+      const values = [
+        { key: 'vector', value: `[${normalizedVector}]` },
         { key: 'server_id', value: id },
         { key: 'server_name', value: metadata.title || '' },
         { key: 'description', value: metadata.description || '' },
         { key: 'github_url', value: metadata.github_url || '' }
       ];
       
-      // 可选字段，如果存在则添加
-      const optionalFields = [];
-      
-      // 检查metadata中是否有categories和tags
-      if (metadata.categories) {
-        optionalFields.push({ key: 'categories', value: metadata.categories });
+      // 添加分类和标签字段（如果有）
+      if (categories) {
+        values.push({ key: 'categories', value: categories });
       }
       
-      if (metadata.tags) {
-        optionalFields.push({ key: 'tags', value: metadata.tags });
+      if (tags) {
+        values.push({ key: 'tags', value: tags });
       }
-      
-      // 合并所有字段
-      const values = [baseValues.concat(optionalFields)];
       
       await insertData(values);
-      logger.debug(`Added vector for server: ${metadata.title}`);
+      logger.debug(`Added normalized vector for server: ${metadata.title} with categories: ${categories || 'none'} and tags: ${tags || 'none'}`);
     } catch (error) {
       // 如果插入失败，尝试只使用基本字段
       if (error instanceof Error && error.message.includes('Unknown column')) {
         logger.warn(`Falling back to basic fields only: ${error.message}`);
-        const values = [
-          [
-            { key: 'vector', value: `[${vector}]` },
-            { key: 'server_id', value: id },
-            { key: 'server_name', value: metadata.title || '' },
-            { key: 'description', value: metadata.description || '' },
-            { key: 'github_url', value: metadata.github_url || '' }
-          ]
+        const basicValues = [
+          { key: 'vector', value: `[${normalizeVector(vector)}]` },
+          { key: 'server_id', value: id },
+          { key: 'server_name', value: metadata.title || '' },
+          { key: 'description', value: metadata.description || '' },
+          { key: 'github_url', value: metadata.github_url || '' }
         ];
         
-        await insertData(values);
-        logger.debug(`Added vector with basic fields for server: ${metadata.title}`);
+        try {
+          await insertData(basicValues);
+          logger.debug(`Added basic normalized vector for server: ${metadata.title}`);
+        } catch (basicError) {
+          logger.error(`Failed to add vector: ${basicError instanceof Error ? basicError.message : String(basicError)}`);
+          throw basicError;
+        }
       } else {
-        // 其他错误则抛出
+        logger.error(`Failed to add vector: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
       }
     }
@@ -422,44 +562,119 @@ export class OceanBaseClient implements IVectorDBClient {
   
   /**
    * 搜索相似向量
+   * @param vector 查询向量
+   * @param limit 结果数量限制
+   * @param options 选项，包括分类过滤、相似度阈值和文本查询
+   * @returns 搜索结果
    */
-  async searchVectors(vector: number[], limit: number): Promise<SearchResult[]> {
-    const results = await searchVectorsByInnerProduct(vector, limit);
+  async searchVectors(
+    vector: number[], 
+    limit: number = 10,
+    options: { 
+      categories?: string[], 
+      minSimilarity?: number,
+      textQuery?: string  // 文本查询参数
+    } = {}
+  ): Promise<SearchResult[]> {
+    if (!this.isInitialized) {
+      await this.connect();
+    }
     
-    return results.map(item => ({
-      id: item.id,
-      similarity: item.score,
-      metadata: {
-        server_id: item.server_id,
-        title: item.server_name,
-        description: item.description,
-        github_url: item.github_url
-      }
-    }));
+    try {
+      const { categories, minSimilarity = 0.5, textQuery } = options;
+      
+      // 对查询向量进行归一化
+      const normalizedQueryVector = normalizeVector(vector);
+      
+      // 并行执行向量搜索和元数据搜索
+      const [vectorResults, metadataResults] = await Promise.all([
+        // 向量搜索
+        searchVectorsByInnerProduct(
+          normalizedQueryVector, 
+          limit,
+          categories,
+          minSimilarity
+        ),
+        // 元数据搜索（如果有文本查询）
+        textQuery ? searchByMetadata(textQuery, limit, categories) : Promise.resolve([])
+      ]);
+      
+      // 记录搜索结果数量
+      logger.debug(`Search results: vector=${vectorResults.length}, metadata=${metadataResults.length}`);
+      
+      // 合并结果
+      const mergedResults = textQuery 
+        ? mergeSearchResults(vectorResults, metadataResults, limit)
+        : vectorResults;
+      
+      // 将结果转换为标准格式
+      return mergedResults.map(item => ({
+        id: item.server_id,
+        similarity: item.score,
+        metadata: {
+          title: item.server_name,
+          description: item.description,
+          github_url: item.github_url,
+          categories: item.categories,
+          tags: item.tags
+        }
+      }));
+    } catch (error) {
+      logger.error(`Error searching vectors: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
   
   /**
    * 删除所有向量
    */
   async deleteAll(): Promise<void> {
-    await deleteData([]);
-    logger.info('Deleted all vectors from database');
+    if (!this.isInitialized) {
+      await this.connect();
+    }
+    
+    try {
+      await deleteData([]);
+      logger.info('All vectors deleted');
+    } catch (error) {
+      logger.error(`Error deleting all vectors: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
   }
   
   /**
-   * 初始化数据库表和索引
+   * 初始化数据库
    */
   async initDatabase(): Promise<void> {
-    await initDatabaseSchema();
-    
-    // 初始化更新信息表
-    try {
-      const { DataUpdateManager } = await import('./dataUpdateManager.js');
-      await DataUpdateManager.initUpdateInfoTable();
-    } catch (error) {
-      logger.error(`Error initializing update info table: ${error instanceof Error ? error.message : String(error)}`);
-      // 不抛出错误，允许应用继续运行
+    if (!this.isInitialized) {
+      await this.connect();
     }
+    
+    try {
+      await initDatabaseSchema();
+      
+      // 初始化数据更新管理器
+      try {
+        await DataUpdateManager.initUpdateInfoTable();
+        logger.info('Data update manager initialized');
+      } catch (error) {
+        logger.warn(`Could not initialize data update manager: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      
+      logger.info('OceanBase database initialized');
+    } catch (error) {
+      logger.error(`Error initializing database: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * 计算向量的大小（模）
+   * @param vector 输入向量
+   * @returns 向量的模
+   */
+  private calculateMagnitude(vector: number[]): number {
+    return Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
   }
 }
 

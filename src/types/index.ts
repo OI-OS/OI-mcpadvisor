@@ -12,6 +12,16 @@ export interface MCPServerResponse {
   github_url: string;
   similarity: number;
   installations?: Record<string, any>;
+  /**
+   * 服务器分类
+   * 可以是字符串数组或逗号分隔的字符串
+   */
+  categories?: string[] | string;
+  /**
+   * 服务器标签
+   * 可以是字符串数组或逗号分隔的字符串
+   */
+  tags?: string[] | string;
 }
 
 /**

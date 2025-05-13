@@ -42,6 +42,26 @@ const consoleFormat = winston.format.combine(
   })
 );
 
+/**
+ * 格式化错误对象，提取堆栈信息
+ */
+const formatError = (error: unknown): string => {
+  if (error instanceof Error) {
+    // 如果是标准 Error 对象，返回消息和堆栈
+    return `${error.message}\nStack: ${error.stack || 'No stack trace available'}`;
+  } else if (typeof error === 'object' && error !== null) {
+    // 如果是其他对象，尝试 JSON 序列化
+    try {
+      return JSON.stringify(error, null, 2);
+    } catch (e) {
+      return String(error);
+    }
+  } else {
+    // 其他情况直接转为字符串
+    return String(error);
+  }
+};
+
 // Create a custom format for file output (without colors)
 const fileFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
@@ -49,6 +69,13 @@ const fileFormat = winston.format.combine(
   winston.format.printf((info) => {
     // Add context information if available
     const context = info.context ? ` [${info.context}]` : '';
+    
+    // 处理错误对象和堆栈信息
+    let message = info.message;
+    if (info.level === 'error' && info.error) {
+      message = `${message}\n${formatError(info.error)}`;
+    }
+    
     // Add structured data if available
     let structuredData = '';
     if (info.data) {
@@ -58,7 +85,8 @@ const fileFormat = winston.format.combine(
         structuredData = ' | [Unserializable data]';
       }
     }
-    return `${info.timestamp} ${info.level}${context}: ${info.message}${structuredData}`;
+    
+    return `${info.timestamp} ${info.level}${context}: ${message}${structuredData}`;
   })
 );
 
