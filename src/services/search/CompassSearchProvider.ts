@@ -22,12 +22,30 @@ export class CompassSearchProvider implements SearchProvider {
   async search(query: string): Promise<MCPServerResponse[]> {
     try {
       logger.info(`Searching for MCP servers with query: ${query}`);
-      const response = await fetch(`${this.apiBase}/recommend?description=${encodeURIComponent(query)}`);
+      const requestUrl = `${this.apiBase}/recommend?description=${encodeURIComponent(query)}`;
+      
+      const response = await fetch(requestUrl);
       
       if (!response.ok) {
         const errorMsg = `COMPASS API request failed with status ${response.status}`;
-        logger.error(errorMsg);
-        throw new Error(errorMsg);
+        const responseError = new Error(errorMsg);
+        
+        // 添加响应状态和文本信息
+        (responseError as any).status = response.status;
+        (responseError as any).statusText = response.statusText;
+        (responseError as any).url = requestUrl;
+        
+        // 使用增强的日志记录方式，传递完整错误对象
+        logger.error(errorMsg, {
+          error: responseError,
+          data: { 
+            url: requestUrl,
+            status: response.status,
+            statusText: response.statusText
+          }
+        });
+        
+        throw responseError;
       }
 
       const data:[{
@@ -46,7 +64,18 @@ export class CompassSearchProvider implements SearchProvider {
       }   
       return res as MCPServerResponse[];
     } catch (error) {
-      logger.error(`Error fetching from COMPASS API: ${error instanceof Error ? error.message : String(error)}`);
+      // 使用增强的日志记录方式，传递完整错误对象
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Error fetching from COMPASS API: ${message}`, {
+        error,
+        data: {
+          query,
+          provider: 'CompassSearchProvider',
+          apiBase: this.apiBase,
+          errorType: error instanceof Error ? error.constructor.name : typeof error,
+          timestamp: new Date().toISOString()
+        }
+      });
       throw error;
     }
   }
