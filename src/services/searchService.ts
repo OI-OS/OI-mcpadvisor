@@ -79,44 +79,167 @@ export class SearchService {
       // 合并默认选项
       const mergedOptions = { ...DEFAULT_SEARCH_OPTIONS, ...options };
       
-      logger.info(`Searching with ${this.providers.length} providers for query: ${query}`);
+      logger.info(`Searching with ${this.providers.length} providers for query: ${query}`, 'SearchService', { providerCount: this.providers.length });
       
       // Collect results from all providers in parallel
-      const providerPromises = this.providers.map(provider => 
-        provider.search(query).catch(error => {
-          logger.error(`Provider search failed: ${error instanceof Error ? error.message : String(error)}`);
-          return [] as MCPServerResponse[];
-        })
-      );
+      const providerPromises = this.providers.map((provider, index) => {
+        const providerName = provider.constructor.name;
+        logger.info(`Starting search with provider ${index + 1}/${this.providers.length}: ${providerName}`, 'Provider', { 
+          providerName,
+          providerIndex: index,
+          query 
+        });
+        
+        return provider.search(query)
+          .then(results => {
+            logger.info(`Provider ${providerName} returned ${results.length} results`, 'Provider', {
+              providerName,
+              resultCount: results.length,
+              topResults: results.slice(0, 3).map(r => ({ 
+                title: r.title, 
+                similarity: r.similarity,
+                github_url: r.github_url 
+              }))
+            });
+            
+            // Log full results at debug level
+            if (results.length > 0) {
+              logger.debug(`Full results from provider ${providerName}:`, 'Provider', {
+                providerName,
+                results
+              });
+            }
+            
+            return {
+              providerName,
+              results
+            };
+          })
+          .catch(error => {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            logger.error(`Provider ${providerName} search failed: ${errorMessage}`, 'Provider', {
+              providerName,
+              error: errorMessage
+            });
+            return {
+              providerName,
+              results: [] as MCPServerResponse[]
+            };
+          });
+      });
       
-      const providerResults = await Promise.all(providerPromises);
-
+      const namedProviderResults = await Promise.all(providerPromises);
+      
+      // Log summary of results from each provider
+      namedProviderResults.forEach(({ providerName, results }) => {
+        logger.info(`Provider ${providerName} found ${results.length} results`, 'SearchSummary', {
+          providerName,
+          resultCount: results.length
+        });
+      });
+      
       // Merge results from all providers
+      const providerResults = namedProviderResults.map(npr => npr.results);
       let mergedResults = providerResults.flat();
-      logger.info(`${JSON.stringify(mergedResults)}`);
+      
+      logger.info(`Merged ${mergedResults.length} total results from all providers`, 'SearchService', { 
+        totalResults: mergedResults.length 
+      });
 
+      // Log pre-deduplication count
+      logger.info(`Starting deduplication process with ${mergedResults.length} results`, 'Deduplication', {
+        initialCount: mergedResults.length
+      });
+      
       // Remove duplicates based on github_url
       const uniqueUrls = new Set<string>();
+      const duplicates: string[] = [];
+      
       mergedResults = mergedResults.filter(server => {
         if (uniqueUrls.has(server.github_url)) {
+          duplicates.push(server.github_url);
           return false;
         }
         uniqueUrls.add(server.github_url);
         return true;
       });
       
+      // Log deduplication results
+      logger.info(`Deduplication complete: removed ${duplicates.length} duplicates`, 'Deduplication', {
+        removedCount: duplicates.length,
+        remainingCount: mergedResults.length,
+        duplicateUrls: duplicates.length > 0 ? duplicates : undefined
+      });
+      
+      // Log pre-sorting information
+      logger.info(`Sorting ${mergedResults.length} results by similarity score`, 'Sorting');
+      
       // Sort by similarity score (highest first)
       mergedResults.sort((a, b) => b.similarity - a.similarity);
       
-      // Apply filtering based on options
-      if (mergedOptions.minSimilarity !== undefined && mergedResults.length > 5) {
-        mergedResults = filterFromEndUntilLimit(mergedResults,  server => server.similarity >= mergedOptions.minSimilarity!,5)
+      // Log top results after sorting
+      if (mergedResults.length > 0) {
+        logger.info(`Top 3 results after sorting:`, 'Sorting', {
+          topResults: mergedResults.slice(0, 3).map(r => ({
+            title: r.title,
+            similarity: r.similarity,
+            github_url: r.github_url
+          }))
+        });
       }
       
-      if (mergedOptions.limit !== undefined && mergedOptions.limit > 0) {
-        mergedResults = mergedResults.slice(0, mergedOptions.limit);
+      // Apply filtering based on options
+      let filteredCount = 0;
+      let originalCount = mergedResults.length;
+      
+      // Apply minimum similarity filter
+      if (mergedOptions.minSimilarity !== undefined && mergedResults.length > 5) {
+        logger.info(`Applying minimum similarity filter: ${mergedOptions.minSimilarity}`, 'Filtering', {
+          minSimilarity: mergedOptions.minSimilarity,
+          beforeCount: mergedResults.length
+        });
+        
+        mergedResults = filterFromEndUntilLimit(
+          mergedResults,  
+          server => server.similarity >= mergedOptions.minSimilarity!,
+          5
+        );
+        
+        filteredCount += (originalCount - mergedResults.length);
+        originalCount = mergedResults.length;
+        
+        logger.info(`After similarity filtering: ${mergedResults.length} results remain`, 'Filtering', {
+          afterCount: mergedResults.length,
+          removedCount: filteredCount
+        });
       }
-      logger.info(`${JSON.stringify(mergedResults)}`);
+      
+      // Apply limit filter
+      if (mergedOptions.limit !== undefined && mergedOptions.limit > 0) {
+        logger.info(`Applying result limit: ${mergedOptions.limit}`, 'Filtering', {
+          limit: mergedOptions.limit,
+          beforeCount: mergedResults.length
+        });
+        
+        const beforeLimit = mergedResults.length;
+        mergedResults = mergedResults.slice(0, mergedOptions.limit);
+        filteredCount += (beforeLimit - mergedResults.length);
+        
+        logger.info(`After limit filtering: ${mergedResults.length} results remain`, 'Filtering', {
+          afterCount: mergedResults.length,
+          removedCount: beforeLimit - mergedResults.length
+        });
+      }
+      
+      // Log final results with full details
+      logger.info(`Final search results: ${mergedResults.length} servers`, 'SearchResults', {
+        resultCount: mergedResults.length,
+        results: mergedResults.map(r => ({
+          title: r.title,
+          similarity: r.similarity.toFixed(4),
+          github_url: r.github_url
+        }))
+      });
 
       logger.debug(`Merged results: ${mergedResults.length} servers after filtering`);
       return mergedResults;
@@ -135,18 +258,30 @@ export class SearchService {
     options: SearchOptions = {}
   ): Promise<MCPServerResponse[]> {
     try {
-      logger.info(`Searching GetMCP with query: "${query}"`);
+      logger.info(`Searching GetMCP with query: "${query}"`, 'GetMcpSearch', { query, options });
       
       // 创建 GetMcpSearchProvider 实例
       const provider = new GetMcpSearchProvider();
+      logger.debug('Created GetMcpSearchProvider instance', 'GetMcpSearch');
       
       // 创建 SearchService 实例
       const service = new SearchService([provider]);
+      logger.debug('Created SearchService with GetMcpSearchProvider', 'GetMcpSearch');
       
       // 执行搜索
-      return service.search(query, options);
+      const startTime = Date.now();
+      const results = await service.search(query, options);
+      const duration = Date.now() - startTime;
+      
+      logger.info(`GetMCP search completed in ${duration}ms with ${results.length} results`, 'GetMcpSearch', {
+        duration,
+        resultCount: results.length
+      });
+      
+      return results;
     } catch (error) {
-      logger.error(`Error searching GetMCP: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error searching GetMCP: ${errorMessage}`, 'GetMcpSearch', { error: errorMessage });
       throw error;
     }
   }
@@ -160,18 +295,30 @@ export class SearchService {
     options: SearchOptions = {}
   ): Promise<MCPServerResponse[]> {
     try {
-      logger.info(`Searching Compass with query: "${query}"`);
+      logger.info(`Searching Compass with query: "${query}"`, 'CompassSearch', { query, options });
       
       // 创建 CompassSearchProvider 实例
       const provider = new CompassSearchProvider();
+      logger.debug('Created CompassSearchProvider instance', 'CompassSearch');
       
       // 创建 SearchService 实例
       const service = new SearchService([provider]);
+      logger.debug('Created SearchService with CompassSearchProvider', 'CompassSearch');
       
       // 执行搜索
-      return service.search(query, options);
+      const startTime = Date.now();
+      const results = await service.search(query, options);
+      const duration = Date.now() - startTime;
+      
+      logger.info(`Compass search completed in ${duration}ms with ${results.length} results`, 'CompassSearch', {
+        duration,
+        resultCount: results.length
+      });
+      
+      return results;
     } catch (error) {
-      logger.error(`Error searching Compass: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error searching Compass: ${errorMessage}`, 'CompassSearch', { error: errorMessage });
       throw error;
     }
   }
@@ -185,18 +332,30 @@ export class SearchService {
     options: SearchOptions = {}
   ): Promise<MCPServerResponse[]> {
     try {
-      logger.info(`Searching Meilisearch with query: "${query}"`);
+      logger.info(`Searching Meilisearch with query: "${query}"`, 'MeilisearchSearch', { query, options });
       
       // 创建 MeilisearchSearchProvider 实例
       const provider = new MeilisearchSearchProvider();
+      logger.debug('Created MeilisearchSearchProvider instance', 'MeilisearchSearch');
       
       // 创建 SearchService 实例
       const service = new SearchService([provider]);
+      logger.debug('Created SearchService with MeilisearchSearchProvider', 'MeilisearchSearch');
       
       // 执行搜索
-      return service.search(query, options);
+      const startTime = Date.now();
+      const results = await service.search(query, options);
+      const duration = Date.now() - startTime;
+      
+      logger.info(`Meilisearch search completed in ${duration}ms with ${results.length} results`, 'MeilisearchSearch', {
+        duration,
+        resultCount: results.length
+      });
+      
+      return results;
     } catch (error) {
-      logger.error(`Error searching Meilisearch: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error searching Meilisearch: ${errorMessage}`, 'MeilisearchSearch', { error: errorMessage });
       throw error;
     }
   }
