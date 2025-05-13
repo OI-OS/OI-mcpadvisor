@@ -81,52 +81,75 @@ graph TD
             Providers --> MeilisearchProvider["Meilisearch Provider"]
             Providers --> GetMcpProvider["GetMCP Provider"]
             Providers --> CompassProvider["Compass Provider"]
-            Providers --> VectorProvider["Vector Search Provider"]
+            Providers --> OfflineProvider["Offline Provider"]
         end
         
-        VectorProvider --> VectorEngine["Vector Search Engine"]
-        VectorEngine --> InMemoryEngine["In-Memory Engine"]
-        VectorEngine --> OceanBaseEngine["OceanBase Engine"]
+        OfflineProvider --> |"Hybrid Search"| HybridSearch["Hybrid Search Engine"]
+        HybridSearch --> TextMatching["Text Matching"]
+        HybridSearch --> VectorSearch["Vector Search"]
         
-        OceanBaseEngine --> |"Query"| OceanBaseClient["OceanBase Client"]
-        OceanBaseClient --> |"Connection"| Database[("OceanBase DB")]
-        
+        MeilisearchProvider --> |"API Call"| MeilisearchAPI["Meilisearch API"]
         GetMcpProvider --> |"API Call"| GetMcpAPI["GetMCP API"]
         CompassProvider --> |"API Call"| CompassAPI["Compass API"]
+        
+        SearchService --> |"Merge & Filter"| ResultProcessor["Result Processor"]
+        ResultProcessor --> |"Prioritize"| PriorityEngine["Provider Priority Engine"]
+        ResultProcessor --> |"Deduplicate"| Deduplicator["Result Deduplicator"]
+        ResultProcessor --> |"Filter"| SimilarityFilter["Similarity Filter"]
         
         SearchService --> Logger["Logging System"]
     end
     
     GetMcpAPI --> |"Data"| ExternalMCPRegistry[("External MCP Registry")]
     CompassAPI --> |"Data"| ExternalMCPRegistry
+    MeilisearchAPI --> |"Data"| MeilisearchDB[("Meilisearch DB")]
 ```
 
 #### Data Flow Diagram
 
 ```mermaid
-sequenceDiagram
-    participant Client as Client
-    participant SearchSvc as Search Service
-    participant Providers as Search Providers
-    participant VectorEngine as Vector Engine
-    participant DB as Database
-    participant ExternalAPIs as External APIs
-    participant Logger as Logger
+flowchart LR
+    Query["User Query"] --> Embedding["Embedding Generation"]
+    Query --> KeywordExtraction["Keyword Extraction"]
     
-    Client->>SearchSvc: Search Query
-    SearchSvc->>Logger: Log Search Request
-    
-    par Parallel Search
-        SearchSvc->>Providers: Query Meilisearch
-        SearchSvc->>Providers: Query GetMCP API
-        SearchSvc->>Providers: Query Compass API
-        SearchSvc->>Providers: Query Vector Engine
+    subgraph "Search Process"
+        Embedding --> VectorSearch["Vector Search"]
+        KeywordExtraction --> TextSearch["Text Search"]
+        
+        VectorSearch --> |"Similarity Scores"| ResultMerging
+        TextSearch --> |"Match Scores"| ResultMerging["Result Merging"]
+        
+        ResultMerging --> |"Combined Results"| Deduplication["Deduplication"]
+        Deduplication --> |"Unique Results"| Prioritization["Provider Prioritization"]
+        Prioritization --> |"Prioritized Results"| SimilarityFiltering["Similarity Filtering"]
+        SimilarityFiltering --> |"Filtered Results"| Limiting["Result Limiting"]
     end
     
-    Providers->>VectorEngine: Vector Search Request
-    VectorEngine->>DB: Execute Vector Query
-    DB->>VectorEngine: Vector Search Results
-    VectorEngine->>Providers: Processed Results
+    Limiting --> |"Final Results"| Response["Response to User"]
+```
+
+#### Search Strategy
+
+```mermaid
+graph TD
+    Query["User Query"] --> Analysis["Query Analysis"]
+    
+    Analysis --> |"Contains Keywords"| TextBias["Text-Biased Search"]
+    Analysis --> |"Semantic Query"| VectorBias["Vector-Biased Search"]
+    
+    TextBias --> |"textMatchWeight: 0.7"| HybridSearch1["Hybrid Search Engine"]
+    VectorBias --> |"textMatchWeight: 0.3"| HybridSearch2["Hybrid Search Engine"]
+    
+    subgraph "Hybrid Search Process"
+        HybridSearch1 & HybridSearch2 --> |"Parallel Execution"| Providers["Multiple Providers"]
+        Providers --> |"Raw Results"| Merging["Smart Merging"]
+        Merging --> |"Provider Priority"| Prioritization["Priority-Based Selection"]
+        Prioritization --> |"Unique Results"| Filtering["Adaptive Filtering"]
+    end
+    
+    Filtering --> |"minSimilarity: 0.5"| FinalResults["Final Results"]
+    Filtering --> |"Fallback"| TopResults["Top 5 Results"]
+```
     
     Providers->>ExternalAPIs: API Requests
     ExternalAPIs->>Providers: API Responses
@@ -145,20 +168,35 @@ sequenceDiagram
    - Multiple search provider support with parallel execution
    - Configurable search options (limit, minSimilarity)
    - Intelligent result merging and deduplication
+   - Provider priority system for result ranking
+   - Adaptive similarity filtering with fallback mechanism
 
 2. **Search Providers**
-   - OceanBase Vector Engine (semantic search)
-   - Meilisearch Provider (text search)
-   - GetMCP Provider (API integration)
-   - CompassSearch Provider (registry integration)
+   - **Meilisearch Provider**: Vector-based search using Meilisearch
+   - **GetMCP Provider**: API-based search from GetMCP registry
+   - **Compass Provider**: API-based search from Compass registry
+   - **Offline Provider**: Hybrid search combining text and vector matching
 
-3. **Vector Database Layer**
+3. **Hybrid Search Strategy**
+   - **Text Matching**: Keyword-based search with exact and fuzzy matching
+   - **Vector Search**: Semantic similarity using embedding vectors
+   - **Configurable Weights**: Adjustable balance between text and vector search
+   - **Smart Fallback**: Ensures minimum result count even with high similarity thresholds
+
+4. **Result Processing Pipeline**
+   - **Merging**: Combines results from multiple providers
+   - **Deduplication**: Removes duplicate results based on GitHub URL or title
+   - **Provider Prioritization**: Ranks results based on provider reliability
+   - **Similarity Filtering**: Filters results based on configurable threshold
+   - **Adaptive Fallback**: Ensures minimum result count for better user experience
+
+5. **Vector Database Layer**
    - Time-based data update strategy (1-hour freshness)
    - Efficient vector indexing with HNSW
    - Automatic schema management
    - Connection pooling for performance
 
-4. **Data Management**
+6. **Data Management**
    - Intelligent caching with timestamp tracking
    - Incremental updates to minimize resource usage
    - Background data refresh to maintain responsiveness
