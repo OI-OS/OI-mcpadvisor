@@ -65,24 +65,89 @@ mcpadvisor
 
 ### Architecture
 
-MCP Advisor follows a modular architecture with clean separation of concerns:
+MCP Advisor follows a modular architecture with clean separation of concerns and functional programming principles:
 
 #### Core Components
 
 1. **Search Service Layer**
-   - Unified search interface
-   - Multiple search provider support
-   - Configurable search options
+   - Unified search interface with provider aggregation
+   - Multiple search provider support with parallel execution
+   - Configurable search options (limit, minSimilarity)
+   - Intelligent result merging and deduplication
 
 2. **Search Providers**
    - OceanBase Vector Engine (semantic search)
    - Meilisearch Provider (text search)
    - GetMCP Provider (API integration)
+   - CompassSearch Provider (registry integration)
 
-3. **Transport Layer**
+3. **Vector Database Layer**
+   - Time-based data update strategy (1-hour freshness)
+   - Efficient vector indexing with HNSW
+   - Automatic schema management
+   - Connection pooling for performance
+
+4. **Data Management**
+   - Intelligent caching with timestamp tracking
+   - Incremental updates to minimize resource usage
+   - Background data refresh to maintain responsiveness
+   - Comprehensive error handling and fallbacks
+
+5. **Transport Layer**
    - Stdio (default for CLI)
    - SSE (for web integration)
    - REST API endpoints
+
+6. **Logging System**
+   - Structured logging with context information
+   - Detailed process tracking for debugging
+   - Performance metrics and timing
+   - Clean separation of console and file outputs
+
+## System Optimizations
+
+### Time-Based Data Update Strategy
+
+MCP Advisor implements an intelligent data update strategy to balance performance and data freshness:
+
+1. **Timestamp Tracking**
+   - Each data source maintains a last-update timestamp
+   - System tracks update frequency and patterns
+   - Configurable freshness window (default: 1 hour)
+
+2. **Conditional Indexing**
+   - Vector database only rebuilds when data is stale
+   - Avoids redundant indexing operations on frequent queries
+   - Dramatically reduces database load and query latency
+
+3. **Background Processing**
+   - Data updates happen asynchronously after serving requests
+   - Users get immediate responses from existing data
+   - Fresh data is available for subsequent queries
+
+4. **Fallback Mechanisms**
+   - Graceful degradation when data sources are unavailable
+   - Multiple provider strategy ensures results even if one fails
+   - Comprehensive error handling with detailed logging
+
+### Structured Logging System
+
+The enhanced logging system provides detailed visibility into system operations:
+
+1. **Context-Aware Logs**
+   - Each log entry includes component context
+   - Structured data for machine parsing
+   - Clean separation between message and metadata
+
+2. **Performance Tracking**
+   - Timing information for key operations
+   - Resource usage monitoring
+   - Query execution statistics
+
+3. **Process Visualization**
+   - Complete visibility into search execution flow
+   - Provider-specific result tracking
+   - Detailed error context for debugging
 
 ### Development Setup
 
