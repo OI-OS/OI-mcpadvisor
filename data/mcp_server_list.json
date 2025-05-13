@@ -1,5 +1,59 @@
 [
   {
+    "id": "rednote-mcp",
+    "name": "rednote-mcp",
+    "display_name": "RedNote MCP",
+    "description": "小红书内容访问的MCP服务，支持关键词搜索笔记、通过URL访问笔记内容、认证管理和命令行初始化工具",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/ifuryst/rednote-mcp"
+    },
+    "homepage": "https://github.com/ifuryst/rednote-mcp",
+    "author": {
+      "name": "ifuryst"
+    },
+    "license": "MIT",
+    "categories": [
+      "Social Media",
+      "Content",
+      "Chinese"
+    ],
+    "tags": [
+      "xiaohongshu",
+      "小红书",
+      "社交媒体",
+      "内容获取",
+      "热点"
+    ]
+  },
+  {
+    "id": "mcp-hotnews-server",
+    "name": "mcp-hotnews-server",
+    "display_name": "Mcp-Hotnews-Server",
+    "description": "获取和分析各大平台热点新闻和话题的MCP服务，支持小红书、微博、知乎等多个中文社交媒体平台",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/wopal-cn/mcp-hotnews-server"
+    },
+    "homepage": "https://github.com/wopal-cn/mcp-hotnews-server",
+    "author": {
+      "name": "wopal-cn"
+    },
+    "license": "MIT",
+    "categories": [
+      "News",
+      "Social Media",
+      "Chinese"
+    ],
+    "tags": [
+      "热点",
+      "新闻",
+      "小红书",
+      "微博",
+      "知乎"
+    ]
+  },
+  {
     "id": "firecrawl",
     "name": "firecrawl",
     "display_name": "Firecrawl",

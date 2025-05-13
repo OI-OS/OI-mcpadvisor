@@ -7,8 +7,10 @@ import { MCPServerResponse, SearchOptions, SearchProvider } from '../types/index
 import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { CompassSearchProvider } from './search/CompassSearchProvider.js';
 import { MeilisearchSearchProvider } from './search/MeilisearchSearchProvider.js';
+import { OfflineSearchProvider } from './search/OfflineSearchProvider.js';
 import logger from '../utils/logger.js';
 import { filterFromEndUntilLimit } from '../utils/ListUtils.js';
+import config from 'config';
 
 /**
  * 默认搜索选项
@@ -19,18 +21,92 @@ const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
 };
 
 /**
+ * 离线模式配置选项
+ */
+interface OfflineConfig {
+  /**
+   * 是否启用离线模式
+   */
+  enabled: boolean;
+  
+  /**
+   * 自定义兜底数据路径
+   */
+  fallbackDataPath?: string;
+  
+  /**
+   * 最小相似度阈值
+   */
+  minSimilarity?: number;
+}
+
+/**
+ * 默认离线模式配置
+ */
+const DEFAULT_OFFLINE_CONFIG: OfflineConfig = {
+  enabled: true,
+  minSimilarity: 0.3
+};
+
+/**
  * Search service that can use multiple search providers
  */
 export class SearchService {
   private providers: SearchProvider[];
 
   /**
+   * 离线搜索提供者
+   * 用于在网络不可用时提供兜底推荐
+   */
+  private offlineProvider?: OfflineSearchProvider;
+  
+  /**
+   * 离线模式配置
+   */
+  private offlineConfig: OfflineConfig;
+
+  /**
    * Create a new search service with the specified providers
    * @param providers - Array of search providers to use
+   * @param offlineConfig - 离线模式配置，默认启用
    */
-  constructor(providers: SearchProvider[] = []) {
+  constructor(
+    providers: SearchProvider[] = [], 
+    offlineConfig: Partial<OfflineConfig> = {}
+  ) {
     this.providers = providers;
-    logger.info(`SearchService initialized with ${providers.length} providers`);
+    
+    // 合并离线模式配置
+    this.offlineConfig = {
+      ...DEFAULT_OFFLINE_CONFIG,
+      ...offlineConfig
+    };
+    
+    // 如果启用了离线模式，初始化离线搜索提供者
+    if (this.offlineConfig.enabled) {
+      this.initOfflineProvider();
+    }
+    
+    logger.info(`SearchService initialized with ${providers.length} providers`, {
+      providerCount: providers.length,
+      offlineMode: this.offlineConfig.enabled
+    });
+  }
+  
+  /**
+   * 初始化离线搜索提供者
+   */
+  private initOfflineProvider(): void {
+    try {
+      this.offlineProvider = new OfflineSearchProvider({
+        fallbackDataPath: this.offlineConfig.fallbackDataPath,
+        minSimilarity: this.offlineConfig.minSimilarity
+      });
+      logger.info('Offline search provider initialized');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to initialize offline search provider: ${message}`, { error });
+    }
   }
 
   /**
@@ -70,7 +146,7 @@ export class SearchService {
    * @returns Promise with array of MCP server responses
    */
   async search(query: string, options?: SearchOptions): Promise<MCPServerResponse[]> {
-    if (this.providers.length === 0) {
+    if (this.providers.length === 0 && !this.offlineProvider) {
       logger.warn('No search providers available');
       return [];
     }
@@ -81,8 +157,18 @@ export class SearchService {
       
       logger.info(`Searching with ${this.providers.length} providers for query: ${query}`, 'SearchService', { providerCount: this.providers.length });
       
+      // 准备所有提供者的列表，包括离线提供者
+      const allProviders = [...this.providers];
+      let offlineProviderIndex = -1;
+      
+      // 如果启用了离线模式，添加离线提供者
+      if (this.offlineConfig.enabled && this.offlineProvider) {
+        offlineProviderIndex = allProviders.length;
+        allProviders.push(this.offlineProvider);
+      }
+      
       // Collect results from all providers in parallel
-      const providerPromises = this.providers.map((provider, index) => {
+      const providerPromises = allProviders.map((provider, index) => {
         const providerName = provider.constructor.name;
         logger.info(`Starting search with provider ${index + 1}/${this.providers.length}: ${providerName}`, 'Provider', { 
           providerName,
@@ -245,6 +331,57 @@ export class SearchService {
       return mergedResults;
     } catch (error) {
       logger.error(`Error in search service: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * 静态离线搜索方法，不需要创建 SearchService 实例
+   * @param query 搜索查询
+   * @param options 搜索选项
+   * @param fallbackDataPath 备用数据路径
+   * @param useEnhanced 是否使用增强型离线搜索提供者，默认为 true
+   * @returns 搜索结果
+   */
+  static async searchOffline(
+    query: string, 
+    options: SearchOptions = {}, 
+    fallbackDataPath?: string,
+    textMatchWeight: number = 0.7
+  ): Promise<MCPServerResponse[]> {
+    try {
+      logger.info(`Searching offline with query: "${query}"`, 'OfflineSearch', { query, options });
+      
+      // 记录开始时间
+      const startTime = Date.now();
+      
+      // 创建离线搜索提供者
+      logger.debug('Using OfflineSearchProvider', 'OfflineSearch');
+      const provider = new OfflineSearchProvider({
+        fallbackDataPath,
+        minSimilarity: options.minSimilarity || 0.3,
+        textMatchWeight: textMatchWeight,
+        vectorSearchWeight: 1 - textMatchWeight
+      });
+      
+      const results = await provider.search(query);
+      
+      const duration = Date.now() - startTime;
+      
+      logger.info(`Offline search completed in ${duration}ms with ${results.length} results`, 'OfflineSearch', {
+        duration,
+        resultCount: results.length
+      });
+      
+      // 应用限制
+      if (options.limit && options.limit > 0) {
+        return results.slice(0, options.limit);
+      }
+      
+      return results;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error searching offline: ${errorMessage}`, 'OfflineSearch', { error: errorMessage });
       throw error;
     }
   }
