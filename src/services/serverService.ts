@@ -77,7 +77,7 @@ export class ServerService {
    */
   constructor(searchService: SearchService) {
     this.searchService = searchService;
-    logger.info(`Initializing ServerService with ${SERVER_NAME} v${SERVER_VERSION}`);
+    logger.info(`Initializing ServerService`, 'Server', { name: SERVER_NAME, version: SERVER_VERSION });
     
     // Create server instance
     this.server = new Server(
@@ -131,10 +131,10 @@ export class ServerService {
             };
           }
           
-          logger.info(`Processing recommend-mcp-servers request with query: ${query}`);
+          logger.info(`Processing recommend-mcp-servers request`, 'Search', { query });
           
           const servers = await this.searchService.search(query);
-          logger.debug(`Found ${servers.length} servers matching query`);
+          logger.debug(`Found servers matching query`, 'Search', { count: servers.length, query });
           
           return {
             content: formatServersToMCPContent(servers),
@@ -156,7 +156,7 @@ export class ServerService {
             };
           }
           
-          logger.info(`Processing install-mcp-server request with mcpName: ${mcpName}, githubUrl: ${githubUrl}`);
+          logger.info(`Processing install-mcp-server request`, 'Installation', { mcpName, githubUrl });
           
           // 获取 GitHub README 内容
           const installationGuideService = new InstallationGuideService();
@@ -340,7 +340,7 @@ export class ServerService {
     try {
       const { port, host = 'localhost' } = config;
       
-      logger.info(`Starting server with SSE transport on ${host}:${port}`);
+      logger.info(`Starting server with SSE transport`, 'Server', { host, port });
       this.setupExpressServer(config);
       
       if (!this.expressApp) {
