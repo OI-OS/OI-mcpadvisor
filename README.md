@@ -67,6 +67,77 @@ mcpadvisor
 
 MCP Advisor follows a modular architecture with clean separation of concerns and functional programming principles:
 
+#### System Architecture Diagram
+
+```mermaid
+graph TD
+    Client["Client Application"] --> |"MCP Protocol"| Transport["Transport Layer"]
+    
+    subgraph "MCP Advisor Server"
+        Transport --> |"Request"| SearchService["Search Service"]
+        SearchService --> |"Query"| Providers["Search Providers"]
+        
+        subgraph "Search Providers"
+            Providers --> MeilisearchProvider["Meilisearch Provider"]
+            Providers --> GetMcpProvider["GetMCP Provider"]
+            Providers --> CompassProvider["Compass Provider"]
+            Providers --> VectorProvider["Vector Search Provider"]
+        end
+        
+        VectorProvider --> VectorEngine["Vector Search Engine"]
+        VectorEngine --> InMemoryEngine["In-Memory Engine"]
+        VectorEngine --> OceanBaseEngine["OceanBase Engine"]
+        
+        OceanBaseEngine --> |"Query"| OceanBaseClient["OceanBase Client"]
+        OceanBaseClient --> |"Connection"| Database[("OceanBase DB")]
+        
+        GetMcpProvider --> |"API Call"| GetMcpAPI["GetMCP API"]
+        CompassProvider --> |"API Call"| CompassAPI["Compass API"]
+        
+        SearchService --> Logger["Logging System"]
+    end
+    
+    GetMcpAPI --> |"Data"| ExternalMCPRegistry[("External MCP Registry")]
+    CompassAPI --> |"Data"| ExternalMCPRegistry
+```
+
+#### Data Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant Client as Client
+    participant SearchSvc as Search Service
+    participant Providers as Search Providers
+    participant VectorEngine as Vector Engine
+    participant DB as Database
+    participant ExternalAPIs as External APIs
+    participant Logger as Logger
+    
+    Client->>SearchSvc: Search Query
+    SearchSvc->>Logger: Log Search Request
+    
+    par Parallel Search
+        SearchSvc->>Providers: Query Meilisearch
+        SearchSvc->>Providers: Query GetMCP API
+        SearchSvc->>Providers: Query Compass API
+        SearchSvc->>Providers: Query Vector Engine
+    end
+    
+    Providers->>VectorEngine: Vector Search Request
+    VectorEngine->>DB: Execute Vector Query
+    DB->>VectorEngine: Vector Search Results
+    VectorEngine->>Providers: Processed Results
+    
+    Providers->>ExternalAPIs: API Requests
+    ExternalAPIs->>Providers: API Responses
+    
+    Providers->>SearchSvc: All Provider Results
+    SearchSvc->>SearchSvc: Merge & Deduplicate Results
+    SearchSvc->>SearchSvc: Sort & Filter Results
+    SearchSvc->>Logger: Log Search Results
+    SearchSvc->>Client: Final Results
+```
+
 #### Core Components
 
 1. **Search Service Layer**
@@ -105,6 +176,64 @@ MCP Advisor follows a modular architecture with clean separation of concerns and
    - Clean separation of console and file outputs
 
 ## System Optimizations
+
+### Enhanced Error Handling System
+
+MCP Advisor implements a robust error handling system to ensure reliability and provide detailed diagnostics:
+
+#### Error Handling Flow Diagram
+
+```mermaid
+graph TD
+    Operation["Operation Execution"] --> |"Try"| Success{"Success?"}
+    Success -->|"Yes"| Result["Return Result"]
+    Success -->|"No"| ErrorType{"Error Type?"}
+    
+    ErrorType -->|"Network Error"| NetworkHandler["Network Error Handler"]
+    ErrorType -->|"Database Error"| DBHandler["Database Error Handler"]
+    ErrorType -->|"Validation Error"| ValidationHandler["Validation Error Handler"]
+    ErrorType -->|"Unknown Error"| GenericHandler["Generic Error Handler"]
+    
+    NetworkHandler --> FormatError["Format Error with Context"]
+    DBHandler --> FormatError
+    ValidationHandler --> FormatError
+    GenericHandler --> FormatError
+    
+    FormatError --> LogError["Log Structured Error"]
+    LogError --> Fallback{"Fallback Available?"}
+    
+    Fallback -->|"Yes"| FallbackOperation["Execute Fallback"]
+    Fallback -->|"No"| PropagateError["Propagate Error"]
+    
+    FallbackOperation --> Result
+    PropagateError --> ClientError["Return Error to Client"]
+```
+
+#### Key Features
+
+1. **Contextual Error Formatting**
+   - Standardized error object enrichment
+   - Stack trace preservation and formatting
+   - Error type classification and normalization
+   - Request context inclusion (query, URL, parameters)
+
+2. **Structured Logging**
+   - JSON-formatted error metadata
+   - Component and operation identification
+   - Timestamp and correlation IDs
+   - Error severity classification
+
+3. **Provider-Specific Error Handling**
+   - Custom handlers for each search provider
+   - Network error retry mechanisms
+   - API-specific error parsing and normalization
+   - Detailed diagnostic information for external services
+
+4. **Graceful Degradation**
+   - Multi-provider fallback strategy
+   - Partial results handling
+   - Default responses for critical failures
+   - User-friendly error messages
 
 ### Time-Based Data Update Strategy
 
@@ -148,6 +277,70 @@ The enhanced logging system provides detailed visibility into system operations:
    - Complete visibility into search execution flow
    - Provider-specific result tracking
    - Detailed error context for debugging
+
+### Vector Search Optimizations
+
+#### Vector Normalization
+
+MCP Advisor implements vector normalization to improve search accuracy and consistency:
+
+```mermaid
+graph LR
+    Input["Input Vector"] --> Normalize["Normalize Vector"]
+    Normalize --> |"Unit Vector"| Store["Store in Database"]
+    
+    Query["Query Vector"] --> NormalizeQuery["Normalize Query Vector"]
+    NormalizeQuery --> |"Unit Vector"| Search["Search Database"]
+    
+    Store --> |"Indexed Vectors"| Search
+    Search --> |"Cosine Similarity"| Results["Search Results"]
+```
+
+1. **Vector Normalization Process**
+   - All vectors are normalized to unit length (magnitude = 1)
+   - Ensures consistent cosine similarity calculations
+   - Improves search precision by focusing on direction, not magnitude
+   - Reduces the impact of vector dimension variations
+
+2. **Implementation Details**
+   - Euclidean norm calculation for vector magnitude
+   - Division of each component by the magnitude
+   - Validation to prevent division by zero
+   - Logging of normalization effects for debugging
+
+#### Hybrid Search Strategy
+
+MCP Advisor combines vector similarity and text matching for more accurate results:
+
+```mermaid
+graph TD
+    Query["User Query"] --> |"Text"| TextSearch["Metadata Text Search"]
+    Query --> |"Embedding"| VectorSearch["Vector Similarity Search"]
+    
+    TextSearch --> |"Text Results"| Merge["Merge Results"]
+    VectorSearch --> |"Vector Results"| Merge
+    
+    Merge --> |"Combined Ranking"| Filter["Apply Filters"]
+    Filter --> |"Category/Tag Filtering"| Sort["Sort by Final Score"]
+    Sort --> Results["Final Results"]
+```
+
+1. **Parallel Search Execution**
+   - Vector search and text search run concurrently
+   - Leverages Promise.all for optimal performance
+   - Fallback mechanisms if either search fails
+
+2. **Weighted Result Merging**
+   - Vector similarity: 70% weight
+   - Text matching: 30% weight
+   - Configurable weighting through environment variables
+   - Deduplication based on unique identifiers
+
+3. **Advanced Filtering**
+   - Category and tag-based filtering
+   - Minimum similarity threshold (default: 0.3)
+   - Result count limiting with intelligent selection
+   - Sorting by combined relevance score
 
 ### Development Setup
 
