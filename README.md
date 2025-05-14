@@ -216,7 +216,14 @@ graph TD
    - **Compass Provider**: API-based search from Compass registry
    - **Offline Provider**: Hybrid search combining text and vector matching
 
-3. **Hybrid Search Strategy**
+3. **Advanced Embedding System**
+   - **TensorFlow.js Integration**: High-quality semantic embeddings using Universal Sentence Encoder
+   - **Multilingual Support**: Optimized for Chinese and other non-Latin languages
+   - **Pluggable Architecture**: Modular design with multiple embedding providers
+   - **Graceful Degradation**: Automatic fallback to lightweight providers when needed
+   - **Performance Optimization**: LRU caching and batch processing for efficient vector generation
+
+4. **Hybrid Search Strategy**
    - **Text Matching**: Keyword-based search with exact and fuzzy matching
    - **Vector Search**: Semantic similarity using embedding vectors
    - **Configurable Weights**: Adjustable balance between text and vector search
