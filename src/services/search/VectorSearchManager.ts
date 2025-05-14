@@ -86,7 +86,7 @@ export const processAndIndexData = async (
         const searchableText = createSearchableText(server);
         
         // 获取文本嵌入
-        const embedding = getTextEmbedding(searchableText);
+        const embedding = await getTextEmbedding(searchableText);
         
         // 转换为 MCPServerResponse 格式
         const serverResponse = convertToServerResponse(key, server);
@@ -134,7 +134,7 @@ export const performVectorSearch = async (
 ): Promise<MCPServerResponse[]> => {
   try {
     // 获取查询嵌入
-    const queryEmbedding = getTextEmbedding(query);
+    const queryEmbedding = await getTextEmbedding(query);
     
     // 设置搜索选项，包括最小相似度和文本查询
     const searchOptions = {
