@@ -8,15 +8,24 @@
   <img width="380" height="200" src="https://glama.ai/mcp/servers/@istarwyh/mcpadvisor/badge" alt="Advisor MCP server" />
 </a>
 
-## What is MCP Advisor?
+## 简介
 
-MCP Advisor is a discovery & recommendation service that helps AI assistants explore Model Context Protocol (MCP) servers using natural language queries. It makes it easier to find and utilize the right MCP tools for specific tasks.
+MCP Advisor 是一个发现和推荐服务，帮助 AI 助手使用自然语言查询探索 Model Context Protocol (MCP) 服务器。它让用户更容易找到并利用适合特定任务的 MCP 工具。
 
-## User Guide
+## 特性
 
-### Quick Integration
+- **自然语言搜索**：使用会话式查询查找 MCP 服务
+- **丰富元数据**：获取每个服务的详细信息
+- **实时更新**：始终与最新的 MCP 服务保持同步 [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
+- **易于集成**：为任何兼容 MCP 的 AI 助手提供简单配置
+- **混合搜索引擎**：结合向量搜索和文本匹配的高级搜索能力
+- **多提供者支持**：支持多个搜索提供者并行执行
 
-The fastest way to integrate MCP Advisor with your AI assistant is through the MCP configuration:
+## 快速开始
+
+### 安装
+
+最快的方式是通过 MCP 配置集成 MCP Advisor：
 
 ```json
 {
@@ -29,59 +38,27 @@ The fastest way to integrate MCP Advisor with your AI assistant is through the M
 }
 ```
 
-Add this configuration to your AI assistant's MCP settings file:
+将此配置添加到您的 AI 助手的 MCP 设置文件中：
 
 - MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Windows: `%AppData%\Claude\claude_desktop_config.json`
 
-### Features
+更多安装方法请参阅 [安装指南](docs/INSTALLATION.md)。
 
-- **Natural Language Search**: Find MCP services using conversational queries
-- **Rich Metadata**: Get detailed information about each service
-- **Real-time Updates**: Always up-to-date with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
-- **Easy Integration**: Simple configuration for any MCP-compatible AI assistant
-
-### Demo Video
+### 演示
 
 <div align="center">
   <a href="https://www.bilibili.com/video/BV17tJuz9Eci">
-    <img src="https://i2.hdslb.com/bfs/archive/7cfc7c30ce29eca2e13e2a3f2859a35779eec492.jpg@640w_400h_1c.webp" alt="MCP Advisor Demo" width="640">
+    <img src="https://xiaohui-zhangjiakou.oss-cn-zhangjiakou.aliyuncs.com/image/202505181400161.png" alt="MCP Advisor Demo" width="640">
   </a>
   <p>点击图片观看演示视频</p>
 </div>
 
-```html
-<!-- 如需在其他Markdown编辑器中嵌入视频，可使用以下代码 -->
-<iframe src="//player.bilibili.com/player.html?isOutside=true&aid=114526997448234&bvid=BV17tJuz9Eci&cid=30018964782&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" width="800" height="450"></iframe>
-```
+## 开发者指南
 
-### Alternative Installation Methods
+### 架构概述
 
-#### NPM Package
-```bash
-npm install @xiaohui-wang/mcpadvisor
-# or
-yarn add @xiaohui-wang/mcpadvisor
-# or
-pnpm add @xiaohui-wang/mcpadvisor
-```
-
-#### Direct Usage
-```bash
-# Run with npx
-npx @xiaohui-wang/mcpadvisor
-
-# Or if installed globally
-mcpadvisor
-```
-
-## Developer Guide
-
-### Architecture
-
-MCP Advisor follows a modular architecture with clean separation of concerns and functional programming principles:
-
-#### System Architecture Diagram
+MCP Advisor 采用模块化架构，具有清晰的关注点分离和函数式编程原则：
 
 ```mermaid
 graph TD
@@ -102,759 +79,257 @@ graph TD
         HybridSearch --> TextMatching["Text Matching"]
         HybridSearch --> VectorSearch["Vector Search"]
         
-        MeilisearchProvider --> |"API Call"| MeilisearchAPI["Meilisearch API"]
-        GetMcpProvider --> |"API Call"| GetMcpAPI["GetMCP API"]
-        CompassProvider --> |"API Call"| CompassAPI["Compass API"]
-        
         SearchService --> |"Merge & Filter"| ResultProcessor["Result Processor"]
-        ResultProcessor --> |"Prioritize"| PriorityEngine["Provider Priority Engine"]
-        ResultProcessor --> |"Deduplicate"| Deduplicator["Result Deduplicator"]
-        ResultProcessor --> |"Filter"| SimilarityFilter["Similarity Filter"]
         
         SearchService --> Logger["Logging System"]
     end
-    
-    GetMcpAPI --> |"Data"| ExternalMCPRegistry[("External MCP Registry")]
-    CompassAPI --> |"Data"| ExternalMCPRegistry
-    MeilisearchAPI --> |"Data"| MeilisearchDB[("Meilisearch DB")]
 ```
 
-#### Data Flow Diagram
+### 核心组件
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Agent as AI Agent
-    participant MCP as MCP Advisor
-    participant QP as Query Processor
-    participant Search as Search Providers
-    participant Results as Result Processor
-    
-    User->>Agent: Natural Language Query
-    Agent->>MCP: Search Request
-    MCP->>QP: Process Query
-    
-    par Parallel Processing
-        QP->>QP: Extract Keywords
-        QP->>QP: Generate Embeddings
-    end
-    
-    par Parallel Search Execution
-        QP->>Search: Text-Based Search (Keywords)
-        Note over Search: Compass Provider
-        Note over Search: GetMCP Provider
-        Note over Search: Offline Provider
-        
-        QP->>QP: Normalize Vector
-        QP->>Search: Vector Similarity Search
-        Note over Search: Meilisearch Provider
-        Note over Search: Offline Vector Search
-    end
-    
-    Search->>Results: All Search Results
-    
-    Results->>Results: Smart Result Merging
-    Results->>Results: URL-based Deduplication
-    Results->>Results: Provider Priority Ranking
-    Results->>Results: Adaptive Similarity Filtering
-    Results->>Results: Result Count Limiting
-    
-    Results->>MCP: Processed Results
-    MCP->>Agent: MCP Server Recommendations
-    Agent->>User: Recommendations with Context
-```
+1. **搜索服务层**
+   - 统一的搜索接口与提供者聚合
+   - 支持多个搜索提供者并行执行
+   - 可配置的搜索选项（limit，minSimilarity）
 
-#### Search Strategy
+2. **搜索提供者**
+   - **Meilisearch Provider**: 使用 Meilisearch 的向量搜索
+   - **GetMCP Provider**: 来自 GetMCP 注册表的 API 搜索
+   - **Compass Provider**: 来自 Compass 注册表的 API 搜索
+   - **Offline Provider**: 结合文本和向量的混合搜索
 
-```mermaid
-graph TD
-    Query["User Query"] --> Analysis["Query Analysis"]
-    
-    Analysis --> |"Contains Keywords"| TextBias["Text-Biased Search"]
-    Analysis --> |"Semantic Query"| VectorBias["Vector-Biased Search"]
-    
-    TextBias --> |"textMatchWeight: 0.7"| HybridSearch1["Hybrid Search Engine"]
-    VectorBias --> |"textMatchWeight: 0.3"| HybridSearch2["Hybrid Search Engine"]
-    
-    subgraph "Vector Processing"
-        RawVector["Raw Embedding Vector"] --> Normalization["Vector Normalization"]
-        Normalization --> |"Unit Vector"| IndexedSearch["HNSW Index Search"]
-        IndexedSearch --> |"Cosine Similarity"| VectorResults["Vector Results"]
-    end
-    
-    subgraph "Text Processing"
-        Keywords["Extracted Keywords"] --> ExactMatch["Exact Matching"]
-        Keywords --> FuzzyMatch["Fuzzy Matching"]
-        ExactMatch & FuzzyMatch --> |"Match Scores"| TextResults["Text Results"]
-    end
-    
-    subgraph "Hybrid Search Process"
-        HybridSearch1 & HybridSearch2 --> |"Parallel Execution"| Providers["Multiple Providers"]
-        VectorResults & TextResults --> WeightedMerge["Weighted Result Merging"]
-        Providers --> |"Raw Results"| Merging["Smart Merging"]
-        WeightedMerge --> Merging
-        Merging --> |"Provider Priority"| Prioritization["Priority-Based Selection"]
-        Prioritization --> |"Unique Results"| Filtering["Adaptive Filtering"]
-    end
-    
-    Filtering --> |"minSimilarity: 0.5"| FinalResults["Final Results"]
-    Filtering --> |"Fallback"| TopResults["Top 5 Results"]
-    
-    ExternalAPIs["External APIs"] 
-    SearchSvc["Search Service"]
-    Logger["Logger"]
-    Client["Client"]
-    
-    Providers-->ExternalAPIs
-    ExternalAPIs-->Providers
-    
-    Providers-->SearchSvc
-    SearchSvc-->SearchSvc
-    SearchSvc-->Logger
-    SearchSvc-->Client
-```
+3. **混合搜索策略**
+   - 文本匹配与向量搜索的智能结合
+   - 可配置的权重平衡
+   - 智能适应性过滤机制
 
-#### Core Components
+4. **传输层**
+   - Stdio（CLI 默认）
+   - SSE（Web 集成）
+   - REST API 端点
 
-1. **Search Service Layer**
-   - Unified search interface with provider aggregation
-   - Multiple search provider support with parallel execution
-   - Configurable search options (limit, minSimilarity)
-   - Intelligent result merging and deduplication
-   - Provider priority system for result ranking
-   - Adaptive similarity filtering with fallback mechanism
+更详细的架构文档请参阅 [ARCHITECTURE.md](docs/ARCHITECTURE.md)。
 
-2. **Search Providers**
-   - **Meilisearch Provider**: Vector-based search using Meilisearch
-   - **GetMCP Provider**: API-based search from GetMCP registry
-   - **Compass Provider**: API-based search from Compass registry
-   - **Offline Provider**: Hybrid search combining text and vector matching
+## 技术亮点
 
-3. **Advanced Embedding System**
-   - **TensorFlow.js Integration**: High-quality semantic embeddings using Universal Sentence Encoder
-   - **Multilingual Support**: Optimized for Chinese and other non-Latin languages
-   - **Pluggable Architecture**: Modular design with multiple embedding providers
-   - **Graceful Degradation**: Automatic fallback to lightweight providers when needed
-   - **Performance Optimization**: LRU caching and batch processing for efficient vector generation
+### 高级搜索技术
 
-4. **Hybrid Search Strategy**
-   - **Text Matching**: Keyword-based search with exact and fuzzy matching
-   - **Vector Search**: Semantic similarity using embedding vectors
-   - **Configurable Weights**: Adjustable balance between text and vector search
-   - **Smart Fallback**: Ensures minimum result count even with high similarity thresholds
+1. **向量归一化**
+   - 所有向量都被归一化为单位长度（大小 = 1）
+   - 确保一致的余弦相似度计算
+   - 通过关注方向而非大小来提高搜索精度
 
-4. **Result Processing Pipeline**
-   - **Merging**: Combines results from multiple providers
-   - **Deduplication**: Removes duplicate results based on GitHub URL or title
-   - **Provider Prioritization**: Ranks results based on provider reliability
-   - **Similarity Filtering**: Filters results based on configurable threshold
-   - **Adaptive Fallback**: Ensures minimum result count for better user experience
+2. **并行搜索执行**
+   - 向量搜索和文本搜索并行运行
+   - 利用 Promise.all 实现最佳性能
+   - 如果任一搜索失败，则启用后备机制
 
-5. **Vector Database Layer**
-   - Time-based data update strategy (1-hour freshness)
-   - Efficient vector indexing with HNSW
-   - Automatic schema management
-   - Connection pooling for performance
+3. **加权结果合并**
+   - 向量和文本结果之间的可配置权重
+   - 默认：向量相似度 (70%)，文本匹配 (30%)
 
-6. **Data Management**
-   - Intelligent caching with timestamp tracking
-   - Incremental updates to minimize resource usage
-   - Background data refresh to maintain responsiveness
-   - Comprehensive error handling and fallbacks
+### 错误处理和日志系统
 
-5. **Transport Layer**
-   - Stdio (default for CLI)
-   - SSE (for web integration)
-   - REST API endpoints
+MCP Advisor 实现了强大的错误处理和日志系统：
 
-6. **Logging System**
-   - Structured logging with context information
-   - Detailed process tracking for debugging
-   - Performance metrics and timing
-   - Clean separation of console and file outputs
+1. **上下文错误格式化**
+   - 标准化的错误对象丰富
+   - 堆栈跟踪保存和格式化
+   - 错误类型分类和标准化
 
-## System Optimizations
+2. **优雅降级**
+   - 多提供者后备策略
+   - 部分结果处理
+   - 关键失败的默认响应
 
-### Enhanced Error Handling System
+更多技术细节请参阅 [TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md)。
 
-MCP Advisor implements a robust error handling system to ensure reliability and provide detailed diagnostics:
+## 开发者快速上手
 
-#### Error Handling Flow Diagram
+### 开发环境设置
 
-```mermaid
-graph TD
-    Operation["Operation Execution"] --> |"Try"| Success{"Success?"}
-    Success -->|"Yes"| Result["Return Result"]
-    Success -->|"No"| ErrorType{"Error Type?"}
-    
-    ErrorType -->|"Network Error"| NetworkHandler["Network Error Handler"]
-    ErrorType -->|"Database Error"| DBHandler["Database Error Handler"]
-    ErrorType -->|"Validation Error"| ValidationHandler["Validation Error Handler"]
-    ErrorType -->|"Unknown Error"| GenericHandler["Generic Error Handler"]
-    
-    NetworkHandler --> FormatError["Format Error with Context"]
-    DBHandler --> FormatError
-    ValidationHandler --> FormatError
-    GenericHandler --> FormatError
-    
-    FormatError --> LogError["Log Structured Error"]
-    LogError --> Fallback{"Fallback Available?"}
-    
-    Fallback -->|"Yes"| FallbackOperation["Execute Fallback"]
-    Fallback -->|"No"| PropagateError["Propagate Error"]
-    
-    FallbackOperation --> Result
-    PropagateError --> ClientError["Return Error to Client"]
-```
-
-#### Key Features
-
-1. **Contextual Error Formatting**
-   - Standardized error object enrichment
-   - Stack trace preservation and formatting
-   - Error type classification and normalization
-   - Request context inclusion (query, URL, parameters)
-
-2. **Structured Logging**
-   - JSON-formatted error metadata
-   - Component and operation identification
-   - Timestamp and correlation IDs
-   - Error severity classification
-
-3. **Provider-Specific Error Handling**
-   - Custom handlers for each search provider
-   - Network error retry mechanisms
-   - API-specific error parsing and normalization
-   - Detailed diagnostic information for external services
-
-4. **Graceful Degradation**
-   - Multi-provider fallback strategy
-   - Partial results handling
-   - Default responses for critical failures
-   - User-friendly error messages
-
-### Time-Based Data Update Strategy
-
-MCP Advisor implements an intelligent data update strategy to balance performance and data freshness:
-
-1. **Timestamp Tracking**
-   - Each data source maintains a last-update timestamp
-   - System tracks update frequency and patterns
-   - Configurable freshness window (default: 1 hour)
-
-2. **Conditional Indexing**
-   - Vector database only rebuilds when data is stale
-   - Avoids redundant indexing operations on frequent queries
-   - Dramatically reduces database load and query latency
-
-3. **Background Processing**
-   - Data updates happen asynchronously after serving requests
-   - Users get immediate responses from existing data
-   - Fresh data is available for subsequent queries
-
-4. **Fallback Mechanisms**
-   - Graceful degradation when data sources are unavailable
-   - Multiple provider strategy ensures results even if one fails
-   - Comprehensive error handling with detailed logging
-
-### Structured Logging System
-
-The enhanced logging system provides detailed visibility into system operations:
-
-1. **Context-Aware Logs**
-   - Each log entry includes component context
-   - Structured data for machine parsing
-   - Clean separation between message and metadata
-
-2. **Performance Tracking**
-   - Timing information for key operations
-   - Resource usage monitoring
-   - Query execution statistics
-
-3. **Process Visualization**
-   - Complete visibility into search execution flow
-   - Provider-specific result tracking
-   - Detailed error context for debugging
-
-#### Advanced Search Techniques
-
-1. **Vector Normalization**
-   - All vectors are normalized to unit length (magnitude = 1)
-   - Ensures consistent cosine similarity calculations
-   - Improves search precision by focusing on direction, not magnitude
-   - Reduces the impact of vector dimension variations
-   - Implementation uses Euclidean norm with zero-division protection
-
-2. **Parallel Search Execution**
-   - Vector search and text search run concurrently
-   - Leverages Promise.all for optimal performance
-   - Fallback mechanisms if either search fails
-
-3. **Weighted Result Merging**
-   - Configurable weighting between vector and text results
-   - Default: Vector similarity (70%), Text matching (30%)
-   - Dynamic adjustment based on query characteristics
-   - Intelligent provider priority system for result ranking
-
-4. **Advanced Filtering Pipeline**
-   - Smart deduplication preserving highest similarity results
-   - Provider-aware prioritization for result ranking
-   - Adaptive similarity threshold with minimum result guarantee
-   - Intelligent result limiting with quality preservation
-
-### Development Setup
-
-1. Clone the repository
-2. Install dependencies:
+1. 克隆仓库
+2. 安装依赖项：
    ```bash
    npm install
    ```
-3. Configure environment variables:
-   ```bash
-   # Required for vector search
-   OCEANBASE_URL=mysql://your_connection_string
-   
-   # Optional for SSE transport
-   TRANSPORT_TYPE=sse
-   SERVER_PORT=3000
-   ENABLE_FILE_LOGGING=true
-   ```
+3. 配置环境变量（参见 [environment-variables.md](docs/environment-variables.md)）
 
-### Library Usage
+### 库使用
 
 ```typescript
 import { SearchService } from '@xiaohui-wang/mcpadvisor';
 
-// Initialize the search service
+// 初始化搜索服务
 const searchService = new SearchService();
 
-// Search for MCP servers
-const results = await searchService.search('vector database integration');
+// 搜索 MCP 服务器
+const results = await searchService.search('向量数据库集成');
 console.log(results);
 ```
 
-### Transport Options
+### 传输选项
 
-#### 1. Stdio Transport (Default)
+MCP Advisor 支持多种传输方式：
 
-Ideal for command-line tools and direct integrations:
+1. **Stdio 传输**（默认） - 适用于命令行工具
+2. **SSE 传输** - 适用于 Web 集成
+3. **REST 传输** - 提供 REST API 端点
 
-```javascript
-// index.js
-const { createServer } = require('@xiaohui-wang/mcpadvisor');
-const server = createServer({ transport: 'stdio' });
-server.start();
-```
+更多开发详情请参阅 [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)。
 
-#### 2. SSE Transport
+## 贡献指南
 
-For web-based integrations:
+1. 遵循提交消息约定：
+   - 使用小写类型（feat, fix, docs 等）
+   - 编写描述性消息，采用句子格式
 
-```javascript
-// server.js
-const { createServer } = require('@xiaohui-wang/mcpadvisor');
-const server = createServer({
-  transport: 'sse',
-  port: 3000
-});
-server.start();
-```
+2. 确保代码质量：
+   - 运行测试：`npm test`
+   - 检查类型：`npm run type-check`
+   - 代码检查：`npm run lint`
 
-### Contributing
+详细的贡献指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-1. Follow the commit message convention:
-   - Use lowercase types (feat, fix, docs, etc.)
-   - Write descriptive messages in sentence format
+## 使用示例
 
-2. Ensure code quality:
-   - Run tests: `npm test`
-   - Check types: `npm run type-check`
-   - Lint code: `npm run lint`
+### 示例查询
 
-3. Submit a pull request with:
-   - Clear description of changes
-   - Updated tests if needed
-   - Documentation updates if needed
-
-### API Documentation
-
-#### SearchService
-
-```typescript
-class SearchService {
-  constructor(options?: SearchOptions);
-  search(query: string): Promise<SearchResult[]>;
-}
-
-interface SearchOptions {
-  limit?: number;
-  minSimilarity?: number;
-}
-
-interface SearchResult {
-  id: string;
-  name: string;
-  description: string;
-  similarity: number;
-}
-```
-
-#### Server Configuration
-
-```typescript
-interface ServerConfig {
-  transport: 'stdio' | 'sse';
-  port?: number;  // Required for SSE
-  enableFileLogging?: boolean;
-}
-```
-### Environment Variables
-
-#### Required
-- `OCEANBASE_URL`: Connection string for OceanBase vector database
-
-#### Optional
-- `TRANSPORT_TYPE`: Transport method (`stdio` or `sse`, default: `stdio`)
-- `SERVER_PORT`: HTTP server port (default: 3000)
-- `SERVER_HOST`: HTTP server host (default: localhost)
-- `SSE_PATH`: SSE endpoint path (default: /sse)
-- `MESSAGE_PATH`: Messages endpoint path (default: /messages)
-- `ENABLE_FILE_LOGGING`: Enable file logging (default: false)
-
-### License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-Connect to the server using:
-- SSE endpoint: `http://localhost:3000/sse`
-- Messages endpoint: `http://localhost:3000/messages?sessionId=<SESSION_ID>`
-- Health check: `http://localhost:3000/health`
-
-#### 3. REST Transport
-
-```sh
-TRANSPORT_TYPE=rest SERVER_PORT=3000 ENABLE_FILE_LOGGING=true node build/index.js
-```
-
-## Examples
-
-### Example Queries
-
-Here are some example queries you can use with MCP Advisor:
+以下是一些可以使用 MCP Advisor 的示例查询：
 
 ```
-"Find an MCP server for natural language processing"
-"MCP server for financial data analysis"
-"Recommendation engine MCP server for e-commerce"
-"MCP server with image recognition capabilities"
-"Weather data processing MCP server"
-"Document summarization MCP server"
+"查找用于自然语言处理的 MCP 服务器"
+"金融数据分析的 MCP 服务器"
+"电商推荐引擎 MCP 服务器"
+"具有图像识别功能的 MCP 服务器"
+"天气数据处理 MCP 服务器"
+"文档摘要 MCP 服务器"
 ```
 
-### Example Response
+### 示例响应
 
 ```json
 [
   {
     "title": "NLP Toolkit",
-    "description": "Comprehensive natural language processing toolkit with sentiment analysis, entity recognition, and text summarization capabilities.",
+    "description": "全面的自然语言处理工具包，具有情感分析、实体识别和文本摘要功能。",
     "github_url": "https://github.com/example/nlp-toolkit",
     "similarity": 0.92
   },
   {
     "title": "Text Processor",
-    "description": "Efficient text processing MCP server with multilingual support.",
+    "description": "高效的文本处理 MCP 服务器，支持多语言。",
     "github_url": "https://github.com/example/text-processor",
     "similarity": 0.85
   }
 ]
 ```
 
-## Troubleshooting
+更多示例请参阅 [EXAMPLES.md](docs/EXAMPLES.md)。
 
-### Common Issues
+## 故障排除
 
-1. **Connection Refused**
-   - Ensure the server is running on the specified port
-   - Check firewall settings
-   - Verify the host address is correct
+### 常见问题
 
-2. **No Results Returned**
-   - Try a more general query
-   - Check network connectivity to the registry API
-   - Verify API endpoints are correctly configured
+1. **连接被拒绝**
+   - 确保服务器在指定端口上运行
+   - 检查防火墙设置
 
-3. **SSE Connection Drops**
-   - Increase client timeout settings
-   - Check server logs for error messages
-   - Ensure proper CORS configuration if connecting from a browser
+2. **未返回结果**
+   - 尝试更一般的查询
+   - 检查与注册表 API 的网络连接
 
-4. **Performance Issues**
-   - Consider adding more specific search terms
-   - Check server resources (CPU/memory)
-   - Implement caching if making frequent similar queries
+3. **性能问题**
+   - 考虑添加更具体的搜索词
+   - 检查服务器资源（CPU/内存）
 
-### Logs
+更多故障排除信息请参阅 [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)。
 
-For detailed troubleshooting, check the logs in the `logs` directory. Enable debug logging with:
+## 搜索提供者
 
-```bash
-DEBUG=true node build/index.js
-```
+MCP Advisor 支持多个可同时使用的搜索提供者：
 
-## Environment Variables
+1. **Compass 搜索提供者**：使用 Compass API 检索 MCP 服务器信息
+2. **GetMCP 搜索提供者**：使用 GetMCP API 和向量搜索进行语义匹配
+3. **Meilisearch 搜索提供者**：使用 Meilisearch 进行快速、容错的文本搜索
 
-MCP Advisor can be configured using the following environment variables:
+有关搜索提供者的详细信息，请参阅 [SEARCH_PROVIDERS.md](docs/SEARCH_PROVIDERS.md)。
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `TRANSPORT_TYPE` | Transport method (`stdio`, `sse`, `rest`) | `stdio` | No |
-| `SERVER_PORT` | HTTP server port for SSE/REST transport | `3000` | No |
-| `SERVER_HOST` | HTTP server host for SSE/REST transport | `localhost` | No |
-| `SSE_PATH` | SSE endpoint path | `/sse` | No |
-| `MESSAGE_PATH` | Messages endpoint path | `/messages` | No |
-| `ENDPOINT` | REST endpoint path | `/rest` | No |
-| `DEBUG` | Enable debug logging | `false` | No |
-| `ENABLE_FILE_LOGGING` | Enable logging to files | `false` | No |
-| `LOG_LEVEL` | Log level (debug, info, warn, error) | `info` | No |
-| `ENABLE_MEILISEARCH_TESTS` | Enable Meilisearch tests | `false` | No |
-| `VECTOR_ENGINE_TYPE` | Vector engine type (`memory`, `oceanbase`, `meilisearch`) | `memory` | No |
+## API 文档
 
-## Search Providers
+有关 API 的详细文档，请参阅 [API_REFERENCE.md](docs/API_REFERENCE.md)。
 
-MCP Advisor supports multiple search providers that can be used simultaneously:
+## 路线图
 
-### 1. Compass Search Provider
-Uses the Compass API to retrieve MCP server information.
-
-### 2. GetMCP Search Provider
-Uses the GetMCP API and vector search for semantic matching.
-
-### 3. Meilisearch Search Provider
-Uses Meilisearch for fast, typo-tolerant text search.
-
-## Meilisearch Configuration
-
-Meilisearch integration can be configured in `src/config/meilisearch.ts`:
-
-```typescript
-export const MEILISEARCH_CONFIG = {
-  host: 'https://ms-1c8c8f2b0bc7-1.lon.meilisearch.io',
-  apiKey: '', // API key with read permissions
-  indexName: 'mcp_server_info_from_getmcp_io'
-};
-```
-
-## API Documentation
-
-### REST API Endpoints
-
-#### GET `/health`
-
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "version": "1.0.0"
-}
-```
-
-#### GET `/sse`
-
-Server-Sent Events endpoint for establishing a connection.
-
-**Query Parameters:**
-- None
-
-**Response:**
-- Establishes an SSE connection
-
-#### POST `/messages`
-
-Endpoint for sending messages to an established SSE connection.
-
-**Query Parameters:**
-- `sessionId` (string, required): The session ID of the SSE connection
-
-**Request Body:**
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "callTool",
-  "params": {
-    "name": "recommend-mcp-servers",
-    "arguments": {
-      "query": "financial data analysis"
-    }
-  },
-  "id": "1"
-}
-```
-
-**Response:**
-```json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "content": [
-      {
-        "title": "Financial Analytics MCP",
-        "description": "Comprehensive financial data analysis toolkit",
-        "github_url": "https://github.com/example/financial-mcp",
-        "similarity": 0.95
-      }
-    ]
-  },
-  "id": "1"
-}
-```
-
-#### POST `/rest`
-
-REST API endpoint for direct requests (when using REST transport).
-
-**Request Body:**
-```json
-{
-  "jsonrpc": "2.0",
-  "method": "callTool",
-  "params": {
-    "name": "recommend-mcp-servers",
-    "arguments": {
-      "query": "financial data analysis"
-    }
-  },
-  "id": "1"
-}
-```
-
-**Response:**
-Same as `/messages` endpoint.
-
-## Roadmap: The Future of MCP Advisor
-
-MCP Advisor is evolving from a simple recommendation system to an intelligent agent orchestration platform. Our vision is to create a system that not only recommends the right MCP servers but also learns from interactions and helps agents dynamically plan and execute complex tasks.
+MCP Advisor 正在从简单的推荐系统发展为智能代理编排平台。我们的愿景是创建一个系统，它不仅推荐正确的 MCP 服务器，还能从交互中学习并帮助代理动态规划和执行复杂任务。
 
 ```mermaid
 gantt
-    title MCP Advisor Evolution Roadmap
+    title MCP Advisor 路线图
     dateFormat  YYYY-MM-DD
     axisFormat  %Y-%m
     
-    section Foundation
-    Enhanced Search & Recommendation ✓       :done, 2025-01-01, 90d
-    Hybrid Search Engine ✓                   :done, 2025-01-01, 90d
-    Provider Priority System ✓               :done, 2025-04-01, 60d
+    section 基础功能
+    增强搜索与推荐 ✓       :done, 2025-01-01, 90d
+    混合搜索引擎 ✓                   :done, 2025-01-01, 90d
+    提供者优先级系统 ✓               :done, 2025-04-01, 60d
     
-    section Intelligence Layer
-    Feedback Collection System               :active, 2025-04-01, 90d
-    Agent Interaction Analytics             :2025-07-01, 120d
-    Usage Pattern Recognition               :2025-07-01, 90d
+    section 智能层
+    反馈收集系统               :active, 2025-04-01, 90d
+    代理交互分析             :2025-07-01, 120d
+    使用模式识别               :2025-07-01, 90d
     
-    section Learning Systems
-    Reinforcement Learning Framework         :2025-10-01, 180d
-    Contextual Bandit Implementation         :2025-10-01, 120d
-    Multi-Agent Reward Modeling             :2026-01-01, 90d
-    
-    section Advanced Features
-    Task Decomposition Engine               :2026-01-01, 120d
-    Dynamic Planning System                 :2026-04-01, 150d
-    Adaptive MCP Orchestration              :2026-04-01, 120d
-    
-    section Ecosystem
-    Developer SDK & API                     :2026-07-01, 90d
-    Custom MCP Training Tools               :2026-07-01, 120d
-    Enterprise Integration Framework        :2026-10-01, 150d
+    section 学习系统
+    强化学习框架         :2025-10-01, 180d
+    上下文赌博实现         :2025-10-01, 120d
+    多代理奖励建模             :2026-01-01, 90d
 ```
 
-### Phase 1: Intelligence Layer (2025 Q2-Q3)
+### 主要发展阶段
 
-#### Feedback Collection System
-- **User Feedback API**: Capture explicit feedback on MCP recommendations
-- **Implicit Feedback Tracking**: Monitor which MCPs are actually used after recommendation
-- **Success Metrics**: Track task completion rates with recommended MCPs
-- **A/B Testing Framework**: Compare different recommendation strategies
+1. **智能层** (2025 Q2-Q3)
+   - 用户反馈 API
+   - 代理交互分析
+   - 使用模式识别
 
-#### Agent Interaction Analytics
-- **Interaction Logging**: Record detailed agent-MCP interactions
-- **Performance Metrics**: Measure response times, success rates, and error frequencies
-- **Conversation Analysis**: Extract patterns from agent-MCP conversations
-- **Cross-MCP Analytics**: Compare effectiveness across different MCP types
+2. **学习系统** (2025 Q4-2026 Q1)
+   - 强化学习框架
+   - 上下文赌博实现
+   - 多代理奖励建模
 
-#### Usage Pattern Recognition
-- **Task Classification**: Automatically categorize tasks that benefit from specific MCPs
-- **Query Intent Analysis**: Identify underlying intent beyond keyword matching
-- **Sequential Pattern Mining**: Discover common MCP usage sequences
-- **User Profiling**: Build profiles based on MCP usage patterns
+3. **高级功能** (2026 Q1-Q2)
+   - 任务分解引擎
+   - 动态规划系统
+   - 自适应 MCP 编排
 
-### Phase 2: Learning Systems (2025 Q4 - 2026 Q1)
+4. **生态系统扩展** (2026 Q3-Q4)
+   - 开发者 SDK 和 API
+   - 自定义 MCP 训练工具
+   - 企业集成框架
 
-#### Reinforcement Learning Framework
-- **State Representation**: Model the agent's context and task requirements
-- **Action Space**: Define MCP selection and configuration options
-- **Reward Function**: Design multi-objective rewards balancing accuracy, efficiency, and user satisfaction
-- **Policy Optimization**: Implement algorithms like PPO or SAC for policy learning
+详细的路线图请参阅 [ROADMAP.md](ROADMAP.md)。
 
-#### Contextual Bandit Implementation
-- **Context Extraction**: Identify relevant features from queries and agent state
-- **Exploration Strategies**: Balance exploration vs. exploitation with Thompson sampling
-- **Online Learning**: Update models in real-time based on interaction outcomes
-- **Cold Start Handling**: Strategies for new MCPs with limited usage data
+## 测试
 
-#### Multi-Agent Reward Modeling
-- **Collaborative Rewards**: Design reward structures for multi-agent scenarios
-- **Preference Learning**: Learn from human preferences between different MCP selections
-- **Inverse Reinforcement Learning**: Infer reward functions from expert demonstrations
-- **Long-term Value Estimation**: Model delayed rewards for complex task chains
+使用 [inspector](https://github.com/modelcontextprotocol/inspector) 进行测试：
 
-### Phase 3: Advanced Features (2026 Q1-Q2)
-
-#### Task Decomposition Engine
-- **Hierarchical Task Analysis**: Break complex tasks into subtasks
-- **MCP Capability Matching**: Map subtasks to appropriate MCPs
-- **Dependency Tracking**: Manage dependencies between subtasks
-- **Parallel Execution Planning**: Identify opportunities for concurrent MCP usage
-
-#### Dynamic Planning System
-- **Goal-Oriented Planning**: Generate plans to achieve specific objectives
-- **Adaptive Replanning**: Adjust plans based on intermediate results
-- **Resource Optimization**: Balance performance vs. cost in MCP selection
-- **Uncertainty Handling**: Plan robustly under incomplete information
-
-#### Adaptive MCP Orchestration
-- **Workflow Automation**: Create and execute multi-MCP workflows
-- **Context Preservation**: Maintain context across MCP transitions
-- **Failure Recovery**: Implement fallback strategies for MCP failures
-- **Performance Optimization**: Dynamically adjust MCP parameters based on feedback
-
-### Phase 4: Ecosystem Expansion (2026 Q3-Q4)
-
-#### Developer SDK & API
-- **Custom Integration API**: Allow developers to integrate their own MCPs
-- **Analytics Dashboard**: Provide insights into MCP usage and performance
-- **Simulation Environment**: Test MCP orchestration in controlled environments
-- **Extension Framework**: Enable community-developed plugins
-
-#### Custom MCP Training Tools
-- **MCP Effectiveness Metrics**: Standardized evaluation framework
-- **Performance Benchmarking**: Compare MCPs against standard tasks
-- **Automated Testing**: Generate test cases for MCP validation
-- **Improvement Recommendations**: Suggest enhancements based on usage patterns
-
-#### Enterprise Integration Framework
-- **Security & Compliance**: Enterprise-grade security features
-- **Custom Deployment Options**: On-premise and private cloud deployment
-- **Team Collaboration**: Multi-user access and role management
-- **Integration with Enterprise Systems**: Connect with existing workflows and tools
-
-## Test
-with [inspector](https://github.com/modelcontextprotocol/inspector)
 ```bash 
- npx @modelcontextprotocol/inspector
+npx @modelcontextprotocol/inspector
 ```
 
-## License 
+## 文档导航
 
-MIT License - See [LICENSE](LICENSE) file for details.
+- [安装指南](docs/INSTALLATION.md) - 详细的安装和配置说明
+- [用户指南](docs/USER_GUIDE.md) - 如何使用 MCP Advisor
+- [架构文档](docs/ARCHITECTURE.md) - 系统架构详解
+- [技术细节](docs/TECHNICAL_DETAILS.md) - 高级技术特性
+- [开发者指南](docs/DEVELOPER_GUIDE.md) - 开发环境设置和代码贡献
+- [故障排除](docs/TROUBLESHOOTING.md) - 常见问题和解决方案
+- [搜索提供者](docs/SEARCH_PROVIDERS.md) - 搜索提供者详情
+- [API 参考](docs/API_REFERENCE.md) - API 文档
+- [路线图](ROADMAP.md) - 项目未来发展计划
+- [贡献指南](CONTRIBUTING.md) - 如何贡献代码
+
+## 许可证
+
+本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。
