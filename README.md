@@ -41,6 +41,20 @@ Add this configuration to your AI assistant's MCP settings file:
 - **Real-time Updates**: Always up-to-date with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
 - **Easy Integration**: Simple configuration for any MCP-compatible AI assistant
 
+### Demo Video
+
+<div align="center">
+  <a href="https://www.bilibili.com/video/BV17tJuz9Eci">
+    <img src="https://i2.hdslb.com/bfs/archive/7cfc7c30ce29eca2e13e2a3f2859a35779eec492.jpg@640w_400h_1c.webp" alt="MCP Advisor Demo" width="640">
+  </a>
+  <p>点击图片观看演示视频</p>
+</div>
+
+```html
+<!-- 如需在其他Markdown编辑器中嵌入视频，可使用以下代码 -->
+<iframe src="//player.bilibili.com/player.html?isOutside=true&aid=114526997448234&bvid=BV17tJuz9Eci&cid=30018964782&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" width="800" height="450"></iframe>
+```
+
 ### Alternative Installation Methods
 
 #### NPM Package
