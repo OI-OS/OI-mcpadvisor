@@ -9,12 +9,13 @@ import { fileURLToPath } from 'url';
 import { MCPServerResponse } from '../types/index.js';
 
 // 获取当前文件的目录
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// 使用不同的变量名避免与 Jest 环境冲突
+const testFilePath = fileURLToPath(import.meta.url);
+const testDirPath = path.dirname(testFilePath);
 
 // 兜底数据路径
 const FALLBACK_DATA_PATH = path.resolve(
-  __dirname, '../../data/mcp_server_list.json'
+  testDirPath, '../../data/mcp_server_list.json'
 );
 
 /**
