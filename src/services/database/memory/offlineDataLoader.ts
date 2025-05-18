@@ -12,8 +12,9 @@ import { getTextEmbedding } from '../../../utils/embedding.js';
 import { normalizeVector } from '../../../utils/vectorUtils.js';
 
 // 获取当前文件的目录
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// 使用不同的变量名避免与 Jest 环境冲突
+const currentFilePath = fileURLToPath(import.meta.url);
+const currentDirPath = path.dirname(currentFilePath);
 
 /**
  * 默认兜底数据路径
@@ -21,7 +22,7 @@ const __dirname = path.dirname(__filename);
  */
 const DEFAULT_FALLBACK_DATA_PATH = path.resolve(
   // 从当前文件位置 (build/services/database/memory/) 回溯到包根目录，然后定位到data文件夹
-  __dirname, '../../../../data/mcp_server_list.json'
+  currentDirPath, '../../../../data/mcp_server_list.json'
 );
 
 // 备用路径，用于在默认路径无法访问时尝试
