@@ -21,6 +21,7 @@ import { SearchService } from './searchService.js';
 import logger from '../utils/logger.js';
 import { RestServerTransport } from "@chatmcp/sdk/server/rest.js";
 import { InstallationGuideService } from "./installation/installationGuideService.js";
+import { ConfigurationGuideService } from "./installation/configurationGuideService.js";
 import { addAdditionalSources, McpSources } from './loadService.js';
 
 // Define Zod schemas for validation
@@ -28,6 +29,7 @@ const GeneralArgumentsSchema = z.object({
   query: z.string().min(1).optional(),
   mcpName: z.string().min(1).optional(),
   githubUrl: z.string().url().optional(),
+  mcpClient: z.string().optional(),
 }).refine(data => {
   // 确保至少有一个参数存在
   return !!(data.query || (data.mcpName && data.githubUrl));
@@ -145,6 +147,7 @@ export class ServerService {
           const parsedArgs = GeneralArgumentsSchema.parse(args);
           const mcpName = parsedArgs.mcpName;
           const githubUrl = parsedArgs.githubUrl;
+          const mcpClient = parsedArgs.mcpClient || "";
           
           if (!mcpName || !githubUrl) {
             return {
@@ -156,16 +159,23 @@ export class ServerService {
             };
           }
           
-          logger.info(`Processing install-mcp-server request`, 'Installation', { mcpName, githubUrl });
+          logger.info(`Processing install-mcp-server request`, 'Installation', { mcpName, githubUrl, mcpClient });
           
           // 获取 GitHub README 内容
           const installationGuideService = new InstallationGuideService();
           const installationGuide = await installationGuideService.generateInstallationGuide(githubUrl, mcpName);
           
+          // 生成客户端特定的配置指南
+          const configurationGuideService = new ConfigurationGuideService();
+          const configGuide = configurationGuideService.generateConfigurationGuide(mcpName, mcpClient);
+          
+          // 合并安装指南和配置指南
+          const completeGuide = `${installationGuide}\n\n${configGuide}`;
+          
           return {
             content: [{
               type: "text",
-              text: installationGuide
+              text: completeGuide
             }],
             isError: false
           };
@@ -229,12 +239,15 @@ export class ServerService {
     };
   }
 
+
+
   private installMcpServerTool(): { [x: string]: unknown; name: string; inputSchema: { [x: string]: unknown; type: "object"; properties?: { [x: string]: unknown; } | undefined; }; description?: string | undefined; annotations?: { [x: string]: unknown; title?: string | undefined; readOnlyHint?: boolean | undefined; destructiveHint?: boolean | undefined; idempotentHint?: boolean | undefined; openWorldHint?: boolean | undefined; } | undefined; } {
     return {
       name: "install-mcp-server",
       description: `
               此工具用于安装MCP服务器。
-              请告诉我您想要安装哪个 MCP 以及其 githubUrl,我将会告诉您如何安装对应的 MCP
+              请告诉我您想要安装哪个 MCP 以及其 githubUrl，我将会告诉您如何安装对应的 MCP，
+              并指导您在不同AI助手环境中正确配置MCP服务器。
               `,
       inputSchema: {
         type: "object",
@@ -247,6 +260,10 @@ export class ServerService {
             type: "string",
             description: `请输入您想要安装的MCP的githubUrl。`,
           },
+          mcpClient: {
+            type: "string",
+            description: `可选，请指定您使用的MCP客户端（如Claude Desktop、Windsurf、Cursor、Cline等）。不同客户端的配置方式可能不同。`,
+          }
         },
         required: ["mcpName", "githubUrl"],
       },
