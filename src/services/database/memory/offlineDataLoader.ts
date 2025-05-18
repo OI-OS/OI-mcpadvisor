@@ -17,9 +17,17 @@ const __dirname = path.dirname(__filename);
 
 /**
  * 默认兜底数据路径
+ * 使用相对于包根目录的路径，确保在打包后仍能正确解析
  */
 const DEFAULT_FALLBACK_DATA_PATH = path.resolve(
+  // 从当前文件位置 (build/services/database/memory/) 回溯到包根目录，然后定位到data文件夹
   __dirname, '../../../../data/mcp_server_list.json'
+);
+
+// 备用路径，用于在默认路径无法访问时尝试
+const ALTERNATIVE_FALLBACK_DATA_PATH = path.resolve(
+  // 直接从node_modules中的包根目录访问
+  process.cwd(), 'node_modules', '@xiaohui-wang/mcpadvisor', 'data/mcp_server_list.json'
 );
 
 /**
@@ -43,12 +51,20 @@ export class OfflineDataLoader {
    */
   async loadFallbackData(): Promise<MCPServerResponse[]> {
     try {
-      logger.info(`Loading fallback data from: ${this.fallbackDataPath}`);
+      logger.info(`Attempting to load fallback data from: ${this.fallbackDataPath}`);
       
-      // 检查文件是否存在
+      // 检查主要文件路径是否存在
       if (!fs.existsSync(this.fallbackDataPath)) {
-        logger.warn(`Fallback data file not found at: ${this.fallbackDataPath}`);
-        return [];
+        logger.warn(`Fallback data file not found at primary path: ${this.fallbackDataPath}`);
+        
+        // 尝试备用路径
+        if (this.fallbackDataPath === DEFAULT_FALLBACK_DATA_PATH && fs.existsSync(ALTERNATIVE_FALLBACK_DATA_PATH)) {
+          logger.info(`Trying alternative fallback data path: ${ALTERNATIVE_FALLBACK_DATA_PATH}`);
+          this.fallbackDataPath = ALTERNATIVE_FALLBACK_DATA_PATH;
+        } else {
+          logger.error('No fallback data file found at any path');
+          return [];
+        }
       }
       
       // 读取并解析JSON文件
@@ -64,11 +80,24 @@ export class OfflineDataLoader {
         tags: item.tags || []
       }));
       
-      logger.info(`Loaded ${serverResponses.length} fallback MCP servers`);
+      logger.info(`Successfully loaded ${serverResponses.length} fallback MCP servers from ${this.fallbackDataPath}`);
       return serverResponses;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      logger.error(`Error loading fallback data: ${message}`, { error });
+      logger.error(`Error loading fallback data: ${message}`, { error, path: this.fallbackDataPath });
+      
+      // 如果主路径失败，尝试备用路径
+      if (this.fallbackDataPath !== ALTERNATIVE_FALLBACK_DATA_PATH && 
+          this.fallbackDataPath === DEFAULT_FALLBACK_DATA_PATH) {
+        try {
+          logger.info(`Trying alternative fallback data path after error: ${ALTERNATIVE_FALLBACK_DATA_PATH}`);
+          this.fallbackDataPath = ALTERNATIVE_FALLBACK_DATA_PATH;
+          return await this.loadFallbackData(); // 递归调用自身尝试备用路径
+        } catch (alternativeError) {
+          logger.error(`Error loading from alternative path: ${String(alternativeError)}`);
+        }
+      }
+      
       return [];
     }
   }
