@@ -5,30 +5,23 @@
 
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { MCPServerResponse } from '../../../types/index.js';
 import logger from '../../../utils/logger.js';
 import { getTextEmbedding } from '../../../utils/embedding.js';
+import { MCPServerResponse } from '../../../types/index.js';
 import { normalizeVector } from '../../../utils/vectorUtils.js';
-
-// 获取当前文件的目录
-// 使用不同的变量名避免与 Jest 环境冲突
-const currentFilePath = fileURLToPath(import.meta.url);
-const currentDirPath = path.dirname(currentFilePath);
+import { getMcpServerListPath, getNodeModulesPath } from '../../../utils/pathUtils.js';
 
 /**
  * 默认兜底数据路径
- * 使用相对于包根目录的路径，确保在打包后仍能正确解析
+ * 使用路径工具获取路径，确保在打包后和测试环境中都能正确解析
+ * 在 Jest 环境中传入 null，路径工具会自动处理
  */
-const DEFAULT_FALLBACK_DATA_PATH = path.resolve(
-  // 从当前文件位置 (build/services/database/memory/) 回溯到包根目录，然后定位到data文件夹
-  currentDirPath, '../../../../data/mcp_server_list.json'
-);
+const DEFAULT_FALLBACK_DATA_PATH = getMcpServerListPath(null);
 
 // 备用路径，用于在默认路径无法访问时尝试
-const ALTERNATIVE_FALLBACK_DATA_PATH = path.resolve(
-  // 直接从node_modules中的包根目录访问
-  process.cwd(), 'node_modules', '@xiaohui-wang/mcpadvisor', 'data/mcp_server_list.json'
+const ALTERNATIVE_FALLBACK_DATA_PATH = getNodeModulesPath(
+  '@xiaohui-wang/mcpadvisor', 
+  'data/mcp_server_list.json'
 );
 
 /**

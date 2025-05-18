@@ -33,6 +33,7 @@ MCP Advisor is a discovery and recommendation service that helps AI assistants e
 - [Architecture Documentation](docs/ARCHITECTURE.md) - System architecture details
 - [Technical Details](docs/TECHNICAL_DETAILS.md) - Advanced technical features
 - [Developer Guide](docs/DEVELOPER_GUIDE.md) - Development environment setup and code contribution
+- [Best Practices](docs/BEST_PRACTICES.md) - Coding standards and best practices for contributors
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Search Providers](docs/SEARCH_PROVIDERS.md) - Search provider details
 - [API Reference](docs/API_REFERENCE.md) - API documentation
