@@ -33,6 +33,7 @@ MCP Advisor 是一个发现和推荐服务，帮助 AI 助手使用自然语言�
 - [架构文档](docs/ARCHITECTURE.md) - 系统架构详解
 - [技术细节](docs/TECHNICAL_DETAILS.md) - 高级技术特性
 - [开发者指南](docs/DEVELOPER_GUIDE.md) - 开发环境设置和代码贡献
+- [最佳实践](docs/BEST_PRACTICES.md) - 编码规范和贡献者最佳实践
 - [故障排除](docs/TROUBLESHOOTING.md) - 常见问题和解决方案
 - [搜索提供者](docs/SEARCH_PROVIDERS.md) - 搜索提供者详情
 - [API 参考](docs/API_REFERENCE.md) - API 文档
