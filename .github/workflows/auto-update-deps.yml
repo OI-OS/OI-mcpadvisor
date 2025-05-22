@@ -1,0 +1,64 @@
+name: Auto Update Dependencies
+
+on:
+  schedule:
+    - cron: '0 2 * * 1' # 每周一凌晨2点运行
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+          run_install: false
+          
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+          
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+            
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Update dependencies
+        run: pnpm deps:update
+        
+      - name: Run tests
+        run: pnpm test
+        
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'chore(deps): update dependencies'
+          title: '📦 依赖更新'
+          body: |
+            此PR由自动更新工作流创建，更新了项目依赖。
+            
+            ## 更新内容
+            - 使用 `pnpm update --latest` 更新所有依赖到最新版本
+            - 所有测试已通过
+            
+            请在合并前检查更新是否引入了任何破坏性变更。
+          branch: deps/auto-update
+          base: main
+          labels: dependencies
