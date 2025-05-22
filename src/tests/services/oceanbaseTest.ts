@@ -3,19 +3,21 @@
  * 用于验证 OceanBase 向量搜索功能
  */
 
-import { oceanBaseClient } from '../services/database/oceanbase/controller.js';
-import { OceanBaseVectorEngine } from '../services/database/oceanbase/vectorEngine.js';
-import { getTextEmbedding } from '../utils/embedding.js';
-import { MCPServerResponse } from '../types/index.js';
+import { oceanBaseClient } from '../../services/database/oceanbase/controller.js';
+import { OceanBaseVectorEngine } from '../../services/database/oceanbase/vectorEngine.js';
+import { getTextEmbedding } from '../../utils/embedding.js';
+import { MCPServerResponse } from '../../types/index.js';
 
-// 模拟logger避免测试中的实际日志记录
-jest.mock('../utils/logger.js', () => ({
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// 注意：logger 已在 setup.ts 中被模拟
+vi.mock('../utils/logger.js', () => ({
   __esModule: true,
   default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
   },
 }));
 
