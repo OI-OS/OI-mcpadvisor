@@ -11,7 +11,7 @@ import logger from '../../utils/logger.js';
 export enum VectorEngineType {
   MEMORY = 'memory',
   OCEANBASE = 'oceanbase',
-  MEILISEARCH = 'meilisearch'
+  MEILISEARCH = 'meilisearch',
 }
 
 /**
@@ -61,19 +61,21 @@ export class VectorEngineFactory {
   static createEngine(type?: VectorEngineType): IVectorSearchEngine {
     // 如果未指定类型，使用环境变量配置
     const engineType = type || parseEngineType(VECTOR_ENGINE_TYPE);
-    
+
     switch (engineType) {
       case VectorEngineType.OCEANBASE:
         // 如果选择了 OceanBase 但未配置 URL，则回退到内存引擎
         if (!OCEANBASE_URL) {
-          logger.warn('OCEANBASE_URL is not set, falling back to in-memory vector engine');
+          logger.warn(
+            'OCEANBASE_URL is not set, falling back to in-memory vector engine',
+          );
           return createMemoryEngine();
         }
         return createOceanBaseEngine();
-      
+
       case VectorEngineType.MEILISEARCH:
         return createMeilisearchEngine();
-      
+
       case VectorEngineType.MEMORY:
       default:
         return createMemoryEngine();

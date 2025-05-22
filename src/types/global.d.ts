@@ -5,7 +5,7 @@ declare global {
   var systemEnv: {
     hnswEfSearch?: number;
   };
-  
+
   namespace NodeJS {
     interface ProcessEnv {
       OCEANBASE_URL?: string;

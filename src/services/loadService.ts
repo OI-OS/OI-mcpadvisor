@@ -30,7 +30,7 @@ function processJsonData(data: any): any[] {
       return { name: key, value };
     });
   }
-  
+
   return [];
 }
 
@@ -80,7 +80,10 @@ function normalizeItem(item: Item, fieldMap: FieldMap): Item {
 /**
  * Fetch data from multiple sources
  */
-async function fetchFromSources(sources: string[], fetchFn: (source: string) => Promise<any[]>): Promise<any[]> {
+async function fetchFromSources(
+  sources: string[],
+  fetchFn: (source: string) => Promise<any[]>,
+): Promise<any[]> {
   const results = await Promise.all(sources.map(fetchFn));
   return results.flat();
 }
@@ -88,27 +91,30 @@ async function fetchFromSources(sources: string[], fetchFn: (source: string) => 
 /**
  * Load all data from configured sources
  */
-export async function loadAll(additionalSources?: McpSources, additionalFieldMap?: FieldMap): Promise<Item[]> {
+export async function loadAll(
+  additionalSources?: McpSources,
+  additionalFieldMap?: FieldMap,
+): Promise<Item[]> {
   const config = await loadConfig();
-  
+
   // Merge additional sources if provided
   const remote_urls = [
     ...(config.mcp_sources?.remote_urls || []),
-    ...(additionalSources?.remote_urls || [])
+    ...(additionalSources?.remote_urls || []),
   ];
   const local_files = [
     ...(config.mcp_sources?.local_files || []),
-    ...(additionalSources?.local_files || [])
+    ...(additionalSources?.local_files || []),
   ];
-  
+
   // Merge field maps if provided
-  const fieldMap = additionalFieldMap 
+  const fieldMap = additionalFieldMap
     ? { ...config.mcp_index_fields, ...additionalFieldMap }
     : config.mcp_index_fields;
 
   const remoteItems = await fetchFromSources(remote_urls, fetchJsonFromUrl);
   const localItems = await fetchFromSources(local_files, fetchJsonFromFile);
-  
+
   const allItems = [...remoteItems, ...localItems];
   const items = allItems.map(item => normalizeItem(item, fieldMap));
   // TODO: save to remote db
@@ -123,12 +129,12 @@ export async function loadAll(additionalSources?: McpSources, additionalFieldMap
  */
 export async function addAdditionalSources(
   sources: Partial<McpSources>,
-  fieldMap?: FieldMap
+  fieldMap?: FieldMap,
 ): Promise<Item[]> {
   const additionalSources: McpSources = {
     remote_urls: sources.remote_urls || [],
-    local_files: sources.local_files || []
+    local_files: sources.local_files || [],
   };
-  
+
   return loadAll(additionalSources, fieldMap);
 }

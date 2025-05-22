@@ -7,7 +7,7 @@ type Predicate<T> = (item: T) => boolean;
 export function filterFromEndUntilLimit<T>(
   arr: T[],
   predicate: Predicate<T>,
-  limit: number
+  limit: number,
 ): T[] {
   if (arr.length === 0 || limit <= 0) {
     return [];

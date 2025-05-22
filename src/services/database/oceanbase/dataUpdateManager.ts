@@ -31,7 +31,7 @@ export class DataUpdateManager {
           update_count INT DEFAULT 0
         );
       `;
-      
+
       const client = await getClient();
       await client.query(sql);
       logger.debug('Update info table initialized');
@@ -41,7 +41,7 @@ export class DataUpdateManager {
       throw error;
     }
   }
-  
+
   /**
    * 获取上次更新时间
    * @param updateType 更新类型
@@ -54,15 +54,15 @@ export class DataUpdateManager {
         FROM ${UPDATE_INFO_TABLE} 
         WHERE update_type = ?
       `;
-      
+
       const client = await getClient();
       const [rows] = await client.query(sql, [updateType]);
       const result = rows as any[];
-      
+
       if (result.length === 0) {
         return null;
       }
-      
+
       return new Date(result[0].last_update_time);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -70,7 +70,7 @@ export class DataUpdateManager {
       return null;
     }
   }
-  
+
   /**
    * 更新上次更新时间
    * @param updateType 更新类型
@@ -79,17 +79,17 @@ export class DataUpdateManager {
     try {
       const now = new Date();
       const client = await getClient();
-      
+
       // 检查记录是否存在
       const existingRecord = await this.getLastUpdateTime(updateType);
-      
+
       if (existingRecord === null) {
         // 插入新记录
         const insertSql = `
           INSERT INTO ${UPDATE_INFO_TABLE} (update_type, last_update_time, update_count)
           VALUES (?, ?, 1)
         `;
-        
+
         await client.query(insertSql, [updateType, now]);
       } else {
         // 更新现有记录
@@ -99,45 +99,54 @@ export class DataUpdateManager {
               update_count = update_count + 1
           WHERE update_type = ?
         `;
-        
+
         await client.query(updateSql, [now, updateType]);
       }
-      
-      logger.info(`Updated last update time for ${updateType} to ${now.toISOString()}`);
+
+      logger.info(
+        `Updated last update time for ${updateType} to ${now.toISOString()}`,
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`Error updating last update time: ${message}`);
       throw error;
     }
   }
-  
+
   /**
    * 检查数据是否需要更新
    * @param updateType 更新类型
    * @param maxAgeHours 最大有效时间（小时）
    * @returns 是否需要更新
    */
-  static async needsUpdate(updateType: UpdateType, maxAgeHours: number = 1): Promise<boolean> {
+  static async needsUpdate(
+    updateType: UpdateType,
+    maxAgeHours: number = 1,
+  ): Promise<boolean> {
     const lastUpdateTime = await this.getLastUpdateTime(updateType);
-    
+
     // 如果没有记录，需要更新
     if (lastUpdateTime === null) {
       logger.info(`No previous update record for ${updateType}, update needed`);
       return true;
     }
-    
+
     const now = new Date();
     const ageMs = now.getTime() - lastUpdateTime.getTime();
     const ageHours = ageMs / (1000 * 60 * 60);
-    
+
     const needsUpdate = ageHours > maxAgeHours;
-    
+
     if (needsUpdate) {
-      logger.info(`Data for ${updateType} is ${ageHours.toFixed(2)} hours old, update needed`);
+      logger.info(
+        `Data for ${updateType} is ${ageHours.toFixed(2)} hours old, update needed`,
+      );
     } else {
-      logger.info(`Data for ${updateType} is ${ageHours.toFixed(2)} hours old, still fresh`);
+      logger.info(
+        `Data for ${updateType} is ${ageHours.toFixed(2)} hours old, still fresh`,
+      );
     }
-    
+
     return needsUpdate;
   }
 }

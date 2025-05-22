@@ -10,8 +10,12 @@ export interface IVectorSearchEngine {
    * @param vector 向量表示
    * @param data 关联的 MCP 服务器数据
    */
-  addEntry(id: string, vector: number[], data: MCPServerResponse): Promise<void>;
-  
+  addEntry(
+    id: string,
+    vector: number[],
+    data: MCPServerResponse,
+  ): Promise<void>;
+
   /**
    * 搜索与查询向量相似的条目
    * @param queryVector 查询向量
@@ -19,7 +23,7 @@ export interface IVectorSearchEngine {
    * @returns 按相似度排序的 MCP 服务器响应
    */
   search(queryVector: number[], limit?: number): Promise<MCPServerResponse[]>;
-  
+
   /**
    * 清除所有索引条目
    */

@@ -16,32 +16,30 @@ export function loadConfig() {
     const customConfigPath = process.env.CONFIG_FILE;
     if (customConfigPath && fs.existsSync(customConfigPath)) {
       // Process.cwd() is used for relative paths
-      const absolutePath = path.isAbsolute(customConfigPath) 
-        ? customConfigPath 
+      const absolutePath = path.isAbsolute(customConfigPath)
+        ? customConfigPath
         : path.join(process.cwd(), customConfigPath);
-      
+
       console.log(`Loading custom config from: ${absolutePath}`);
-      
+
       // For JSON files
       if (absolutePath.endsWith('.json')) {
         const customConfig = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
         return mergeConfigs(config, customConfig);
       }
-      
+
       // For JS/TS files
       if (absolutePath.endsWith('.js') || absolutePath.endsWith('.ts')) {
         // Dynamic import for ESM
-        return import(absolutePath)
-          .then(module => {
-            return mergeConfigs(config, module.default || module);
-          });
+        return import(absolutePath).then(module =>
+          mergeConfigs(config, module.default || module),
+        );
       }
     }
-    
+
     // Check for environment variable overrides for specific fields
     const envConfig = loadEnvironmentOverrides();
     return mergeConfigs(config, envConfig);
-    
   } catch (error) {
     console.error('Error loading custom configuration:', error);
     return config; // Fallback to default config
@@ -53,17 +51,19 @@ export function loadConfig() {
  */
 function loadEnvironmentOverrides() {
   const envConfig: Record<string, any> = {};
-  
+
   // Load additional MCP sources from a separate file
   if (process.env.MCP_SOURCES_FILE) {
     try {
       const sourcesFilePath = process.env.MCP_SOURCES_FILE;
-      const absolutePath = path.isAbsolute(sourcesFilePath) 
-        ? sourcesFilePath 
+      const absolutePath = path.isAbsolute(sourcesFilePath)
+        ? sourcesFilePath
         : path.join(process.cwd(), sourcesFilePath);
-      
+
       if (fs.existsSync(absolutePath)) {
-        const additionalSources = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
+        const additionalSources = JSON.parse(
+          fs.readFileSync(absolutePath, 'utf8'),
+        );
         envConfig.mcp_sources = additionalSources.mcp_sources || {};
         if (additionalSources.mcp_index_fields) {
           envConfig.mcp_index_fields = additionalSources.mcp_index_fields;
@@ -73,26 +73,30 @@ function loadEnvironmentOverrides() {
       console.error('Failed to parse MCP_SOURCES_FILE:', e);
     }
   }
-  
+
   // MCP sources from environment variables
   if (process.env.MCP_REMOTE_URLS) {
     try {
       envConfig.mcp_sources = envConfig.mcp_sources || {};
-      envConfig.mcp_sources.remote_urls = JSON.parse(process.env.MCP_REMOTE_URLS);
+      envConfig.mcp_sources.remote_urls = JSON.parse(
+        process.env.MCP_REMOTE_URLS,
+      );
     } catch (e) {
       console.error('Failed to parse MCP_REMOTE_URLS environment variable');
     }
   }
-  
+
   if (process.env.MCP_LOCAL_FILES) {
     try {
       envConfig.mcp_sources = envConfig.mcp_sources || {};
-      envConfig.mcp_sources.local_files = JSON.parse(process.env.MCP_LOCAL_FILES);
+      envConfig.mcp_sources.local_files = JSON.parse(
+        process.env.MCP_LOCAL_FILES,
+      );
     } catch (e) {
       console.error('Failed to parse MCP_LOCAL_FILES environment variable');
     }
   }
-  
+
   // Index field mappings from environment variable
   if (process.env.MCP_INDEX_FIELDS) {
     try {
@@ -101,7 +105,7 @@ function loadEnvironmentOverrides() {
       console.error('Failed to parse MCP_INDEX_FIELDS environment variable');
     }
   }
-  
+
   return envConfig;
 }
 
@@ -110,11 +114,11 @@ function loadEnvironmentOverrides() {
  */
 function mergeConfigs(baseConfig: any, overrideConfig: any): any {
   const result = { ...baseConfig };
-  
+
   for (const key in overrideConfig) {
     if (Object.prototype.hasOwnProperty.call(overrideConfig, key)) {
       if (
-        typeof overrideConfig[key] === 'object' && 
+        typeof overrideConfig[key] === 'object' &&
         overrideConfig[key] !== null &&
         !Array.isArray(overrideConfig[key]) &&
         typeof baseConfig[key] === 'object' &&
@@ -127,6 +131,6 @@ function mergeConfigs(baseConfig: any, overrideConfig: any): any {
       }
     }
   }
-  
+
   return result;
-} 
+}

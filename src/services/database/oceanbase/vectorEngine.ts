@@ -8,31 +8,33 @@ import { normalizeVector } from '../../../utils/vectorUtils.js';
 /**
  * 将 MCPServerResponse 转换为元数据
  */
-const serverResponseToMetadata = (data: MCPServerResponse): Record<string, any> => {
+const serverResponseToMetadata = (
+  data: MCPServerResponse,
+): Record<string, any> => {
   // 创建基本元数据
   const metadata: Record<string, any> = {
     title: data.title,
     description: data.description,
-    github_url: data.github_url
+    github_url: data.github_url,
   };
-  
+
   // 处理分类信息
   if (data.categories) {
     metadata.categories = data.categories;
   }
-  
+
   // 处理标签信息
   if (data.tags) {
     metadata.tags = data.tags;
   }
-  
+
   return metadata;
 };
 
 /**
  * 将搜索结果转换为 MCPServerResponse
  */
-const searchResultToServerResponse = (result: { 
+const searchResultToServerResponse = (result: {
   id: string;
   similarity: number;
   metadata: Record<string, any>;
@@ -43,19 +45,19 @@ const searchResultToServerResponse = (result: {
     title: result.metadata.title,
     description: result.metadata.description,
     github_url: result.metadata.github_url,
-    similarity: result.similarity
+    similarity: result.similarity,
   };
-  
+
   // 添加分类信息（如果有）
   if (result.metadata.categories) {
     response.categories = result.metadata.categories;
   }
-  
+
   // 添加标签信息（如果有）
   if (result.metadata.tags) {
     response.tags = result.metadata.tags;
   }
-  
+
   return response;
 };
 
@@ -75,7 +77,9 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
         this.handleError(error, 'initializing OceanBase');
       });
     } else {
-      logger.warn('OCEANBASE_URL is not set, OceanBase vector engine will not be initialized');
+      logger.warn(
+        'OCEANBASE_URL is not set, OceanBase vector engine will not be initialized',
+      );
     }
   }
 
@@ -97,17 +101,25 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
    * 添加向量条目
    * 在存储前对向量进行归一化处理
    */
-  async addEntry(id: string, vector: number[], data: MCPServerResponse): Promise<void> {
+  async addEntry(
+    id: string,
+    vector: number[],
+    data: MCPServerResponse,
+  ): Promise<void> {
     if (!OCEANBASE_URL || !this.isInitialized) {
-      logger.warn('OceanBase vector engine is not initialized, cannot add entry');
+      logger.warn(
+        'OceanBase vector engine is not initialized, cannot add entry',
+      );
       return;
     }
-    
+
     try {
       // 对向量进行归一化
       const normalizedVector = normalizeVector(vector);
-      logger.debug(`Vector normalized from magnitude ${this.calculateMagnitude(vector).toFixed(4)} to ${this.calculateMagnitude(normalizedVector).toFixed(4)}`);
-      
+      logger.debug(
+        `Vector normalized from magnitude ${this.calculateMagnitude(vector).toFixed(4)} to ${this.calculateMagnitude(normalizedVector).toFixed(4)}`,
+      );
+
       const metadata = serverResponseToMetadata(data);
       await oceanBaseClient.addVector(id, normalizedVector, metadata);
       logger.debug(`Added normalized vector entry for server: ${data.title}`);
@@ -125,48 +137,64 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
    * @returns 搜索结果
    */
   async search(
-    queryVector: number[], 
+    queryVector: number[],
     limit: number = 10,
-    options: { 
-      categories?: string[], 
-      minSimilarity?: number,
-      textQuery?: string  // 文本查询参数
-    } = {}
+    options: {
+      categories?: string[];
+      minSimilarity?: number;
+      textQuery?: string; // 文本查询参数
+    } = {},
   ): Promise<MCPServerResponse[]> {
     if (!OCEANBASE_URL || !this.isInitialized) {
-      logger.warn('OceanBase vector engine is not initialized, returning empty search results');
+      logger.warn(
+        'OceanBase vector engine is not initialized, returning empty search results',
+      );
       return [];
     }
-    
+
     try {
       // 对查询向量进行归一化
       const normalizedQueryVector = normalizeVector(queryVector);
-      logger.debug(`Query vector normalized from magnitude ${this.calculateMagnitude(queryVector).toFixed(4)} to ${this.calculateMagnitude(normalizedQueryVector).toFixed(4)}`);
-      
+      logger.debug(
+        `Query vector normalized from magnitude ${this.calculateMagnitude(queryVector).toFixed(4)} to ${this.calculateMagnitude(normalizedQueryVector).toFixed(4)}`,
+      );
+
       // 记录搜索参数
       if (options.categories && options.categories.length > 0) {
-        logger.debug(`Applying category filter: ${options.categories.join(', ')}`);
+        logger.debug(
+          `Applying category filter: ${options.categories.join(', ')}`,
+        );
       }
-      
+
       if (options.minSimilarity) {
-        logger.debug(`Using minimum similarity threshold: ${options.minSimilarity}`);
+        logger.debug(
+          `Using minimum similarity threshold: ${options.minSimilarity}`,
+        );
       }
-      
+
       if (options.textQuery) {
         logger.debug(`Using text query: "${options.textQuery}"`);
       }
-      
+
       // 执行搜索，包含向量搜索和文本搜索
       const startTime = Date.now();
-      const results = await oceanBaseClient.searchVectors(normalizedQueryVector, limit, options);
+      const results = await oceanBaseClient.searchVectors(
+        normalizedQueryVector,
+        limit,
+        options,
+      );
       const duration = Date.now() - startTime;
-      
+
       const serverResponses = results.map(searchResultToServerResponse);
-      
+
       // 记录搜索结果
-      const searchType = options.textQuery ? 'hybrid (vector + text)' : 'vector-only';
-      logger.debug(`Found ${serverResponses.length} results from ${searchType} search in ${duration}ms`);
-      
+      const searchType = options.textQuery
+        ? 'hybrid (vector + text)'
+        : 'vector-only';
+      logger.debug(
+        `Found ${serverResponses.length} results from ${searchType} search in ${duration}ms`,
+      );
+
       return serverResponses;
     } catch (error) {
       this.handleError(error, 'vector search');
@@ -178,10 +206,12 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
    */
   async clear(): Promise<void> {
     if (!OCEANBASE_URL || !this.isInitialized) {
-      logger.warn('OceanBase vector engine is not initialized, cannot clear entries');
+      logger.warn(
+        'OceanBase vector engine is not initialized, cannot clear entries',
+      );
       return;
     }
-    
+
     try {
       await oceanBaseClient.deleteAll();
       logger.info('Cleared all vector entries');
@@ -189,7 +219,7 @@ export class OceanBaseVectorEngine implements IWritableVectorSearchEngine {
       this.handleError(error, 'clearing vector entries');
     }
   }
-  
+
   /**
    * 计算向量的大小（模）
    * @param vector 输入向量
