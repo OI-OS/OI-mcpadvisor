@@ -3,6 +3,7 @@
  * 测试 TensorFlow.js 和 Universal Sentence Encoder 实现
  */
 
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getTextEmbedding,
   getTextEmbeddings,
@@ -11,24 +12,15 @@ import {
   cosineSimilarity,
   normalizeVector,
   createZeroVector,
-} from '../utils/embedding.js';
-import logger from '../utils/logger.js';
+} from '../../utils/embedding.js';
+import logger from '../../utils/logger.js';
 
-// 模拟 logger 以避免测试期间的实际日志记录
-jest.mock('../utils/logger.js', () => ({
-  __esModule: true,
-  default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
+// 注意：logger 已在 setup.ts 中被模拟
 
 describe('嵌入工具测试', () => {
   // 在每个测试前重置模拟
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   // 基础工具函数测试

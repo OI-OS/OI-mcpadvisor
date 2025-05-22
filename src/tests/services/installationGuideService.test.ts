@@ -1,4 +1,5 @@
-import { InstallationGuideService } from '../services/installation/installationGuideService.js';
+import { describe, test, expect, vi } from 'vitest';
+import { InstallationGuideService } from '../../services/installation/installationGuideService.js';
 
 /**
  * 测试 InstallationGuideService 的安装指南生成功能
@@ -35,8 +36,7 @@ describe('InstallationGuideService', () => {
   // 为每个仓库创建测试用例
   testRepos.forEach(repo => {
     test(`should generate installation guide for ${repo.name}`, async () => {
-      // 设置较长的超时时间，因为需要从 GitHub 获取内容
-      jest.setTimeout(30000);
+      // 注意：全局超时时间已在 setup.ts 中设置为 30000ms
 
       console.log(`Testing installation guide generation for ${repo.name}...`);
 

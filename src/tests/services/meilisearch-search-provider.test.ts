@@ -2,16 +2,17 @@
  * Meilisearch 搜索提供者测试
  */
 
-import { SearchService } from '../services/searchService.js';
-import { MeilisearchSearchProvider } from '../services/search/MeilisearchSearchProvider.js';
-import logger from '../utils/logger.js';
+import { SearchService } from '../../services/searchService.js';
+import { MeilisearchSearchProvider } from '../../services/search/MeilisearchSearchProvider.js';
+import logger from '../../utils/logger.js';
 
 // 检查是否启用了 Meilisearch 测试
 const ENABLE_MEILISEARCH_TESTS =
   process.env.ENABLE_MEILISEARCH_TESTS === 'true';
 
-// 增加测试超时时间到 30 秒
-jest.setTimeout(30000);
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// 注意：全局超时时间已在 setup.ts 中设置为 30000ms
 
 describe('MeilisearchSearchProvider', () => {
   // 如果未启用测试，则跳过所有测试

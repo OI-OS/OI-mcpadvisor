@@ -2,29 +2,19 @@
  * Basic tests for the MCP Compass application
  */
 
-import { SearchService } from '../services/searchService.js';
-import { CompassSearchProvider } from '../services/search/CompassSearchProvider.js';
-import { MCPServerResponse } from '../types/index.js';
-import logger from '../utils/logger.js';
+import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
+import { SearchService } from '../../services/searchService.js';
+import { CompassSearchProvider } from '../../services/search/CompassSearchProvider.js';
+import { MCPServerResponse } from '../../types/index.js';
+import logger from '../../utils/logger.js';
 
-// Mock the fetch function
-global.fetch = jest.fn();
-
-// Mock the logger to avoid actual logging during tests
-jest.mock('../utils/logger.js', () => ({
-  __esModule: true,
-  default: {
-    info: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
+// 注意：fetch 和 logger 的模拟已移至 setup.ts 文件中
+// 这里不需要重复模拟
 
 describe('MCP Compass Application', () => {
   beforeEach(() => {
     // Reset mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('Application can be initialized', () => {
@@ -50,7 +40,7 @@ describe('MCP Compass Application', () => {
     ] as MCPServerResponse[];
 
     // Setup the fetch mock
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     });
@@ -71,7 +61,7 @@ describe('MCP Compass Application', () => {
 
   test('SearchProvider handles API errors', async () => {
     // Setup the fetch mock to simulate an error
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       ok: false,
       status: 500,
     });
@@ -87,7 +77,7 @@ describe('MCP Compass Application', () => {
   test('SearchService can handle multiple providers', async () => {
     // Create mock providers
     const mockProvider1 = {
-      search: jest.fn().mockResolvedValue([
+      search: vi.fn().mockResolvedValue([
         {
           title: 'Provider 1 MCP Server',
           description: 'A test MCP server from provider 1',
@@ -98,7 +88,7 @@ describe('MCP Compass Application', () => {
     };
 
     const mockProvider2 = {
-      search: jest.fn().mockResolvedValue([
+      search: vi.fn().mockResolvedValue([
         {
           title: 'Provider 2 MCP Server',
           description: 'A test MCP server from provider 2',

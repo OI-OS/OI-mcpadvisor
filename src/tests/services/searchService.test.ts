@@ -1,5 +1,6 @@
-import { SearchService } from '../services/searchService.js';
-import { MCPServerResponse } from '../types/index.js';
+import { SearchService } from '../../services/searchService.js';
+import { MCPServerResponse } from '../../types/index.js';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
 /**
  * 测试 SearchService
@@ -8,7 +9,7 @@ describe('SearchService', () => {
   // 模拟SearchService.searchGetMcp方法
   beforeEach(() => {
     // 为测试创建一个模拟的searchGetMcp方法
-    jest
+    vi
       .spyOn(SearchService, 'searchGetMcp')
       .mockImplementation(async (query, options) => {
         const mockResults: MCPServerResponse[] = [
@@ -50,7 +51,7 @@ describe('SearchService', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   test('should return search results for a query', async () => {
