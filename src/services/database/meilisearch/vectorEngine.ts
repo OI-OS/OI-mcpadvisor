@@ -18,7 +18,7 @@ const hitToServerResponse = (hit: Record<string, any>): MCPServerResponse => ({
   description: hit.description,
   github_url: hit.github_url,
   similarity: hit._rankingScore || 0.5,
-  installations: hit.installations || {}
+  installations: hit.installations || {},
 });
 
 /**
@@ -39,14 +39,19 @@ export class MeilisearchVectorEngine implements IVectorSearchEngine {
    * 向量相似度搜索
    * 注意：Meilisearch 不直接支持向量搜索，这里使用文本搜索作为替代
    */
-  async search(queryVector: number[], limit: number = 10): Promise<MCPServerResponse[]> {
+  async search(
+    queryVector: number[],
+    limit: number = 10,
+  ): Promise<MCPServerResponse[]> {
     try {
       const queryText = this.vectorToTextQuery(queryVector);
-      
+
       const results = await this.client.search(queryText, { limit });
       const serverResponses = results.hits.map(hitToServerResponse);
-      
-      logger.debug(`Found ${serverResponses.length} results from Meilisearch search`);
+
+      logger.debug(
+        `Found ${serverResponses.length} results from Meilisearch search`,
+      );
       return serverResponses;
     } catch (error) {
       this.handleError(error, 'Meilisearch search');
@@ -59,10 +64,13 @@ export class MeilisearchVectorEngine implements IVectorSearchEngine {
    */
   private vectorToTextQuery(queryVector: number[]): string {
     // 使用查询向量的前几个值构造查询
-    const queryTerms = queryVector.slice(0, 3).map(v => v.toFixed(2)).join(' ');
-    
+    const queryTerms = queryVector
+      .slice(0, 3)
+      .map(v => v.toFixed(2))
+      .join(' ');
+
     // 如果查询为空，使用通用查询
-    return queryTerms || "mcp server";
+    return queryTerms || 'mcp server';
   }
 
   /**

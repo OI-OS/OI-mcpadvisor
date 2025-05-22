@@ -35,11 +35,11 @@ winston.addColors(colors);
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
   winston.format.colorize({ all: false }),
-  winston.format.printf((info) => {
+  winston.format.printf(info => {
     // Add context information if available
     const context = info.context ? ` [${info.context}]` : '';
     return `${info.timestamp} ${info.level}${context}: ${info.message}`;
-  })
+  }),
 );
 
 /**
@@ -66,16 +66,16 @@ const formatError = (error: unknown): string => {
 const fileFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss.SSS' }),
   winston.format.uncolorize(),
-  winston.format.printf((info) => {
+  winston.format.printf(info => {
     // Add context information if available
     const context = info.context ? ` [${info.context}]` : '';
-    
+
     // 处理错误对象和堆栈信息
     let message = info.message;
     if (info.level === 'error' && info.error) {
       message = `${message}\n${formatError(info.error)}`;
     }
-    
+
     // Add structured data if available
     let structuredData = '';
     if (info.data) {
@@ -85,9 +85,9 @@ const fileFormat = winston.format.combine(
         structuredData = ' | [Unserializable data]';
       }
     }
-    
+
     return `${info.timestamp} ${info.level}${context}: ${message}${structuredData}`;
-  })
+  }),
 );
 
 // Define transports based on mode
@@ -98,12 +98,12 @@ if (isMainApplication || process.env.ENABLE_FILE_LOGGING === 'true') {
   try {
     // Use environment variable if provided, otherwise use default
     const logsDir = process.env.LOGS_DIR || path.join(process.cwd(), 'logs');
-    
+
     // Only try to create directory if we're the main application
     if (isMainApplication && !fs.existsSync(logsDir)) {
       fs.mkdirSync(logsDir, { recursive: true });
     }
-    
+
     // Only add file transports if directory exists
     if (fs.existsSync(logsDir)) {
       transports.push(
@@ -111,13 +111,13 @@ if (isMainApplication || process.env.ENABLE_FILE_LOGGING === 'true') {
         new winston.transports.File({
           filename: path.join(logsDir, 'error.log'),
           level: 'error',
-          format: fileFormat
+          format: fileFormat,
         }),
         // File transport for all logs
-        new winston.transports.File({ 
+        new winston.transports.File({
           filename: path.join(logsDir, 'all.log'),
-          format: fileFormat 
-        })
+          format: fileFormat,
+        }),
       );
     }
   } catch (error) {
@@ -131,8 +131,8 @@ transports.push(
   new winston.transports.Console({
     format: consoleFormat,
     silent: !isConsoleEnabled && !isMainApplication,
-    handleExceptions: false
-  })
+    handleExceptions: false,
+  }),
 );
 
 // Create the logger with silent mode when used as a dependency
@@ -142,7 +142,7 @@ const logger = winston.createLogger({
   defaultMeta: { service: 'mcpadvisor' },
   transports,
   silent: !isMainApplication && process.env.ENABLE_FILE_LOGGING !== 'true', // Silence all logging when used as a dependency
-  exitOnError: false // Don't crash on logging errors
+  exitOnError: false, // Don't crash on logging errors
 });
 
 // Add helper methods for structured logging
@@ -164,7 +164,7 @@ const enhancedLogger = {
 
 // Helper function to create enhanced log methods
 function createLogMethod(level: string): LogMethod {
-  return function(message: string, contextOrData?: any, data?: any): void {
+  return function (message: string, contextOrData?: any, data?: any): void {
     // Check if second argument is context or data
     if (typeof contextOrData === 'string') {
       // If third argument exists, it's data

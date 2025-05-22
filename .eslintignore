@@ -1,0 +1,9 @@
+build/
+node_modules/
+coverage/
+*.log
+jest.config.js
+commitlint.config.js
+.eslintrc.cjs
+.prettierrc.js
+*.d.ts

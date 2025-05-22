@@ -12,7 +12,8 @@ export class MemoryCache<T> implements ICache<T> {
    * 构造函数
    * @param ttlMs 缓存有效期（毫秒）
    */
-  constructor(ttlMs: number = 3600000) { // 默认1小时
+  constructor(ttlMs: number = 3600000) {
+    // 默认1小时
     this.ttlMs = ttlMs;
     logger.debug(`Created memory cache with TTL: ${ttlMs}ms`);
   }
@@ -24,7 +25,7 @@ export class MemoryCache<T> implements ICache<T> {
     if (!this.isValid()) {
       return null;
     }
-    
+
     return this.cache?.data || null;
   }
 
@@ -34,9 +35,9 @@ export class MemoryCache<T> implements ICache<T> {
   set(data: T): void {
     this.cache = {
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
-    
+
     logger.debug('Cache updated');
   }
 
@@ -47,13 +48,13 @@ export class MemoryCache<T> implements ICache<T> {
     if (!this.cache) {
       return false;
     }
-    
+
     const isValid = Date.now() - this.cache.timestamp <= this.ttlMs;
-    
+
     if (!isValid) {
       this.clear();
     }
-    
+
     return isValid;
   }
 

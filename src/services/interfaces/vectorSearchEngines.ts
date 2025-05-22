@@ -13,13 +13,13 @@ export interface VectorSearchOptions {
    * 分类过滤条件
    */
   categories?: string[];
-  
+
   /**
    * 最小相似度阈值
    * 范围为 0-1，默认为 0.5
    */
   minSimilarity?: number;
-  
+
   /**
    * 文本查询
    * 用于与向量搜索并行的元数据搜索
@@ -38,7 +38,11 @@ export interface IVectorSearchEngine {
    * @param options 搜索选项，包括分类过滤和相似度阈值
    * @returns 搜索结果列表
    */
-  search(queryVector: number[], limit?: number, options?: VectorSearchOptions): Promise<MCPServerResponse[]>;
+  search(
+    queryVector: number[],
+    limit?: number,
+    options?: VectorSearchOptions,
+  ): Promise<MCPServerResponse[]>;
 }
 
 /**
@@ -51,8 +55,12 @@ export interface IWritableVectorSearchEngine extends IVectorSearchEngine {
    * @param vector 向量数据
    * @param data 服务器响应数据
    */
-  addEntry(id: string, vector: number[], data: MCPServerResponse): Promise<void>;
-  
+  addEntry(
+    id: string,
+    vector: number[],
+    data: MCPServerResponse,
+  ): Promise<void>;
+
   /**
    * 清除所有向量数据
    */

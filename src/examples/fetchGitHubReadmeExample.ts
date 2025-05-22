@@ -6,12 +6,12 @@ import { fetchGitHubReadme } from '../utils/githubUtils.js';
 async function main() {
   // Example URL from the requirements
   const url = 'https://github.com/seansoreilly/abs';
-  
+
   console.log(`Fetching README from: ${url}`);
-  
+
   try {
     const readmeContent = await fetchGitHubReadme(url);
-    
+
     if (readmeContent) {
       console.log('\nREADME Content:');
       console.log('-----------------------------------');
@@ -21,7 +21,10 @@ async function main() {
       console.error('Failed to fetch README content');
     }
   } catch (error) {
-    console.error('Error:', error instanceof Error ? error.message : String(error));
+    console.error(
+      'Error:',
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }
 

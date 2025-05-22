@@ -19,7 +19,9 @@ interface VectorEntry {
 /**
  * 可写内存向量引擎实现
  */
-export class WritableInMemoryVectorEngine implements IWritableVectorSearchEngine {
+export class WritableInMemoryVectorEngine
+  implements IWritableVectorSearchEngine
+{
   private entries: VectorEntry[] = [];
 
   /**
@@ -32,7 +34,11 @@ export class WritableInMemoryVectorEngine implements IWritableVectorSearchEngine
   /**
    * 添加向量条目
    */
-  async addEntry(id: string, vector: number[], data: MCPServerResponse): Promise<void> {
+  async addEntry(
+    id: string,
+    vector: number[],
+    data: MCPServerResponse,
+  ): Promise<void> {
     try {
       this.entries.push({ id, vector, data });
       logger.debug(`Added vector entry for server: ${data.title}`);
@@ -44,14 +50,20 @@ export class WritableInMemoryVectorEngine implements IWritableVectorSearchEngine
   /**
    * 向量相似度搜索
    */
-  async search(queryVector: number[], limit: number = 10): Promise<MCPServerResponse[]> {
+  async search(
+    queryVector: number[],
+    limit: number = 10,
+  ): Promise<MCPServerResponse[]> {
     try {
       // 计算每个条目与查询向量的相似度
       const results = this.entries.map(entry => {
-        const similarity = this.calculateCosineSimilarity(queryVector, entry.vector);
+        const similarity = this.calculateCosineSimilarity(
+          queryVector,
+          entry.vector,
+        );
         return {
           ...entry.data,
-          similarity
+          similarity,
         };
       });
 
@@ -60,7 +72,9 @@ export class WritableInMemoryVectorEngine implements IWritableVectorSearchEngine
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, limit);
 
-      logger.debug(`Found ${sortedResults.length} results from in-memory search`);
+      logger.debug(
+        `Found ${sortedResults.length} results from in-memory search`,
+      );
       return sortedResults;
     } catch (error) {
       this.handleError(error, 'in-memory search');
@@ -85,23 +99,23 @@ export class WritableInMemoryVectorEngine implements IWritableVectorSearchEngine
   private calculateCosineSimilarity(vecA: number[], vecB: number[]): number {
     // 确保向量长度相同
     const length = Math.min(vecA.length, vecB.length);
-    
+
     // 计算点积
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
-    
+
     for (let i = 0; i < length; i++) {
       dotProduct += vecA[i] * vecB[i];
       normA += vecA[i] * vecA[i];
       normB += vecB[i] * vecB[i];
     }
-    
+
     // 避免除以零
     if (normA === 0 || normB === 0) {
       return 0;
     }
-    
+
     // 计算余弦相似度
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }

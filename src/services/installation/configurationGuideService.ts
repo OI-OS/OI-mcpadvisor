@@ -15,7 +15,7 @@ export enum McpClientType {
   CLINE = 'cline',
   CHATGPT = 'chatgpt',
   OPENAI = 'openai',
-  OTHER = 'other'
+  OTHER = 'other',
 }
 
 /**
@@ -29,29 +29,32 @@ export class ConfigurationGuideService {
    * @param mcpClient - 用户使用的MCP客户端
    * @returns 配置指南文本
    */
-  public generateConfigurationGuide(mcpName: string, mcpClient: string = ''): string {
+  public generateConfigurationGuide(
+    mcpName: string,
+    mcpClient: string = '',
+  ): string {
     const clientType = this.normalizeClientType(mcpClient);
     const baseConfigTemplate = this.getBaseConfigTemplate(mcpName);
-    
-    switch(clientType) {
+
+    switch (clientType) {
       case McpClientType.CLAUDE:
       case McpClientType.CLAUDE_DESKTOP:
         return this.getClaudeConfigGuide(mcpName, baseConfigTemplate);
-      
+
       case McpClientType.WINDSURF:
       case McpClientType.CASCADE:
         return this.getWindsurfConfigGuide(mcpName, baseConfigTemplate);
-      
+
       case McpClientType.CURSOR:
         return this.getCursorConfigGuide(mcpName, baseConfigTemplate);
-      
+
       case McpClientType.CLINE:
         return this.getClineConfigGuide(mcpName, baseConfigTemplate);
-      
+
       case McpClientType.CHATGPT:
       case McpClientType.OPENAI:
         return this.getChatGptConfigGuide(mcpName);
-      
+
       case McpClientType.OTHER:
       default:
         return this.getDefaultConfigGuide(mcpName, baseConfigTemplate);
@@ -65,27 +68,27 @@ export class ConfigurationGuideService {
    */
   private normalizeClientType(mcpClient: string): McpClientType {
     const clientLower = mcpClient.toLowerCase().trim();
-    
+
     if (clientLower === 'claude' || clientLower === 'claude desktop') {
       return clientLower as McpClientType;
     }
-    
+
     if (clientLower === 'windsurf' || clientLower === 'cascade') {
       return clientLower as McpClientType;
     }
-    
+
     if (clientLower === 'cursor') {
       return McpClientType.CURSOR;
     }
-    
+
     if (clientLower === 'cline') {
       return McpClientType.CLINE;
     }
-    
+
     if (clientLower === 'chatgpt' || clientLower === 'openai') {
       return clientLower as McpClientType;
     }
-    
+
     return McpClientType.OTHER;
   }
 
@@ -116,7 +119,10 @@ export class ConfigurationGuideService {
    * @param baseConfigTemplate - 基本配置模板
    * @returns 配置指南文本
    */
-  private getClaudeConfigGuide(mcpName: string, baseConfigTemplate: string): string {
+  private getClaudeConfigGuide(
+    mcpName: string,
+    baseConfigTemplate: string,
+  ): string {
     return `## Claude Desktop配置指南
 
 将以下配置添加到Claude Desktop的MCP配置文件中：
@@ -136,7 +142,10 @@ ${baseConfigTemplate}
    * @param baseConfigTemplate - 基本配置模板
    * @returns 配置指南文本
    */
-  private getWindsurfConfigGuide(mcpName: string, baseConfigTemplate: string): string {
+  private getWindsurfConfigGuide(
+    mcpName: string,
+    baseConfigTemplate: string,
+  ): string {
     return `## Windsurf/Cascade配置指南
 
 将以下配置添加到Windsurf的MCP配置文件中：
@@ -156,7 +165,10 @@ ${baseConfigTemplate}
    * @param baseConfigTemplate - 基本配置模板
    * @returns 配置指南文本
    */
-  private getCursorConfigGuide(mcpName: string, baseConfigTemplate: string): string {
+  private getCursorConfigGuide(
+    mcpName: string,
+    baseConfigTemplate: string,
+  ): string {
     return `## Cursor配置指南
 
 将以下配置添加到Cursor的MCP配置文件中：
@@ -182,7 +194,10 @@ ${baseConfigTemplate}
    * @param baseConfigTemplate - 基本配置模板
    * @returns 配置指南文本
    */
-  private getClineConfigGuide(mcpName: string, baseConfigTemplate: string): string {
+  private getClineConfigGuide(
+    mcpName: string,
+    baseConfigTemplate: string,
+  ): string {
     return `## Cline配置指南
 
 将以下配置添加到Cline的MCP配置文件中：
@@ -223,7 +238,10 @@ ${baseConfigTemplate}
    * @param baseConfigTemplate - 基本配置模板
    * @returns 配置指南文本
    */
-  private getDefaultConfigGuide(mcpName: string, baseConfigTemplate: string): string {
+  private getDefaultConfigGuide(
+    mcpName: string,
+    baseConfigTemplate: string,
+  ): string {
     return `## MCP配置指南
 
 将以下配置添加到您的AI助手的MCP配置文件中：
