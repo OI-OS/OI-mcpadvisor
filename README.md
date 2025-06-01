@@ -325,6 +325,11 @@ gantt
 
 For a detailed roadmap, see [ROADMAP.md](ROADMAP.md).
 
+To Implement the above features, we need to:
+
+- [ ] Full-Text Index Search
+- [ ] Utilize Professional Rerank Module like https://github.com/PrithivirajDamodaran/FlashRank 
+
 ## Testing
 
 Use [inspector](https://github.com/modelcontextprotocol/inspector) for testing:
