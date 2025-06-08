@@ -4,6 +4,7 @@ COPY ./ /app
 
 WORKDIR /app
 
+ENV COREPACK_IGNORE_SIGNATURES=1
 RUN corepack enable
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install
 RUN pnpm run build
@@ -19,6 +20,7 @@ COPY --from=builder /app/data /app/data
 
 ENV NODE_ENV=production
 
+ENV COREPACK_IGNORE_SIGNATURES=1
 RUN corepack enable
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --prod --ignore-scripts
 
