@@ -12,6 +12,7 @@
 </a>
 
 
+[![Install with VS Code](https://img.shields.io/badge/VS_Code-Install_Server-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=mcpadvisor&inputs=%5B%5D&config=%7B%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40xiaohui-wang%2Fmcpadvisor%22%5D%7D)
 
 [English](./README.md) | [简体中文](./README_zh.md) 
 
@@ -328,7 +329,7 @@ For a detailed roadmap, see [ROADMAP.md](ROADMAP.md).
 To Implement the above features, we need to:
 
 - [ ] Full-Text Index Search
-- [ ] Utilize Professional Rerank Module like https://github.com/PrithivirajDamodaran/FlashRank 
+- [ ] Utilize Professional Rerank Module like https://github.com/PrithivirajDamodaran/FlashRank or Qwen Rerank Model
 
 ## Testing
 
