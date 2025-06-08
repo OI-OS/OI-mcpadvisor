@@ -10,7 +10,7 @@ COPY ./ /app
 WORKDIR /app
 
 # Use pnpm for installation with store cache
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install
 RUN pnpm run build
 
 FROM node:22.12-alpine AS release
@@ -28,6 +28,6 @@ ENV NODE_ENV=production
 RUN npm install -g pnpm@9.15.0
 
 # Use pnpm for production installation
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --prod --frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store pnpm install --prod --ignore-scripts
 
 ENTRYPOINT ["node", "build/index.js"]
