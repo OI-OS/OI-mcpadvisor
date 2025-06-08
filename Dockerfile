@@ -4,10 +4,8 @@ COPY ./ /app
 
 WORKDIR /app
 
-ENV COREPACK_IGNORE_SIGNATURES=1
-RUN corepack enable
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install
-RUN pnpm run build
+RUN --mount=type=cache,target=/root/.npm npm install
+RUN npm run build
 
 FROM node:22.12-alpine AS release
 
@@ -15,13 +13,11 @@ WORKDIR /app
 
 COPY --from=builder /app/build /app/build
 COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/pnpm-lock.yaml /app/pnpm-lock.yaml
+COPY --from=builder /app/package-lock.json /app/package-lock.json
 COPY --from=builder /app/data /app/data
 
 ENV NODE_ENV=production
 
-ENV COREPACK_IGNORE_SIGNATURES=1
-RUN corepack enable
-RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --prod --ignore-scripts
+RUN npm ci --ignore-scripts --omit=dev
 
 ENTRYPOINT ["node", "build/index.js"]
