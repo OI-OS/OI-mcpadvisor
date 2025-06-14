@@ -11779,5 +11779,118 @@
         "example": "sk_test_4eC39HqLyjEDERyCzKZQz9fgo"
       }
     }
+  },
+  {
+    "id": "promptx",
+    "name": "promptx",
+    "display_name": "PromptX",
+    "description": "AI 应用原生的专业能力增强 Prompt 管理 MCP，通过一行命令为 Claude Desktop、Cursor 等 AI 客户端提供专业角色、长期记忆和知识体系。",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/Deepractice/PromptX"
+    },
+    "homepage": "https://github.com/Deepractice/PromptX",
+    "author": {
+      "name": "Deepractice"
+    },
+    "license": "MIT",
+    "categories": [
+      "AI",
+      "Productivity",
+      "Knowledge Management"
+    ],
+    "tags": [
+      "PromptX",
+      "MCP",
+      "Agent",
+      "Memory",
+      "Knowledge"
+    ],
+    "installations": {
+      "npm": {
+        "type": "npm",
+        "command": "npx",
+        "args": [
+          "-y",
+          "-f",
+          "dpml-prompt@snapshot",
+          "mcp-server"
+        ],
+        "env": {
+          "PROMPTX_WORKSPACE": "${PROMPTX_WORKSPACE}"
+        },
+        "description": "零配置快速启动，-f 强制刷新缓存；可使用 PROMPTX_WORKSPACE 指定工作目录"
+      }
+    },
+    "examples": [
+      {
+        "title": "角色发现",
+        "description": "列出所有可用角色",
+        "prompt": "promptx_hello"
+      },
+      {
+        "title": "激活专家角色",
+        "description": "激活名为 '数据库专家' 的角色",
+        "prompt": "promptx_action with role '数据库专家'"
+      },
+      {
+        "title": "保存记忆",
+        "description": "保存关键信息到长期记忆",
+        "prompt": "promptx_remember that my favorite language is Rust"
+      }
+    ],
+    "arguments": {
+      "PROMPTX_WORKSPACE": {
+        "description": "自定义工作空间路径；若为空，服务将自动选择默认路径。Windows 需使用双反斜杠。",
+        "required": false,
+        "example": "/Users/username/projects/promptx_data"
+      }
+    }
+  },
+  {
+    "id": "context7",
+    "name": "context7",
+    "display_name": "Context7",
+    "description": "为任何提示实时提供最新、版本特定的库文档与代码示例，避免 LLM 使用过时或幻觉 API。",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/upstash/context7"
+    },
+    "homepage": "https://context7.com",
+    "author": {
+      "name": "Upstash"
+    },
+    "license": "MIT",
+    "categories": [
+      "AI",
+      "Documentation",
+      "Developer Tools"
+    ],
+    "tags": [
+      "Context7",
+      "MCP",
+      "Docs",
+      "Code",
+      "Library"
+    ],
+    "installations": {
+      "npm": {
+        "type": "npm",
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp@latest"]
+      }
+    },
+    "examples": [
+      {
+        "title": "解析库 ID",
+        "description": "将库名解析为 Context7 ID",
+        "prompt": "resolve-library-id with libraryName 'next.js'"
+      },
+      {
+        "title": "获取库文档",
+        "description": "获取 Next.js 路由文档",
+        "prompt": "get-library-docs /vercel/next.js topic:routing"
+      }
+    ]
   }
 ]
