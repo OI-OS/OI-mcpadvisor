@@ -63,6 +63,14 @@ Add this configuration to your AI assistant's MCP settings file:
 - MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Windows: `%AppData%\Claude\claude_desktop_config.json`
 
+### Installing via Smithery
+
+To install Advisor for Claude Desktop automatically via [Smithery](https://smithery.ai/server/@istarwyh/mcpadvisor):
+
+```bash
+npx -y @smithery/cli install @istarwyh/mcpadvisor --client claude
+```
+
 For more installation methods, see the [Installation Guide](docs/INSTALLATION.md).
 
 ### Demo
