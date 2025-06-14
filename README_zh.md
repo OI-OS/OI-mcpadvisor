@@ -19,14 +19,19 @@
 
 MCP Advisor 是一个发现和推荐服务，帮助 AI 助手使用自然语言查询探索 Model Context Protocol (MCP) 服务器。它让用户更容易找到并利用适合特定任务的 MCP 工具。
 
-## 特性
+## 用户故事
 
-- **自然语言搜索**：使用会话式查询查找 MCP 服务
-- **丰富元数据**：获取每个服务的详细信息
-- **实时更新**：始终与最新的 MCP 服务保持同步 [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
-- **易于集成**：为任何兼容 MCP 的 AI 助手提供简单配置
-- **混合搜索引擎**：结合向量搜索和文本匹配的高级搜索能力
-- **多提供者支持**：支持多个搜索提供者并行执行
+1. **MCP服务器发现与推荐**
+   - 作为AI Agent 开发者，我希望通过自然语言查询快速找到适合特定任务的MCP服务器
+   - 直接提问：`"Find MCP servers for insurance risk analysis"`
+
+2. **MCP服务器安装与配置**  
+   - 作为普通用户发现一个 MCP 很好用，我希望能够快速用上这个MCP
+   - 直接指示：`"安装一下这个 MCP： https://github.com/Deepractice/PromptX`
+
+### 演示
+
+https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
 
 ## 文档导航
 
@@ -66,14 +71,7 @@ MCP Advisor 是一个发现和推荐服务，帮助 AI 助手使用自然语言�
 
 更多安装方法请参阅 [安装指南](docs/INSTALLATION.md)。
 
-### 演示
 
-<div align="center">
-  <a href="https://www.bilibili.com/video/BV17tJuz9Eci">
-    <img src="https://xiaohui-zhangjiakou.oss-cn-zhangjiakou.aliyuncs.com/image/202505181400161.png" alt="MCP Advisor Demo" width="640">
-  </a>
-  <p>点击图片观看演示视频</p>
-</div>
 
 ## 开发者指南
 

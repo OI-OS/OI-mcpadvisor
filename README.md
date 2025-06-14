@@ -18,14 +18,20 @@
 
 MCP Advisor is a discovery and recommendation service that helps AI assistants explore Model Context Protocol (MCP) servers using natural language queries. It makes it easier for users to find and leverage MCP tools suitable for specific tasks.
 
-## Features
+## User Stories
 
-- **Natural Language Search**: Find MCP services using conversational queries
-- **Rich Metadata**: Get detailed information about each service
-- **Real-time Updates**: Always in sync with the latest MCP services [![MCP Servers](https://img.shields.io/badge/MCP-Servers-red?logo=github)](https://github.com/modelcontextprotocol/servers)
-- **Easy Integration**: Simple configuration for any MCP-compatible AI assistant
-- **Hybrid Search Engine**: Advanced search capabilities combining vector search and text matching
-- **Multi-provider Support**: Support for multiple search providers executing in parallel
+1. **Discover & Recommend MCP Servers**
+   - As an AI agent developer, I want to quickly find the right MCP servers for a specific task using natural-language queries.
+   - Example prompt: `"Find MCP servers for insurance risk analysis"`
+
+2. **Install & Configure MCP Servers**
+   - As a regular user who discovers a useful MCP server, I want to install and start using it as quickly as possible.
+   - Example prompt: `"Install this MCP: https://github.com/Deepractice/PromptX"`
+
+### Demo
+
+https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
+
 
 ## Documentation Navigation
 
@@ -72,15 +78,6 @@ npx -y @smithery/cli install @istarwyh/mcpadvisor --client claude
 ```
 
 For more installation methods, see the [Installation Guide](docs/INSTALLATION.md).
-
-### Demo
-
-<div align="center">
-  <a href="https://www.bilibili.com/video/BV17tJuz9Eci">
-    <img src="https://xiaohui-zhangjiakou.oss-cn-zhangjiakou.aliyuncs.com/image/202505181400161.png" alt="MCP Advisor Demo" width="640">
-  </a>
-  <p>Click the image to watch the demo video</p>
-</div>
 
 ## Developer Guide
 
