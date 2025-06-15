@@ -8,13 +8,12 @@ import {
   SearchOptions,
   SearchProvider,
 } from '../types/index.js';
+import type { SearchParams } from '../types/search.js';
 import { CompassSearchProvider } from './search/CompassSearchProvider.js';
 import { GetMcpSearchProvider } from './search/GetMcpSearchProvider.js';
 import { MeilisearchSearchProvider } from './search/MeilisearchSearchProvider.js';
 import { OfflineSearchProvider } from './search/OfflineSearchProvider.js';
 import logger from '../utils/logger.js';
-import { filterFromEndUntilLimit } from '../utils/ListUtils.js';
-import config from 'config';
 
 /**
  * 提供者优先级配置
@@ -67,6 +66,11 @@ const DEFAULT_OFFLINE_CONFIG: OfflineConfig = {
  */
 export class SearchService {
   private providers: SearchProvider[];
+
+  /**
+   * Combine structured params to plain query string for legacy providers
+   */
+
 
   /**
    * 离线搜索提供者
@@ -163,15 +167,23 @@ export class SearchService {
   }
 
   /**
-   * Search for MCP servers using all providers
-   * @param query - The search query
+   * Search for MCP servers using all providers (v2 params)
+   * @param params - Structured search parameters
    * @param options - Optional search configuration
-   * @returns Promise with array of MCP server responses
    */
+  // 兼容重载签名
+  async search(params: SearchParams, options?: SearchOptions): Promise<MCPServerResponse[]>;
+  async search(query: string, options?: SearchOptions): Promise<MCPServerResponse[]>;
   async search(
-    query: string,
+    arg: string | SearchParams,
     options?: SearchOptions,
   ): Promise<MCPServerResponse[]> {
+    // 解析参数
+    const params: SearchParams =
+      typeof arg === 'string'
+        ? { taskDescription: arg }
+        : arg;
+
     if (this.providers.length === 0 && !this.offlineProvider) {
       logger.warn('No search providers available');
       return [];
@@ -182,7 +194,7 @@ export class SearchService {
       const mergedOptions = { ...DEFAULT_SEARCH_OPTIONS, ...options };
 
       logger.info(
-        `Searching with ${this.providers.length} providers for query: ${query}`,
+        `Searching with ${this.providers.length} providers for task: ${params.taskDescription}`,
         'SearchService',
         { providerCount: this.providers.length },
       );
@@ -206,12 +218,12 @@ export class SearchService {
           {
             providerName,
             providerIndex: index,
-            query,
+            params,
           },
         );
 
         return provider
-          .search(query)
+          .search(params)
           .then(results => {
             logger.info(
               `Provider ${providerName} returned ${results.length} results`,
@@ -468,11 +480,14 @@ export class SearchService {
    * @returns 搜索结果
    */
   static async searchOffline(
-    query: string,
+    query: string | SearchParams,
     options: SearchOptions = {},
     fallbackDataPath?: string,
     textMatchWeight: number = 0.7,
   ): Promise<MCPServerResponse[]> {
+    const searchParams = typeof query === 'string' 
+      ? { taskDescription: query }
+      : query;
     try {
       logger.info(`Searching offline with query: "${query}"`, 'OfflineSearch', {
         query,
@@ -491,7 +506,7 @@ export class SearchService {
         vectorSearchWeight: 1 - textMatchWeight,
       });
 
-      const results = await provider.search(query);
+      const results = await provider.search(searchParams);
 
       const duration = Date.now() - startTime;
 
@@ -527,9 +542,12 @@ export class SearchService {
    * 便捷方法，直接使用 GetMcpSearchProvider
    */
   static async searchGetMcp(
-    query: string,
+    query: string | SearchParams,
     options: SearchOptions = {},
   ): Promise<MCPServerResponse[]> {
+    const searchParams = typeof query === 'string' 
+      ? { taskDescription: query }
+      : query;
     try {
       logger.info(`Searching GetMCP with query: "${query}"`, 'GetMcpSearch', {
         query,
@@ -549,7 +567,7 @@ export class SearchService {
 
       // 执行搜索
       const startTime = Date.now();
-      const results = await service.search(query, options);
+      const results = await service.search(searchParams, options);
       const duration = Date.now() - startTime;
 
       logger.info(
@@ -577,9 +595,12 @@ export class SearchService {
    * 便捷方法，直接使用 CompassSearchProvider
    */
   static async searchCompass(
-    query: string,
+    query: string | SearchParams,
     options: SearchOptions = {},
   ): Promise<MCPServerResponse[]> {
+    const searchParams = typeof query === 'string' 
+      ? { taskDescription: query }
+      : query;
     try {
       logger.info(`Searching Compass with query: "${query}"`, 'CompassSearch', {
         query,
@@ -599,7 +620,7 @@ export class SearchService {
 
       // 执行搜索
       const startTime = Date.now();
-      const results = await service.search(query, options);
+      const results = await service.search(searchParams, options);
       const duration = Date.now() - startTime;
 
       logger.info(
@@ -629,9 +650,12 @@ export class SearchService {
    * 便捷方法，直接使用 MeilisearchSearchProvider
    */
   static async searchMeilisearch(
-    query: string,
+    query: string | SearchParams,
     options: SearchOptions = {},
   ): Promise<MCPServerResponse[]> {
+    const searchParams = typeof query === 'string' 
+      ? { taskDescription: query }
+      : query;
     try {
       logger.info(
         `Searching Meilisearch with query: "${query}"`,
@@ -655,7 +679,7 @@ export class SearchService {
 
       // 执行搜索
       const startTime = Date.now();
-      const results = await service.search(query, options);
+      const results = await service.search(searchParams, options);
       const duration = Date.now() - startTime;
 
       logger.info(

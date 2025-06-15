@@ -3,7 +3,8 @@
  * 使用 Meilisearch 搜索引擎和 GetMCP API 资源获取器
  */
 
-import { MCPServerResponse, SearchProvider } from '../../types/index.js';
+import { MCPServerResponse, SearchProviderV2 } from '../../types/index.js';
+import type { SearchParams } from '../../types/search.js';
 import { ICache } from '../interfaces/cache.js';
 import { MemoryCache } from '../cache/memoryCache.js';
 import { GETMCP_API_URL, CACHE_TTL_MS } from '../../config/constants.js';
@@ -51,7 +52,7 @@ const convertHitToServerResponse = (
  * Meilisearch 搜索提供者实现
  * 注意：由于 API 密钥只有读取权限，此实现只支持搜索操作
  */
-export class MeilisearchSearchProvider implements SearchProvider {
+export class MeilisearchSearchProvider implements SearchProviderV2 {
   private resourceFetcher: IGetMcpResourceFetcher;
   private cache: ICache<GetMcpApiResponse>;
 
@@ -72,7 +73,8 @@ export class MeilisearchSearchProvider implements SearchProvider {
   /**
    * 搜索 MCP 服务器
    */
-  async search(query: string): Promise<MCPServerResponse[]> {
+  async search(params: SearchParams): Promise<MCPServerResponse[]> {
+    const query = [params.taskDescription, ...(params.keywords || []), ...(params.capabilities || [])].join(' ').trim();
     try {
       logger.info(`Searching for MCP servers with query: ${query}`);
 

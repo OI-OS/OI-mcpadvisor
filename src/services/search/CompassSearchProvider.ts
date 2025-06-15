@@ -3,6 +3,7 @@
  */
 
 import { MCPServerResponse, SearchProvider } from '../../types/index.js';
+import type { SearchParams } from '../../types/search.js';
 import { COMPASS_API_BASE } from '../../config/constants.js';
 import logger from '../../utils/logger.js';
 
@@ -21,7 +22,8 @@ export class CompassSearchProvider implements SearchProvider {
    * @param query - The search query
    * @returns Promise with array of MCP server responses
    */
-  async search(query: string): Promise<MCPServerResponse[]> {
+  async search(params: SearchParams): Promise<MCPServerResponse[]> {
+    const query = [params.taskDescription, ...(params.keywords || []), ...(params.capabilities || [])].join(' ').trim();
     try {
       logger.info(`Searching for MCP servers with query: ${query}`);
       const requestUrl = `${this.apiBase}/recommend?description=${encodeURIComponent(query)}`;

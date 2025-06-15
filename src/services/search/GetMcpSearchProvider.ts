@@ -1,4 +1,5 @@
-import { MCPServerResponse, SearchProvider } from '../../types/index.js';
+import { MCPServerResponse, SearchProviderV2 } from '../../types/index.js';
+import type { SearchParams } from '../../types/search.js';
 import { ICache } from '../interfaces/cache.js';
 import { MemoryCache } from '../cache/memoryCache.js';
 import { IVectorSearchEngine } from '../interfaces/vectorSearchEngines.js';
@@ -19,7 +20,7 @@ import logger from '../../utils/logger.js';
  * GetMCP 搜索提供者实现
  * 使用向量搜索引擎和 GetMCP API 资源获取器
  */
-export class GetMcpSearchProvider implements SearchProvider {
+export class GetMcpSearchProvider implements SearchProviderV2 {
   private resourceFetcher: IGetMcpResourceFetcher;
   private cache: ICache<GetMcpApiResponse>;
   private vectorEngine: IVectorSearchEngine;
@@ -43,7 +44,8 @@ export class GetMcpSearchProvider implements SearchProvider {
   /**
    * 搜索 MCP 服务器
    */
-  async search(query: string): Promise<MCPServerResponse[]> {
+  async search(params: SearchParams): Promise<MCPServerResponse[]> {
+    const query = [params.taskDescription, ...(params.keywords || []), ...(params.capabilities || [])].join(' ').trim();
     try {
       logger.info(`Searching for MCP servers with query: ${query}`);
 

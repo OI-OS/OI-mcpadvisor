@@ -38,7 +38,10 @@ export interface OfflineSearchProviderConfig {
  * 使用内存向量引擎和备用数据进行离线搜索
  * 支持向量搜索和文本匹配的混合搜索策略
  */
-export class OfflineSearchProvider implements SearchProvider {
+import type { SearchParams } from '../../types/search.js';
+import { SearchProviderV2 } from '../../types/index.js';
+
+export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
   private readonly vectorEngine: EnhancedMemoryVectorEngine;
   private readonly config: OfflineSearchProviderConfig;
   private dataLoaded = false;
@@ -70,7 +73,41 @@ export class OfflineSearchProvider implements SearchProvider {
    * @param query 搜索查询
    * @returns 搜索结果
    */
-  async search(query: string): Promise<MCPServerResponse[]> {
+  /**
+   * 搜索 MCP 服务器（兼容重载）
+   * @param arg 查询字符串或结构化搜索参数
+   */
+  // 兼容重载签名
+  async search(query: string): Promise<MCPServerResponse[]>;
+  async search(params: SearchParams): Promise<MCPServerResponse[]>;
+  async search(arg: string | SearchParams): Promise<MCPServerResponse[]> {
+    // 解析参数
+    let taskDescription: string;
+    let keywords: string[] | undefined;
+    let capabilities: string[] | undefined;
+
+    if (typeof arg === 'string') {
+      // legacy path
+      taskDescription = arg;
+    } else {
+      ({ taskDescription, keywords, capabilities } = arg);
+    }
+
+    // 将关键词与能力拼接到查询文本中以复用现有逻辑
+    const combinedQueryParts = [taskDescription];
+    if (keywords && keywords.length) combinedQueryParts.push(keywords.join(' '));
+    if (capabilities && capabilities.length)
+      combinedQueryParts.push(capabilities.join(' '));
+
+    const combinedQuery = combinedQueryParts.join(' ').trim();
+
+    return this.internalSearch(combinedQuery);
+  }
+
+  /**
+   * 原有搜索实现搬迁至此，供重载方法调用
+   */
+  private async internalSearch(query: string): Promise<MCPServerResponse[]> {
     try {
       logger.info(`Searching for MCP servers with query: ${query}`);
 
@@ -156,6 +193,8 @@ export class OfflineSearchProvider implements SearchProvider {
    * @param query 搜索查询
    * @returns 向量搜索结果
    */
+  // --- legacy private helpers remain untouched below ---
+
   private async vectorSearch(query: string): Promise<MCPServerResponse[]> {
     try {
       // 获取查询的向量嵌入
