@@ -11,6 +11,10 @@ export interface MCPServerResponse {
   description: string;
   github_url: string;
   similarity: number;
+  /**
+   * 用于排序的分数，通常与 similarity 相同
+   */
+  score?: number;
   installations?: Record<string, any>;
   /**
    * 服务器分类
@@ -22,6 +26,10 @@ export interface MCPServerResponse {
    * 可以是字符串数组或逗号分隔的字符串
    */
   tags?: string[] | string;
+  /**
+   * 来源，标记结果是在线还是离线获取
+   */
+  source?: 'online' | 'offline';
 }
 
 /**
@@ -52,4 +60,16 @@ export interface SearchProviderV2 {
 export interface SearchOptions {
   limit?: number;
   minSimilarity?: number;
+  /**
+   * 排序字段
+   */
+  sortBy?: string;
+  /**
+   * 排序方向，默认为降序 (desc)
+   */
+  sortOrder?: 'asc' | 'desc';
+  /**
+   * 分类过滤
+   */
+  categories?: string[];
 }

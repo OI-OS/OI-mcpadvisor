@@ -79,9 +79,21 @@ export class OfflineDataLoader {
       const rawData = fs.readFileSync(this.fallbackDataPath, 'utf8');
       const parsedData = JSON.parse(rawData);
 
+      // 增加调试信息：检查原始数据中是否包含小红书相关服务器
+      const redNoteServers = parsedData.filter((item: any) => 
+        item.id === 'rednote-mcp' || item.id === 'mcp-hotnews-server'
+      );
+      
+      logger.info(`Found ${redNoteServers.length} RedNote related servers in raw data:`, {
+        redNoteServers: redNoteServers.map((s: any) => ({ id: s.id, name: s.name }))
+      });
+
       // 转换为MCPServerResponse格式
       const serverResponses = parsedData.map((item: any) => ({
+        id: item.id, // 保留服务器的 id 字段
         title: item.display_name || item.name,
+        name: item.name, // 添加name字段，这可能是搜索时用到的
+        display_name: item.display_name, // 添加display_name字段
         description: item.description || '',
         github_url: item.repository?.url || item.homepage || '',
         categories: item.categories || [],
@@ -133,9 +145,28 @@ export class OfflineDataLoader {
     }[]
   > {
     try {
+      console.log(`[DEBUG] 开始加载兜底数据并生成嵌入向量`);
       const serverResponses = await this.loadFallbackData();
+      console.log(`[DEBUG] 加载了 ${serverResponses.length} 个原始服务器数据`);
+      
+      // 检查是否包含小红书相关服务器
+      const redNoteServers = serverResponses.filter(server => 
+        server.id === 'rednote-mcp' || server.id === 'mcp-hotnews-server'
+      );
+      
+      console.log(`[DEBUG] 原始数据中包含 ${redNoteServers.length} 个小红书相关服务器:`, 
+        redNoteServers.map(s => ({ id: s.id, title: s.title }))
+      );
+      
       const result = [];
 
+      // 如果没有服务器数据，直接返回空结果
+      if (serverResponses.length === 0) {
+        console.log(`[DEBUG] 没有服务器数据可用，返回空结果`);
+        return [];
+      }
+
+      console.log(`[DEBUG] 开始为 ${serverResponses.length} 个服务器生成嵌入向量`);
       for (const server of serverResponses) {
         try {
           // 生成文本用于嵌入
@@ -144,6 +175,7 @@ export class OfflineDataLoader {
           }. ${Array.isArray(server.tags) ? server.tags.join(', ') : ''}`;
 
           // 获取嵌入向量
+          console.log(`[DEBUG] 为服务器 ${server.id || server.title} 生成嵌入向量`);
           const vector = await getTextEmbedding(textForEmbedding);
 
           // 归一化向量
@@ -157,7 +189,13 @@ export class OfflineDataLoader {
             vector: normalizedVector,
             data: server,
           });
+          
+          // 如果是小红书相关服务器，打印详细信息
+          if (server.id === 'rednote-mcp' || server.id === 'mcp-hotnews-server') {
+            console.log(`[DEBUG] 成功为小红书相关服务器 ${server.id} 生成嵌入向量`);
+          }
         } catch (embeddingError) {
+          console.log(`[DEBUG] 为服务器 ${server.id || server.title} 生成嵌入向量失败:`, embeddingError);
           logger.error(
             `Error generating embedding for server ${server.title}`,
             {

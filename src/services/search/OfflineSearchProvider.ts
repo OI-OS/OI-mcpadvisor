@@ -53,7 +53,7 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
   constructor(config: OfflineSearchProviderConfig = {}) {
     this.config = {
       fallbackDataPath: config.fallbackDataPath,
-      minSimilarity: config.minSimilarity || 0.3,
+      minSimilarity: config.minSimilarity || 0.1, // 降低默认阈值，提高召回率
       textMatchWeight: config.textMatchWeight || 0.7,
       vectorSearchWeight: config.vectorSearchWeight || 0.3,
     };
@@ -216,13 +216,15 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
   }
 
   /**
-   * 检查查询中是否包含关键词
+   * 检查查询中是否包含关键词或相关语义
    * @param query 搜索查询
-   * @returns 是否包含关键词
+   * @returns 是否包含关键词或相关语义
    */
   private checkQueryForKeywords(query: string): boolean {
     const queryLower = query.toLowerCase();
-    const priorityKeywords = [
+    
+    // 精确匹配关键词
+    const exactKeywords = [
       '小红书',
       'xiaohongshu',
       'rednote',
@@ -233,10 +235,41 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
       '知乎',
       'zhihu',
     ];
-
-    return priorityKeywords.some(keyword =>
-      queryLower.includes(keyword.toLowerCase()),
+    
+    // 相关语义词组
+    const relatedPhrases = [
+      '今日热门',
+      '热门话题',
+      '网络热点',
+      '今天的热点',
+      '流行趋势',
+      '网红',
+      '博主',
+      '种草',
+      '网络舆论',
+      '社交平台',
+      '短视频',
+      '评论',
+      '锐评',
+      '点评',
+    ];
+    
+    // 检查精确匹配
+    const hasExactKeyword = exactKeywords.some(keyword =>
+      queryLower.includes(keyword.toLowerCase())
     );
+    
+    if (hasExactKeyword) {
+      return true;
+    }
+    
+    // 检查相关语义
+    const hasRelatedPhrase = relatedPhrases.some(phrase =>
+      queryLower.includes(phrase.toLowerCase())
+    );
+    
+    // 如果包含相关语义词组，也认为是相关查询
+    return hasRelatedPhrase;
   }
 
   /**
@@ -252,14 +285,29 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
         minSimilarity: 0, // 设置为0以获取所有服务器
       });
 
+      // 调试信息：检查加载的服务器数据
+      console.log(`[DEBUG] 文本搜索 - 加载了 ${allServers.length} 个服务器`);
+      
+      // 检查是否包含小红书相关服务器
+      const redNoteServers = allServers.filter(server => 
+        server.id === 'rednote-mcp' || server.id === 'mcp-hotnews-server'
+      );
+      
+      console.log(`[DEBUG] 文本搜索 - 找到 ${redNoteServers.length} 个小红书相关服务器:`, 
+        redNoteServers.map(s => ({ id: s.id, title: s.title }))
+      );
+
       // 将查询分解为关键词
       const keywords = query
         .toLowerCase()
         .split(/\s+/)
         .filter(k => k.length > 1);
 
+      console.log(`[DEBUG] 文本搜索 - 查询关键词:`, keywords);
+
       // 如果没有有效关键词，返回空结果
       if (keywords.length === 0) {
+        console.log(`[DEBUG] 文本搜索 - 没有有效关键词，返回空结果`);
         return [];
       }
 
@@ -310,9 +358,23 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
       results.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
 
       // 过滤相似度低于阈值的结果
-      return results.filter(
+      const filteredResults = results.filter(
         result => (result.similarity || 0) >= this.config.minSimilarity!,
       );
+
+      // 调试信息：检查过滤后的结果
+      console.log(`[DEBUG] 文本搜索 - 过滤后剩余 ${filteredResults.length} 个结果`);
+      
+      // 检查是否包含小红书相关服务器
+      const filteredRedNoteServers = filteredResults.filter(server => 
+        server.id === 'rednote-mcp' || server.id === 'mcp-hotnews-server'
+      );
+      
+      console.log(`[DEBUG] 文本搜索 - 过滤后剩余 ${filteredRedNoteServers.length} 个小红书相关服务器:`, 
+        filteredRedNoteServers.map(s => ({ id: s.id, title: s.title, similarity: s.similarity }))
+      );
+
+      return filteredResults;
     } catch (error) {
       logger.error(
         `Text search error: ${error instanceof Error ? error.message : String(error)}`,
@@ -380,27 +442,80 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
 
   /**
    * 计算文本相似度
-   * 简单实现，基于关键词匹配
+   * 增强实现，支持部分匹配和更灵活的相似度计算
    */
   private calculateTextSimilarity(query: string, text: string): number {
     if (!text) return 0;
+    if (!query) return 0;
 
-    const queryTerms = query
-      .toLowerCase()
-      .split(/\s+/)
+    // 将查询和文本转为小写
+    const queryLower = query.toLowerCase();
+    const textLower = text.toLowerCase();
+
+    // 如果文本完全包含查询，给予较高分数
+    if (textLower.includes(queryLower)) {
+      return 0.9;
+    }
+
+    // 将查询分解为词项
+    const queryTerms = queryLower
+      .split(/[\s,.!?;:"'()\[\]{}\-_+=<>~|/\\]+/) // 更全面的分隔符
       .filter(term => term.length > 1);
+
     if (queryTerms.length === 0) return 0;
 
-    const textLower = text.toLowerCase();
-    let matchCount = 0;
+    // 计算匹配分数
+    let totalScore = 0;
+    let matchedTerms = 0;
 
     for (const term of queryTerms) {
+      // 完全匹配
       if (textLower.includes(term)) {
-        matchCount++;
+        totalScore += 1.0;
+        matchedTerms++;
+        continue;
+      }
+
+      // 部分匹配（针对较长的词项）
+      if (term.length >= 3) {
+        // 检查是否有部分匹配
+        for (let i = 0; i < term.length - 2; i++) {
+          const subTerm = term.substring(i, i + 3); // 至少3个字符的子串
+          if (textLower.includes(subTerm)) {
+            totalScore += 0.5; // 部分匹配给予较低分数
+            matchedTerms++;
+            break;
+          }
+        }
+      }
+
+      // 中文字符匹配（单字匹配）
+      // 对于中文查询，即使单个字符也可能有意义
+      const chineseChars = term.match(/[\u4e00-\u9fa5]/g);
+      if (chineseChars && chineseChars.length > 0) {
+        let chineseMatched = false;
+        for (const char of chineseChars) {
+          if (textLower.includes(char)) {
+            chineseMatched = true;
+            break;
+          }
+        }
+        if (chineseMatched) {
+          totalScore += 0.3; // 中文单字匹配给予较低分数
+          matchedTerms++;
+        }
       }
     }
 
-    return matchCount / queryTerms.length;
+    // 如果没有任何匹配，返回0
+    if (matchedTerms === 0) return 0;
+
+    // 计算最终分数，考虑匹配质量和覆盖率
+    const coverage = matchedTerms / queryTerms.length;
+    const avgScore = totalScore / matchedTerms;
+    
+    // 综合考虑匹配质量和覆盖率
+    return (avgScore * 0.7 + coverage * 0.3);
   }
 
   /**
@@ -455,6 +570,14 @@ export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
 
     // 转换为数组并按相似度排序
     const results = Array.from(mergedMap.values());
+    
+    // 确保每个结果都有 score 属性，用于排序功能测试
+    results.forEach(result => {
+      // 将 similarity 值复制到 score 属性
+      result.score = result.similarity || 0;
+    });
+    
+    // 按相似度排序
     results.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
 
     return results;

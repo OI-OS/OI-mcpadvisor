@@ -91,6 +91,18 @@ describe('MCP Compass Application', () => {
             github_url: 'https://github.com/test/mcp-server-1',
             similarity: 0.9,
           },
+          {
+            title: 'Provider 1 Extra Server 1',
+            description: 'An extra test MCP server from provider 1',
+            github_url: 'https://github.com/test/mcp-server-extra-1',
+            similarity: 0.7,
+          },
+          {
+            title: 'Provider 1 Extra Server 2',
+            description: 'Another extra test MCP server from provider 1',
+            github_url: 'https://github.com/test/mcp-server-extra-2',
+            similarity: 0.5,
+          },
         ]);
       }),
     };
@@ -104,15 +116,21 @@ describe('MCP Compass Application', () => {
             github_url: 'https://github.com/test/mcp-server-2',
             similarity: 0.95,
           },
+          {
+            title: 'Provider 2 Extra Server',
+            description: 'An extra test MCP server from provider 2',
+            github_url: 'https://github.com/test/mcp-server-extra-3',
+            similarity: 0.6,
+          },
         ]);
       }),
     };
 
-    // Create search service with multiple providers
+    // Create search service with multiple providers and limit option
     const searchService = new SearchService([mockProvider1, mockProvider2]);
 
-    // Perform a search
-    const results = await searchService.search({ taskDescription: 'test query' });
+    // Perform a search with limit option to ensure we only get top 2 results
+    const results = await searchService.search({ taskDescription: 'test query' }, { limit: 2 });
 
     // Verify that both providers were called with SearchParams
     expect(mockProvider1.search).toHaveBeenCalledWith({
@@ -122,9 +140,62 @@ describe('MCP Compass Application', () => {
       taskDescription: 'test query'
     });
 
-    // Verify results are merged and sorted by similarity
+    // Verify results are merged, sorted by similarity, and limited to 2
     expect(results).toHaveLength(2);
     expect(results[0].title).toBe('Provider 2 MCP Server'); // Higher similarity should be first
     expect(results[1].title).toBe('Provider 1 MCP Server');
+  });
+  
+  test('SearchService merges and sorts results correctly', async () => {
+    // Create mock providers with overlapping results
+    const mockProvider1 = {
+      search: vi.fn().mockImplementation(() => {
+        return Promise.resolve([
+          {
+            title: 'Common Server',
+            description: 'A server that appears in both providers',
+            github_url: 'https://github.com/test/common-server',
+            similarity: 0.85,
+          },
+          {
+            title: 'Provider 1 Unique Server',
+            description: 'A server unique to provider 1',
+            github_url: 'https://github.com/test/unique-server-1',
+            similarity: 0.75,
+          },
+        ]);
+      }),
+    };
+
+    const mockProvider2 = {
+      search: vi.fn().mockImplementation(() => {
+        return Promise.resolve([
+          {
+            title: 'Common Server',
+            description: 'A server that appears in both providers',
+            github_url: 'https://github.com/test/common-server',
+            similarity: 0.9, // Higher similarity than provider 1
+          },
+          {
+            title: 'Provider 2 Unique Server',
+            description: 'A server unique to provider 2',
+            github_url: 'https://github.com/test/unique-server-2',
+            similarity: 0.8,
+          },
+        ]);
+      }),
+    };
+
+    // Create search service with multiple providers
+    const searchService = new SearchService([mockProvider1, mockProvider2]);
+
+    // Perform a search
+    const results = await searchService.search('test query');
+
+    // Check sorting order by similarity
+    expect(results[0].title).toBe('Common Server');
+    expect(results[0].similarity).toBe(0.9); // Should take the higher similarity value
+    expect(results[1].title).toBe('Provider 2 Unique Server');
+    expect(results[2].title).toBe('Provider 1 Unique Server');
   });
 });
