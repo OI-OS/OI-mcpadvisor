@@ -64,7 +64,7 @@ mcpadvisor
 npx @xiaohui-wang/mcpadvisor
 
 # 或者使用 npx 运行特定版本
-npx @xiaohui-wang/mcpadvisor@1.0.1
+npx @xiaohui-wang/mcpadvisor@1.0.4
 ```
 
 ## 配置选项
@@ -129,8 +129,6 @@ MCP Advisor 可以使用以下环境变量进行配置。所有环境变量都�
 | `ENABLE_FILE_LOGGING` | 启用文件日志 | `false` | 否 |
 | `LOG_LEVEL` | 日志级别 (`debug`, `info`, `warn`, `error`) | `info` | 否 |
 | `LOG_DIR` | 日志文件目录 | `./logs` | 否 |
-| `LOG_MAX_SIZE` | 日志文件轮转前的最大大小 | `10m` | 否 |
-| `LOG_MAX_FILES` | 保留的最大日志文件数 | `5` | 否 |
 
 ### 搜索配置
 
@@ -165,7 +163,7 @@ TRANSPORT_TYPE=rest SERVER_PORT=8080 ENDPOINT=/api/mcp node build/index.js
 #### 生产配置
 
 ```bash
-TRANSPORT_TYPE=sse SERVER_PORT=3000 SERVER_HOST=0.0.0.0 LOG_LEVEL=warn ENABLE_FILE_LOGGING=true MIN_SIMILARITY=0.7 MAX_RESULTS=5 node build/index.js
+TRANSPORT_TYPE=rest SERVER_PORT=8080 SERVER_HOST=0.0.0.0 LOG_LEVEL=warn ENABLE_FILE_LOGGING=true node build/index.js
 ```
 
 ### 注意事项
@@ -174,8 +172,6 @@ TRANSPORT_TYPE=sse SERVER_PORT=3000 SERVER_HOST=0.0.0.0 LOG_LEVEL=warn ENABLE_FI
 - 使用 SSE 或 REST 传输时，确保端口未被其他应用程序占用
 - 对于生产部署，考虑将 `SERVER_HOST` 设置为 `0.0.0.0` 以允许外部连接
 - 设置 `DEBUG=true` 将覆盖 `LOG_LEVEL` 设置并将其设置为 `debug`
-
-有关环境变量的完整详细信息，请参阅 [environment-variables.md](environment-variables.md)。
 
 ## 故障排除
 

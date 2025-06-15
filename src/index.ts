@@ -2,11 +2,7 @@
 
 import { SearchService } from './services/searchService.js';
 import { CompassSearchProvider } from './services/search/CompassSearchProvider.js';
-import {
-  ServerService,
-  TransportType,
-  TransportConfig,
-} from './services/serverService.js';
+import { ServerService, TransportType, TransportConfig } from './services/server/index.js';
 import logger from './utils/logger.js';
 import { GetMcpSearchProvider } from './services/search/GetMcpSearchProvider.js';
 import { MeilisearchSearchProvider } from './services/search/MeilisearchSearchProvider.js';
@@ -18,7 +14,7 @@ import { getParamValue } from '@chatmcp/sdk/utils/index.js';
  */
 async function main() {
   try {
-    logger.info('Starting MCP Compass application');
+    logger.info('Starting MCP Advisor application');
 
     // Get parameters from command line or environment variables
     const mode = getParamValue('mode') || process.env.TRANSPORT_TYPE || 'stdio';
@@ -28,9 +24,8 @@ async function main() {
     );
     const host =
       getParamValue('host') || process.env.SERVER_HOST || 'localhost';
-    const path = getParamValue('path') || process.env.SSE_PATH || '/sse';
     const messagePath =
-      getParamValue('messagePath') || process.env.MESSAGE_PATH || '/messages';
+      getParamValue('messagePath') || '/messages';
     const endpoint =
       getParamValue('endpoint') || process.env.ENDPOINT || '/rest';
 
@@ -38,20 +33,19 @@ async function main() {
     const transportConfig: TransportConfig = {
       port,
       host,
-      path,
+      ssePath: '/sse',
       messagePath,
       endpoint,
     };
 
     // Initialize search providers
-    const compassSearchProvider = new CompassSearchProvider();
-    const getMcpSearchProvider = new GetMcpSearchProvider();
-    const meilisearchSearchProvider = new MeilisearchSearchProvider();
-    const searchService = new SearchService([
-      meilisearchSearchProvider,
-      compassSearchProvider,
-      getMcpSearchProvider,
-    ]);
+    const searchProviders = [
+      new MeilisearchSearchProvider(),
+      new CompassSearchProvider(),
+      new GetMcpSearchProvider(),
+    ];
+    
+    const searchService = new SearchService(searchProviders);
 
     // Determine transport type
     let transportType = TransportType.STDIO;
@@ -65,7 +59,7 @@ async function main() {
     const serverService = new ServerService(searchService);
     await serverService.start(transportType, transportConfig);
 
-    logger.info(`MCP Advisor server started with ${transportType} transport`);
+    logger.info(`MCP Advisor server started with ${transportType} transport,endpoint:${endpoint}`);
   } catch (error) {
     logger.error(
       `Fatal error in main(): ${error instanceof Error ? error.message : String(error)}`,
