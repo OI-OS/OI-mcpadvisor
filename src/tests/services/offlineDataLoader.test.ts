@@ -83,15 +83,15 @@ describe('OfflineDataLoader', () => {
       fs.unlinkSync(TEST_DATA_PATH);
     }
     
-    // 创建加载器实例，使用不存在的路径
-    const loader = new OfflineDataLoader('/path/does/not/exist.json');
+    // 创建加载器实例，使用不存在的路径，并禁用路径兵底逻辑
+    const loader = new OfflineDataLoader('/path/does/not/exist.json', { disableFallbackPaths: true });
     
     // 加载数据
     const data = await loader.loadFallbackData();
     
     // 验证返回空数组
     expect(data).toHaveLength(0);
-    expect(logger.error).toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith('Fallback paths are disabled, returning empty array');
   });
   
   test('应该能够加载带有嵌入向量的离线数据', async () => {

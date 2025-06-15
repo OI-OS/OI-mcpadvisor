@@ -32,13 +32,17 @@ const ALTERNATIVE_FALLBACK_DATA_PATH = getNodeModulesPath(
  */
 export class OfflineDataLoader {
   private fallbackDataPath: string;
+  private disableFallbackPaths: boolean;
 
   /**
    * 构造函数
    * @param fallbackDataPath 可选的自定义兜底数据路径
+   * @param options 选项对象，包含 disableFallbackPaths 属性
    */
-  constructor(fallbackDataPath?: string) {
-    this.fallbackDataPath = fallbackDataPath || DEFAULT_FALLBACK_DATA_PATH;
+  constructor(fallbackDataPath?: string, options: { disableFallbackPaths?: boolean } = {}) {
+    this.fallbackDataPath =
+      fallbackDataPath || getMcpServerListPath() || DEFAULT_FALLBACK_DATA_PATH;
+    this.disableFallbackPaths = options.disableFallbackPaths || false;
     logger.info(
       `Offline data loader initialized with path: ${this.fallbackDataPath}`,
     );
@@ -60,6 +64,12 @@ export class OfflineDataLoader {
           `Fallback data file not found at primary path: ${this.fallbackDataPath}`,
         );
 
+        // 如果禁用了路径兵底逻辑，直接返回空数组
+        if (this.disableFallbackPaths) {
+          logger.info('Fallback paths are disabled, returning empty array');
+          return [];
+        }
+
         // 尝试备用路径
         if (
           this.fallbackDataPath === DEFAULT_FALLBACK_DATA_PATH &&
@@ -70,8 +80,37 @@ export class OfflineDataLoader {
           );
           this.fallbackDataPath = ALTERNATIVE_FALLBACK_DATA_PATH;
         } else {
-          logger.error('No fallback data file found at any path');
-          return [];
+          // 尝试直接查找硬编码路径
+          const hardcodedPath = '/Users/mac/Desktop/code-open/mcpadvisor/data/mcp_server_list.json';
+          if (fs.existsSync(hardcodedPath)) {
+            logger.info(`Found data file at hardcoded path: ${hardcodedPath}`);
+            this.fallbackDataPath = hardcodedPath;
+          } else {
+            // 尝试在当前目录及其父目录中查找
+            let currentDir = process.cwd();
+            let found = false;
+            
+            // 最多向上查找3级目录
+            for (let i = 0; i < 4 && !found; i++) {
+              const potentialPath = path.join(currentDir, 'data', 'mcp_server_list.json');
+              logger.debug(`Checking for data file at: ${potentialPath}`);
+              
+              if (fs.existsSync(potentialPath)) {
+                logger.info(`Found data file at: ${potentialPath}`);
+                this.fallbackDataPath = potentialPath;
+                found = true;
+                break;
+              }
+              
+              // 向上一级目录
+              currentDir = path.dirname(currentDir);
+            }
+            
+            if (!found) {
+              logger.error('No fallback data file found at any path');
+              return [];
+            }
+          }
         }
       }
 
