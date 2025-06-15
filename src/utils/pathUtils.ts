@@ -99,27 +99,54 @@ export function getProjectRootPath(
 export function getDataDirPath(metaUrl: string | null = null): string {
   // 检查是否在测试环境中（Jest 或 Vitest）
   if (isTestEnvironment()) {
-    // 在测试环境中，使用项目的实际路径
-    // 先尝试直接使用项目路径
-    const projectPath = '/Users/mac/Desktop/code-open/mcpadvisor';
-    const dataPath = path.join(projectPath, 'data');
+    // 在测试环境中，尝试多个可能的路径
     
-    // 检查路径是否存在
-    if (fs.existsSync(dataPath)) {
-      console.log(`[DEBUG] 使用项目数据路径: ${dataPath}`);
-      return dataPath;
+    // 1. 首先尝试硬编码的项目路径（最可靠）
+    const hardcodedPath = '/Users/mac/Desktop/code-open/mcpadvisor';
+    const hardcodedDataPath = path.join(hardcodedPath, 'data');
+    
+    // 检查硬编码路径是否存在
+    if (fs.existsSync(hardcodedDataPath)) {
+      console.log(`[DEBUG] 使用硬编码项目数据路径: ${hardcodedDataPath}`);
+      return hardcodedDataPath;
+    }
+    console.log(`[DEBUG] 硬编码数据路径不存在: ${hardcodedDataPath}`);
+    
+    // 2. 尝试从当前工作目录查找
+    const cwdPath = process.cwd();
+    const cwdDataPath = path.join(cwdPath, 'data');
+    
+    if (fs.existsSync(cwdDataPath)) {
+      console.log(`[DEBUG] 使用当前工作目录数据路径: ${cwdDataPath}`);
+      return cwdDataPath;
+    }
+    console.log(`[DEBUG] 当前工作目录数据路径不存在: ${cwdDataPath}`);
+    
+    // 3. 尝试从当前工作目录向上查找
+    let searchDir = cwdPath;
+    for (let i = 0; i < 3; i++) { // 最多向上查找3级目录
+      searchDir = path.dirname(searchDir);
+      const potentialDataPath = path.join(searchDir, 'data');
+      
+      if (fs.existsSync(potentialDataPath)) {
+        console.log(`[DEBUG] 在上级目录找到数据路径: ${potentialDataPath}`);
+        return potentialDataPath;
+      }
     }
     
-    // 如果项目路径不存在，回退到使用当前工作目录
-    const cwdDataPath = path.join(process.cwd(), 'data');
-    console.log(`[DEBUG] 项目数据路径不存在，使用当前工作目录数据路径: ${cwdDataPath}`);
-    return cwdDataPath;
+    // 4. 如果都找不到，记录警告并返回默认路径
+    console.log(`[WARN] 无法找到有效的数据目录，使用默认路径: ${hardcodedDataPath}`);
+    return hardcodedDataPath; // 即使不存在也返回这个路径，让调用方处理文件不存在的情况
   }
 
   // 非测试环境，从源代码目录回溯到项目根目录，然后定位到 data 目录
   const srcDir = getDirPath(metaUrl);
   const projectRoot = path.resolve(srcDir, '../../');
-  return path.join(projectRoot, 'data');
+  const dataPath = path.join(projectRoot, 'data');
+  
+  // 添加日志以便调试
+  console.log(`[DEBUG] 非测试环境，使用项目数据路径: ${dataPath}`);
+  return dataPath;
 }
 
 /**
