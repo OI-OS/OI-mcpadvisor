@@ -27,7 +27,18 @@ describe('MeilisearchSearchProvider', () => {
   }
 
   // 测试查询
-  const testQueries = ['web scraping', 'firecrawl'];
+  const testQueries = [
+    { taskDescription: 'web scraping' },
+    { taskDescription: 'firecrawl' }
+  ];
+  
+  // 兼容旧测试的辅助函数
+  const createSearchParams = (query: string | { taskDescription: string }) => {
+    if (typeof query === 'string') {
+      return { taskDescription: query };
+    }
+    return query;
+  };
 
   // 测试 SearchService.searchMeilisearch 静态方法
   describe('SearchService.searchMeilisearch', () => {
@@ -35,7 +46,8 @@ describe('MeilisearchSearchProvider', () => {
       it(`should search for "${query}"`, async () => {
         try {
           // 使用 Meilisearch 搜索
-          const results = await SearchService.searchMeilisearch(query, {
+          const searchParams = createSearchParams(query);
+          const results = await SearchService.searchMeilisearch(searchParams, {
             limit: 5,
           });
 
@@ -75,7 +87,8 @@ describe('MeilisearchSearchProvider', () => {
         const query = testQueries[0];
 
         // 执行搜索
-        const results = await provider.search(query);
+        const searchParams = createSearchParams(query);
+        const results = await provider.search(searchParams);
 
         // 验证结果
         expect(results).toBeDefined();

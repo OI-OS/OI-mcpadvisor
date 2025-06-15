@@ -27,19 +27,45 @@ import { addAdditionalSources, McpSources } from './loadService.js';
 // Define Zod schemas for validation
 const GeneralArgumentsSchema = z
   .object({
+    // New search params
+    taskDescription: z.string().min(1).optional(),
+    keywords: z.union([z.string().array(), z.string()]).optional().default([]),
+    capabilities: z.union([z.string().array(), z.string()]).optional().default([]),
+    // Legacy query param (kept for backward compatibility)
     query: z.string().min(1).optional(),
+    // Other params
     mcpName: z.string().min(1).optional(),
     githubUrl: z.string().url().optional(),
     mcpClient: z.string().optional(),
   })
   .refine(
     data =>
-      // 确保至少有一个参数存在
-      !!(data.query || (data.mcpName && data.githubUrl)),
+      // Ensure at least one search parameter or install parameters are provided
+      !!(data.taskDescription || data.query || (data.mcpName && data.githubUrl)),
     {
-      message: 'At least query or both mcpName and githubUrl must be provided',
+      message: 'At least taskDescription/query or both mcpName and githubUrl must be provided',
     },
-  );
+  )
+  .transform(data => {
+    // Transform data to ensure consistent format
+    const transformed = { ...data };
+    
+    // Handle legacy query parameter
+    if (data.query && !data.taskDescription) {
+      transformed.taskDescription = data.query;
+    }
+    
+    // Ensure arrays are properly formatted
+    if (transformed.keywords && !Array.isArray(transformed.keywords)) {
+      transformed.keywords = [transformed.keywords].filter(Boolean);
+    }
+    
+    if (transformed.capabilities && !Array.isArray(transformed.capabilities)) {
+      transformed.capabilities = [transformed.capabilities].filter(Boolean);
+    }
+    
+    return transformed;
+  });
 
 // Schema for additional sources
 const SourcesSchema = z.object({
@@ -125,28 +151,36 @@ export class ServerService {
       try {
         if (name === 'recommend-mcp-servers') {
           const parsedArgs = GeneralArgumentsSchema.parse(args);
-          const query = parsedArgs.query;
-
-          if (!query) {
+          const { taskDescription, keywords = [], capabilities = [] } = parsedArgs;
+          
+          if (!taskDescription) {
             return {
               content: [
                 {
                   type: 'text',
-                  text: 'Error: Query parameter is required for recommend-mcp-servers tool',
+                  text: 'Error: taskDescription parameter is required for recommend-mcp-servers tool',
                 },
               ],
               isError: true,
             };
           }
 
+          const searchParams = {
+            taskDescription,
+            keywords: Array.isArray(keywords) ? keywords : [keywords].filter(Boolean),
+            capabilities: Array.isArray(capabilities) ? capabilities : [capabilities].filter(Boolean),
+          };
+
           logger.info(`Processing recommend-mcp-servers request`, 'Search', {
-            query,
+            taskDescription,
+            keywords,
+            capabilities,
           });
 
-          const servers = await this.searchService.search(query);
+          const servers = await this.searchService.search(searchParams);
           logger.debug(`Found servers matching query`, 'Search', {
             count: servers.length,
-            query,
+            taskDescription,
           });
 
           return {
@@ -244,16 +278,14 @@ export class ServerService {
       properties?: { [x: string]: unknown } | undefined;
     };
     description?: string | undefined;
-    annotations?:
-      | {
-          [x: string]: unknown;
-          title?: string | undefined;
-          readOnlyHint?: boolean | undefined;
-          destructiveHint?: boolean | undefined;
-          idempotentHint?: boolean | undefined;
-          openWorldHint?: boolean | undefined;
-        }
-      | undefined;
+    annotations?: {
+      [x: string]: unknown;
+      title?: string | undefined;
+      readOnlyHint?: boolean | undefined;
+      destructiveHint?: boolean | undefined;
+      idempotentHint?: boolean | undefined;
+      openWorldHint?: boolean | undefined;
+    } | undefined;
   } {
     return {
       name: 'recommend-mcp-servers',
@@ -265,10 +297,10 @@ export class ServerService {
       inputSchema: {
         type: 'object',
         properties: {
-          query: {
+          taskDescription: {
             type: 'string',
             description: `
-                    请提供所需MCP服务器的精确描述。
+                    请提供所需MCP服务器的精确任务描述。
                     
                     有效查询示例：
                     - '用于风控策略部署的MCP服务器'
@@ -284,8 +316,20 @@ export class ServerService {
                     2. 具体功能需求（如风险分析、策略部署、策略研发、特征研发等）
                     `,
           },
+          keywords: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '当前任务对应的搜索关键词列表，当提供关键词会优先对 MCP Server 筛选',
+            default: [],
+          },
+          capabilities: {
+            type: 'array',
+            items: { type: 'string' },
+            description: '当前任务所需功能列表，当提供功能列表会综合任务描述和功能列表对 MCP Server 筛选',
+            default: [],
+          },
         },
-        required: ['query'],
+        required: ['taskDescription'],
       },
     };
   }

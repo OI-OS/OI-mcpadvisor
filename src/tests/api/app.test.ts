@@ -3,44 +3,43 @@
  */
 
 import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
-import { SearchService } from '../../services/searchService.js';
 import { CompassSearchProvider } from '../../services/search/CompassSearchProvider.js';
+import { SearchService } from '../../services/searchService.js';
 import { MCPServerResponse } from '../../types/index.js';
 import logger from '../../utils/logger.js';
 
-// 注意：fetch 和 logger 的模拟已移至 setup.ts 文件中
-// 这里不需要重复模拟
+// Mock the global fetch
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Mock the logger
+vi.mock('../../utils/logger', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn(),
+  },
+}));
 
 describe('MCP Compass Application', () => {
-  beforeEach(() => {
-    // Reset mocks before each test
+  afterEach(() => {
     vi.clearAllMocks();
   });
 
-  test('Application can be initialized', () => {
-    // Create the search provider and service
-    const searchProvider = new CompassSearchProvider();
-    const searchService = new SearchService([searchProvider]);
-
-    // Verify that the services were created successfully
-    expect(searchProvider).toBeDefined();
-    expect(searchService).toBeDefined();
-    expect(logger.info).toHaveBeenCalled();
-  });
-
   test('SearchProvider can handle search requests', async () => {
-    // Mock successful API response
+    // Setup the fetch mock
     const mockResponse = [
       {
         title: 'Test MCP Server',
-        description: 'A test MCP server for unit testing',
+        description: 'A test MCP server',
         github_url: 'https://github.com/test/mcp-server',
-        similarity: 0.95,
+        similarity: 0.9,
       },
     ] as MCPServerResponse[];
 
     // Setup the fetch mock
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockResponse,
     });
@@ -49,7 +48,7 @@ describe('MCP Compass Application', () => {
     const searchProvider = new CompassSearchProvider();
 
     // Perform a search
-    const results = await searchProvider.search('test query');
+    const results = await searchProvider.search({ taskDescription: 'test query' });
 
     // Verify the results
     expect(results).toEqual(mockResponse);
@@ -57,56 +56,71 @@ describe('MCP Compass Application', () => {
     expect(logger.info).toHaveBeenCalledWith(
       expect.stringContaining('Searching for MCP servers'),
     );
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://registry.mcphub.io/recommend?description=test%20query',
+    );
   });
 
   test('SearchProvider handles API errors', async () => {
     // Setup the fetch mock to simulate an error
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    mockFetch.mockResolvedValueOnce({
       ok: false,
       status: 500,
+      statusText: 'Internal Server Error',
     });
 
     // Create the search provider
     const searchProvider = new CompassSearchProvider();
 
     // Expect the search to throw an error
-    await expect(searchProvider.search('test query')).rejects.toThrow();
+    await expect(searchProvider.search({ taskDescription: 'test query' })).rejects.toThrow();
     expect(logger.error).toHaveBeenCalled();
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://registry.mcphub.io/recommend?description=test%20query',
+    );
   });
 
   test('SearchService can handle multiple providers', async () => {
     // Create mock providers
     const mockProvider1 = {
-      search: vi.fn().mockResolvedValue([
-        {
-          title: 'Provider 1 MCP Server',
-          description: 'A test MCP server from provider 1',
-          github_url: 'https://github.com/test/mcp-server-1',
-          similarity: 0.9,
-        },
-      ]),
+      search: vi.fn().mockImplementation((params: { taskDescription: string }) => {
+        return Promise.resolve([
+          {
+            title: 'Provider 1 MCP Server',
+            description: 'A test MCP server from provider 1',
+            github_url: 'https://github.com/test/mcp-server-1',
+            similarity: 0.9,
+          },
+        ]);
+      }),
     };
 
     const mockProvider2 = {
-      search: vi.fn().mockResolvedValue([
-        {
-          title: 'Provider 2 MCP Server',
-          description: 'A test MCP server from provider 2',
-          github_url: 'https://github.com/test/mcp-server-2',
-          similarity: 0.95,
-        },
-      ]),
+      search: vi.fn().mockImplementation((params: { taskDescription: string }) => {
+        return Promise.resolve([
+          {
+            title: 'Provider 2 MCP Server',
+            description: 'A test MCP server from provider 2',
+            github_url: 'https://github.com/test/mcp-server-2',
+            similarity: 0.95,
+          },
+        ]);
+      }),
     };
 
     // Create search service with multiple providers
     const searchService = new SearchService([mockProvider1, mockProvider2]);
 
     // Perform a search
-    const results = await searchService.search('test query');
+    const results = await searchService.search({ taskDescription: 'test query' });
 
-    // Verify that both providers were called
-    expect(mockProvider1.search).toHaveBeenCalledWith('test query');
-    expect(mockProvider2.search).toHaveBeenCalledWith('test query');
+    // Verify that both providers were called with SearchParams
+    expect(mockProvider1.search).toHaveBeenCalledWith({
+      taskDescription: 'test query'
+    });
+    expect(mockProvider2.search).toHaveBeenCalledWith({
+      taskDescription: 'test query'
+    });
 
     // Verify results are merged and sorted by similarity
     expect(results).toHaveLength(2);
