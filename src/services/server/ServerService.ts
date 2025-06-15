@@ -112,14 +112,22 @@ export class ServerService {
 
   async startWithSSE(config: TransportConfig): Promise<void> {
     const { port, host = 'localhost' } = config;
-    logger.info('Starting server with SSE transport', { host, port });
+    const baseUrl = `http://${host}:${port}`;
+    const sseUrl = `${baseUrl}/sse`;
+    const messagePath = config.messagePath || '/messages';
+    const messagesUrl = `${baseUrl}${messagePath}`;
 
+    logger.info('Starting server with SSE transport', { host, port });
     this.expressServer = await this.setupExpressServer(config);
     await this.expressServer.start(port, host);
     
-    logger.info(`${SERVER_NAME} Server running on http://${host}:${port}`);
-    logger.info(`SSE endpoint available at http://${host}:${port}/sse`);
-    logger.info(`Messages endpoint available at http://${host}:${port}${config.messagePath || '/messages'}`);
+    console.log('\n' + '='.repeat(70));
+    console.log(`🚀 Server is running on ${baseUrl}`);
+    console.log(`🔌 SSE endpoint: ${sseUrl}`);
+    console.log(`📨 Messages endpoint: ${messagesUrl}`);
+    console.log('='.repeat(70) + '\n');
+    
+    logger.info(`${SERVER_NAME} Server running on ${baseUrl}`);
   }
 
   /**
