@@ -519,6 +519,40 @@ export class SearchService {
         },
       );
 
+      // 处理排序
+      if (options.sortBy) {
+        const sortField = options.sortBy as keyof MCPServerResponse;
+        const sortMultiplier = options.sortOrder === 'desc' ? -1 : 1;
+        
+        results.sort((a, b) => {
+          const aValue = a[sortField];
+          const bValue = b[sortField];
+          
+          // 处理数字排序
+          if (typeof aValue === 'number' && typeof bValue === 'number') {
+            return (aValue - bValue) * sortMultiplier;
+          }
+          
+          // 处理字符串排序
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return aValue.localeCompare(bValue) * sortMultiplier;
+          }
+          
+          // 处理空值
+          if (aValue === undefined && bValue !== undefined) return 1;
+          if (aValue !== undefined && bValue === undefined) return -1;
+          
+          return 0;
+        });
+      }
+      
+      // 确保每个结果都有 score 属性
+      results.forEach(result => {
+        if (result.score === undefined) {
+          result.score = result.similarity || 0;
+        }
+      });
+      
       // 应用限制
       if (options.limit && options.limit > 0) {
         return results.slice(0, options.limit);

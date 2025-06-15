@@ -134,9 +134,21 @@ export class EnhancedMemoryVectorEngine implements IWritableVectorSearchEngine {
       currentTime - this.lastFallbackLoadTime > this.fallbackLoadIntervalMs
     ) {
       try {
+        console.log(`[DEBUG] 开始加载兜底数据，使用路径: ${this.customFallbackPath || '默认路径'}`);
         logger.info('Loading fallback data into memory engine');
         const fallbackEntries =
           await this.offlineLoader.loadFallbackDataWithEmbeddings();
+
+        console.log(`[DEBUG] 加载了 ${fallbackEntries.length} 个带向量的兜底数据条目`);
+        
+        // 检查是否包含小红书相关服务器
+        const redNoteEntries = fallbackEntries.filter(entry => 
+          entry.data.id === 'rednote-mcp' || entry.data.id === 'mcp-hotnews-server'
+        );
+        
+        console.log(`[DEBUG] 其中包含 ${redNoteEntries.length} 个小红书相关服务器:`, 
+          redNoteEntries.map(e => ({ id: e.data.id, title: e.data.title }))
+        );
 
         // 只有在首次加载时才添加兜底数据
         // 这样可以避免重复添加相同的数据
@@ -155,6 +167,7 @@ export class EnhancedMemoryVectorEngine implements IWritableVectorSearchEngine {
             );
           }
           this.fallbackDataLoaded = true;
+          console.log(`[DEBUG] 成功添加 ${fallbackEntries.length} 个兜底数据条目到内存引擎`);
           logger.info(
             `Added ${fallbackEntries.length} fallback entries to memory engine`,
           );

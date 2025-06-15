@@ -1,88 +1,69 @@
 /**
  * 离线搜索功能测试
- * 测试离线模式下的推荐效果，特别是针对小红书相关查询
+ * 测试离线模式下的推荐效果，包括小红书、GitHub、文档等不同场景
  */
 
-import { describe, test, expect, vi } from 'vitest';
+import { describe, expect, test, beforeAll, afterAll } from 'vitest';
 import { SearchService } from '../../services/searchService.js';
-import { MCPServerResponse } from '../../types/index.js';
 import { getMcpServerListPath } from '../../utils/pathUtils.js';
+import { 
+  redbookTestCases,
+  githubTestCases,
+  prompxTestCases,
+  edgeCaseTestCases 
+} from '../fixtures/search/cases/index.js';
+import { createSearchTest } from '../fixtures/search/testUtils.js';
 
 // 使用路径工具获取兜底数据路径
-// 在测试环境中传入 null，路径工具会自动处理
-const FALLBACK_DATA_PATH = getMcpServerListPath(null);
+const FALLBACK_DATA_PATH = getMcpServerListPath();
 
-/**
- * 检查结果中是否包含小红书相关服务器
- */
-function containsRedNoteServer(results: MCPServerResponse[]): boolean {
-  return results.some(
-    result =>
-      result.title.toLowerCase().includes('rednote') ||
-      result.title.toLowerCase().includes('红书') ||
-      (Array.isArray(result.tags) &&
-        result.tags.some(
-          tag =>
-            tag.toLowerCase().includes('xiaohongshu') ||
-            tag.toLowerCase().includes('红书'),
-        )),
-  );
-}
+// 合并所有测试用例
+const ALL_TEST_CASES = [
+  ...redbookTestCases,
+  ...githubTestCases,
+  ...edgeCaseTestCases,
+  ...prompxTestCases,
+];
 
-// 使用 Vitest 标准的测试结构
+// 测试套件
 describe('离线搜索功能测试', () => {
-  // 测试查询
-  const query = '我想要看看小红书今天的热点问题，你再锐评一下';
-
-  // 测试文本匹配为主的离线搜索
-  test('文本匹配为主的离线搜索应该返回小红书相关服务器', async () => {
-    // 设置较高的文本权重 (0.7)
-    const results = await SearchService.searchOffline(
-      query,
-      {
-        limit: 5,
-        minSimilarity: 0.1,
-      },
-      FALLBACK_DATA_PATH,
-      0.7,
-    );
-
-    // 断言结果存在
-    expect(results).toBeDefined();
-    // 注意：测试环境中可能没有完整数据，因此不强制要求结果数量
-    console.log(`文本匹配结果数量：${results.length}`);
-    
-    // 如果有结果，才断言包含小红书相关服务器
-    if (results.length > 0) {
-      expect(containsRedNoteServer(results)).toBe(true);
-    } else {
-      console.log('文本匹配测试：结果为空，跳过相关性检查');
-    }
+  // 测试前准备
+  beforeAll(() => {
+    console.log('开始执行离线搜索测试...');
   });
 
-  // 测试向量搜索为主的离线搜索
-  test('向量搜索为主的离线搜索应该返回小红书相关服务器', async () => {
-    // 设置较低的文本权重 (0.3)
-    const results = await SearchService.searchOffline(
-      query,
-      {
-        limit: 5,
-        minSimilarity: 0.1,
-      },
-      FALLBACK_DATA_PATH,
-      0.3,
-    );
+  afterAll(() => {
+    console.log('离线搜索测试执行完毕');
+  });
 
-    // 断言结果存在
-    expect(results).toBeDefined();
-    // 注意：测试环境中可能没有完整数据，因此不强制要求结果数量
-    console.log(`向量搜索结果数量：${results.length}`);
+  // 动态生成测试用例
+  ALL_TEST_CASES.forEach(testCase => 
+    createSearchTest(
+      testCase,
+      SearchService.searchOffline,
+      FALLBACK_DATA_PATH,
+    )
+  );
+
+  // 特殊场景测试
+  describe('特殊场景测试', () => {
+    // 分页功能测试暂时移除
     
-    // 如果有结果，才断言包含小红书相关服务器
-    if (results.length > 0) {
-      expect(containsRedNoteServer(results)).toBe(true);
-    } else {
-      console.log('向量搜索测试：结果为空，跳过相关性检查');
-    }
+    test('排序功能', async () => {
+      const results = await SearchService.searchOffline(
+        'MCP服务器',
+        { limit: 5, minSimilarity: 0.1, sortBy: 'score', sortOrder: 'desc' },
+        FALLBACK_DATA_PATH,
+      );
+      
+      // 检查结果是否按分数降序排列
+      if (results.length > 1) {
+        for (let i = 0; i < results.length - 1; i++) {
+          const current = results[i] as any;
+          const next = results[i + 1] as any;
+          expect(current.score).toBeGreaterThanOrEqual(next.score);
+        }
+      }
+    });
   });
 });

@@ -5,6 +5,8 @@
 
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import fs from 'fs';
 
 /**
  * 检测当前是否在 Jest 测试环境中
@@ -13,6 +15,18 @@ import { fileURLToPath } from 'url';
 export function isJestEnvironment(): boolean {
   return (
     typeof process !== 'undefined' && process.env.JEST_WORKER_ID !== undefined
+  );
+}
+
+/**
+ * 检测当前是否在测试环境中（Jest 或 Vitest）
+ * @returns 如果在测试环境中返回 true，否则返回 false
+ */
+export function isTestEnvironment(): boolean {
+  return (
+    isJestEnvironment() || 
+    typeof process !== 'undefined' && 
+    (process.env.VITEST !== undefined || process.env.NODE_ENV === 'test')
   );
 }
 
@@ -79,16 +93,30 @@ export function getProjectRootPath(
 /**
  * 获取数据目录路径
  *
- * @param metaUrl 当前模块的 import.meta.url，在 Jest 环境中可以传入 null
+ * @param metaUrl 当前模块的 import.meta.url，在测试环境中可以传入 null
  * @returns 数据目录的绝对路径
  */
 export function getDataDirPath(metaUrl: string | null = null): string {
-  // 在 Jest 环境中，直接使用项目根目录下的 data 目录
-  if (isJestEnvironment()) {
-    return path.join(process.cwd(), 'data');
+  // 检查是否在测试环境中（Jest 或 Vitest）
+  if (isTestEnvironment()) {
+    // 在测试环境中，使用项目的实际路径
+    // 先尝试直接使用项目路径
+    const projectPath = '/Users/mac/Desktop/code-open/mcpadvisor';
+    const dataPath = path.join(projectPath, 'data');
+    
+    // 检查路径是否存在
+    if (fs.existsSync(dataPath)) {
+      console.log(`[DEBUG] 使用项目数据路径: ${dataPath}`);
+      return dataPath;
+    }
+    
+    // 如果项目路径不存在，回退到使用当前工作目录
+    const cwdDataPath = path.join(process.cwd(), 'data');
+    console.log(`[DEBUG] 项目数据路径不存在，使用当前工作目录数据路径: ${cwdDataPath}`);
+    return cwdDataPath;
   }
 
-  // 从源代码目录回溯到项目根目录，然后定位到 data 目录
+  // 非测试环境，从源代码目录回溯到项目根目录，然后定位到 data 目录
   const srcDir = getDirPath(metaUrl);
   const projectRoot = path.resolve(srcDir, '../../');
   return path.join(projectRoot, 'data');

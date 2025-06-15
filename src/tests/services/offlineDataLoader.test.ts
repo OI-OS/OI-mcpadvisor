@@ -7,7 +7,6 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { OfflineDataLoader } from '../../services/database/memory/offlineDataLoader.js';
-import { MCPServerResponse } from '../../types/index.js';
 import logger from '../../utils/logger.js';
 import * as embedding from '../../utils/embedding.js';
 import * as vectorUtils from '../../utils/vectorUtils.js';
