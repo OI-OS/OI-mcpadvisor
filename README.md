@@ -334,13 +334,14 @@ To Implement the above features, we need to:
 - [ ] Support Full-Text Index Search
 - [ ] Support MCP Resources to read log
 - [ ] Utilize Professional Rerank Module like https://github.com/PrithivirajDamodaran/FlashRank or Qwen Rerank Model
+- [ ] Support Cline marketplace: https://api.cline.bot/v1/mcp/marketplace
 
 ## Testing
 
 Use [inspector](https://github.com/modelcontextprotocol/inspector) for testing:
 
 ```bash 
-npx @modelcontextprotocol/inspector
+ENABLE_FILE_LOGGING=true node YOUR-MCPADVISOR-PATH/build/index.js npx @modelcontextprotocol/inspector
 ```
 
 
