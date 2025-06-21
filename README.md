@@ -40,13 +40,11 @@ https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
 - [User Guide](docs/USER_GUIDE.md) - How to use MCP Advisor
 - [Architecture Documentation](docs/ARCHITECTURE.md) - System architecture details
 - [Technical Details](docs/TECHNICAL_DETAILS.md) - Advanced technical features
-- [Developer Guide](docs/DEVELOPER_GUIDE.md) - Development environment setup and code contribution
-- [Best Practices](docs/BEST_PRACTICES.md) - Coding standards and best practices for contributors
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Search Providers](docs/SEARCH_PROVIDERS.md) - Search provider details
-- [API Reference](docs/API_REFERENCE.md) - API documentation
 - [Roadmap](ROADMAP.md) - Future development plans
-- [Contribution Guidelines](CONTRIBUTING.md) - How to contribute code
+- [Developer Guide](docs/DEVELOPER_GUIDE.md) - Development environment setup and code contribution
+- [Best Practices](docs/BEST_PRACTICES.md) - Coding standards and best practices for contributors
 
 ## Quick Start
 
@@ -98,6 +96,7 @@ graph TD
             Providers --> MeilisearchProvider["Meilisearch Provider"]
             Providers --> GetMcpProvider["GetMCP Provider"]
             Providers --> CompassProvider["Compass Provider"]
+            Providers --> NacosProvider["Nacos Provider"]
             Providers --> OfflineProvider["Offline Provider"]
         end
         
@@ -280,10 +279,6 @@ MCP Advisor supports multiple search providers that can be used simultaneously:
 3. **Meilisearch Search Provider**: Uses Meilisearch for fast, fault-tolerant text search
 
 For detailed information about search providers, see [SEARCH_PROVIDERS.md](docs/SEARCH_PROVIDERS.md).
-
-## API Documentation
-
-For detailed API documentation, see [API_REFERENCE.md](docs/API_REFERENCE.md).
 
 ## Roadmap
 

@@ -28,6 +28,7 @@ graph TD
             Providers --> MeilisearchProvider["Meilisearch 提供者"]
             Providers --> GetMcpProvider["GetMCP 提供者"]
             Providers --> CompassProvider["Compass 提供者"]
+            Providers --> NacosProvider["Nacos 服务发现"]
             Providers --> OfflineProvider["离线提供者"]
         end
         
@@ -38,6 +39,7 @@ graph TD
         MeilisearchProvider --> |"API 调用"| MeilisearchAPI["Meilisearch API"]
         GetMcpProvider --> |"API 调用"| GetMcpAPI["GetMCP API"]
         CompassProvider --> |"API 调用"| CompassAPI["Compass API"]
+        NacosProvider --> |"服务发现"| NacosServer["Nacos 注册中心"]
         
         SearchService --> |"合并和过滤"| ResultProcessor["结果处理器"]
         ResultProcessor --> |"优先级"| PriorityEngine["提供者优先级引擎"]
