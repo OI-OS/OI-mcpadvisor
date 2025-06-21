@@ -2,7 +2,7 @@
  * Meilisearch 搜索提供者测试
  */
 
-import { SearchService } from '../../services/searchService.js';
+import { searchMeilisearch } from '../../services/search/SearchMcpFactory.js';
 import { MeilisearchSearchProvider } from '../../services/search/MeilisearchSearchProvider.js';
 import logger from '../../utils/logger.js';
 
@@ -40,14 +40,14 @@ describe('MeilisearchSearchProvider', () => {
     return query;
   };
 
-  // 测试 SearchService.searchMeilisearch 静态方法
-  describe('SearchService.searchMeilisearch', () => {
+  // 测试 searchMeilisearch 工厂函数
+  describe('searchMeilisearch', () => {
     testQueries.forEach(query => {
       it(`should search for "${query}"`, async () => {
         try {
           // 使用 Meilisearch 搜索
           const searchParams = createSearchParams(query);
-          const results = await SearchService.searchMeilisearch(searchParams, {
+          const results = await searchMeilisearch(searchParams, {
             limit: 5,
           });
 

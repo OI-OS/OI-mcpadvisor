@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, test, beforeAll, afterAll } from 'vitest';
-import { SearchService } from '../../../services/searchService.js';
+import { searchOffline } from '../../../services/search/SearchMcpFactory.js';
 import { getMcpServerListPath } from '../../../utils/pathUtils.js';
 import { 
   redbookTestCases,
@@ -35,14 +35,14 @@ describe('离线搜索功能测试', () => {
   ALL_TEST_CASES.forEach(testCase => 
     createSearchTest(
       testCase,
-      SearchService.searchOffline,
+searchOffline,
       FALLBACK_DATA_PATH,
     )
   );
 
   describe('特殊场景测试', () => {    
     test('排序功能', async () => {
-      const results = await SearchService.searchOffline(
+      const results = await searchOffline(
         'MCP服务器',
         { limit: 5, minSimilarity: 0.1, sortBy: 'score', sortOrder: 'desc' },
         FALLBACK_DATA_PATH,

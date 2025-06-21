@@ -1,6 +1,13 @@
-import { SearchService } from '../../services/searchService.js';
+import { searchGetMcp } from '../../services/search/SearchMcpFactory.js';
 import { MCPServerResponse } from '../../types/index.js';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+
+// Mock the factory function
+vi.mock('../../services/search/searchMcpFactory.js', () => ({
+  searchGetMcp: vi.fn()
+}));
+
+const mockSearchGetMcp = vi.mocked(searchGetMcp);
 
 /**
  * 测试 SearchService
@@ -9,9 +16,7 @@ describe('SearchService', () => {
   // 模拟SearchService.searchGetMcp方法
   beforeEach(() => {
     // 为测试创建一个模拟的searchGetMcp方法
-    vi
-      .spyOn(SearchService, 'searchGetMcp')
-      .mockImplementation(async (query, options) => {
+    mockSearchGetMcp.mockImplementation(async (query, options) => {
         const mockResults: MCPServerResponse[] = [
           {
             title: 'Test Server 1',
@@ -55,18 +60,18 @@ describe('SearchService', () => {
   });
 
   test('should return search results for a query', async () => {
-    const results = await SearchService.searchGetMcp('AI');
+    const results = await searchGetMcp('AI');
     expect(results).toHaveLength(3);
     expect(results[0].title).toBe('Test Server 1');
   });
 
   test('should limit results when limit option is provided', async () => {
-    const results = await SearchService.searchGetMcp('data', { limit: 2 });
+    const results = await searchGetMcp('data', { limit: 2 });
     expect(results).toHaveLength(2);
   });
 
   test('should filter results by minimum similarity', async () => {
-    const results = await SearchService.searchGetMcp('test', {
+    const results = await searchGetMcp('test', {
       minSimilarity: 0.8,
     });
     expect(results.every(result => result.similarity >= 0.8)).toBe(true);
