@@ -3,6 +3,7 @@ import {
   MCPServerResponse, 
   SearchOptions
 } from '../types/index.js';
+import { RerankMcpServer } from './search/RerankMcpService.js';
 import type { SearchParams } from '../types/search.js';
 import { OfflineSearchProvider } from './search/OfflineSearchProvider.js';
 import logger from '../utils/logger.js';
@@ -58,33 +59,18 @@ const DEFAULT_OFFLINE_CONFIG: OfflineConfig = {
  */
 export class SearchService {
   private providers: SearchProvider[] = [];
-
-  /**
-   * Combine structured params to plain query string for legacy providers
-   */
-
-
-  /**
-   * 离线搜索提供者
-   * 用于在网络不可用时提供兜底推荐
-   */
   private offlineProvider?: SearchProvider;
-
-  /**
-   * 离线模式配置
-   */
   private offlineConfig: OfflineConfig;
+  private reranker: RerankMcpServer;
 
   /**
    * Create a new search service with the specified providers
    * @param providers - Array of search providers to use
    * @param offlineConfig - 离线模式配置，默认启用
    */
-  constructor(
-    providers: SearchProvider[] = [],
-    offlineConfig: Partial<OfflineConfig> = {},
-  ) {
+  constructor(providers: SearchProvider[] = [], offlineConfig: Partial<OfflineConfig> = {}) {
     this.providers = providers;
+    this.reranker = new RerankMcpServer(PROVIDER_PRIORITIES);
 
     // 合并离线模式配置
     this.offlineConfig = {
@@ -204,7 +190,7 @@ export class SearchService {
 
       const namedProviderResults = await Promise.all(providerPromises);
       this.logProviderResults(namedProviderResults);
-      return this.reRank(namedProviderResults, mergedOptions);
+      return this.reranker.reRank(namedProviderResults, mergedOptions);
     } catch (error) {
       logger.error(
         `Error in search service: ${error instanceof Error ? error.message : String(error)}`,
@@ -213,7 +199,11 @@ export class SearchService {
     }
   }
 
-
+  /**
+   * Search all providers in parallel
+   * @param allProviders - Array of all providers to search
+   * @param params - Search parameters
+   */
   private searchAllProviders(allProviders: SearchProvider[], params: SearchParams) {
     return allProviders.map((provider, index) => {
       const providerName = provider.constructor.name;
@@ -290,175 +280,5 @@ export class SearchService {
         }
       );
     });
-  }
-
-  private reRank(namedProviderResults: ({ providerName: string; results: MCPServerResponse[]; } | { providerName: string; results: MCPServerResponse[]; })[], mergedOptions: { limit?: number; minSimilarity?: number; sortBy?: string; sortOrder?: "asc" | "desc"; }) {
-    const resultsMap = new Map<
-      string,
-      MCPServerResponse & { providerPriority?: number; }
-    >();
-    const duplicates: string[] = [];
-
-    // 处理每个提供者的结果
-    for (const { providerName, results } of namedProviderResults) {
-      // 获取提供者优先级
-      const priority = PROVIDER_PRIORITIES[providerName] || 0;
-
-      for (const result of results) {
-        // 为结果添加提供者优先级信息
-        const resultWithPriority = { ...result, providerPriority: priority };
-
-        const key = result.sourceUrl || `title:${result.title}`;
-
-        if (!resultsMap.has(key)) {
-          // 新结果，直接添加
-          resultsMap.set(key, resultWithPriority);
-        } else {
-          // 已存在结果，检查是否需要替换
-          const existingResult = resultsMap.get(key)!;
-
-          // 在相似度相同的情况下，优先级高的提供者的结果排在前面
-          if (existingResult.similarity < result.similarity ||
-            (existingResult.similarity === result.similarity &&
-              (existingResult.providerPriority || 0) < priority)) {
-            resultsMap.set(key, resultWithPriority);
-          }
-
-          // 记录重复项
-          duplicates.push(key);
-        }
-      }
-    }
-
-    // 转换为数组
-    let mergedResults = Array.from(resultsMap.values());
-
-    logger.info(
-      `Merged ${mergedResults.length} total results from all providers`,
-      'SearchService',
-      {
-        totalResults: mergedResults.length,
-      }
-    );
-
-    // Log deduplication results
-    logger.info(
-      `Deduplication complete: removed ${duplicates.length} duplicates`,
-      'Deduplication',
-      {
-        removedCount: duplicates.length,
-        remainingCount: mergedResults.length,
-        duplicateUrls: duplicates.length > 0 ? [...new Set(duplicates)] : undefined,
-      }
-    );
-
-    // Log pre-sorting information
-    logger.info(
-      `Sorting ${mergedResults.length} results by similarity score`,
-      'Sorting'
-    );
-
-    // Sort by similarity score (highest first)
-    mergedResults.sort((a, b) => b.similarity - a.similarity);
-
-    // Log top results after sorting
-    if (mergedResults.length > 0) {
-      logger.info(`Top 3 results after sorting:`, 'Sorting', {
-        topResults: mergedResults.slice(0, 3).map(r => ({
-          title: r.title,
-          similarity: r.similarity,
-          github_url: r.sourceUrl,
-        })),
-      });
-    }
-
-    // Apply filtering based on options
-    let filteredCount = 0;
-    let originalCount = mergedResults.length;
-
-    if (mergedOptions.minSimilarity !== undefined &&
-      mergedResults.length > 0) {
-      logger.info(
-        `Applying minimum similarity filter: ${mergedOptions.minSimilarity}`,
-        'Filtering',
-        {
-          minSimilarity: mergedOptions.minSimilarity,
-          beforeCount: mergedResults.length,
-        }
-      );
-
-      // 保存原始排序的结果，以便在过滤后结果太少时使用
-      const originalResults = [...mergedResults];
-
-      // 首先按相似度过滤
-      mergedResults = mergedResults.filter(
-        server => server.similarity >= mergedOptions.minSimilarity!
-      );
-
-      // 如果过滤后结果太少，保留至少5个最相似的结果
-      if (mergedResults.length < 5 && originalResults.length > 5) {
-        // 使用原始排序的前5个结果
-        mergedResults =
-          mergedResults.length > 0
-            ? mergedResults
-            : originalResults.slice(0, Math.min(5, originalResults.length));
-      }
-
-      filteredCount += originalCount - mergedResults.length;
-      originalCount = mergedResults.length;
-
-      logger.info(
-        `After similarity filtering: ${mergedResults.length} results remain`,
-        'Filtering',
-        {
-          afterCount: mergedResults.length,
-          removedCount: filteredCount,
-        }
-      );
-    }
-
-    // Apply limit filter
-    if (mergedOptions.limit !== undefined && mergedOptions.limit > 0) {
-      logger.info(
-        `Applying result limit: ${mergedOptions.limit}`,
-        'Filtering',
-        {
-          limit: mergedOptions.limit,
-          beforeCount: mergedResults.length,
-        }
-      );
-
-      const beforeLimit = mergedResults.length;
-      mergedResults = mergedResults.slice(0, mergedOptions.limit);
-      filteredCount += beforeLimit - mergedResults.length;
-
-      logger.info(
-        `After limit filtering: ${mergedResults.length} results remain`,
-        'Filtering',
-        {
-          afterCount: mergedResults.length,
-          removedCount: beforeLimit - mergedResults.length,
-        }
-      );
-    }
-
-    // Log final results with full details
-    logger.info(
-      `Final search results: ${mergedResults.length} servers`,
-      'SearchResults',
-      {
-        resultCount: mergedResults.length,
-        results: mergedResults.map(r => ({
-          title: r.title,
-          similarity: r.similarity.toFixed(4),
-          github_url: r.sourceUrl,
-        })),
-      }
-    );
-
-    logger.debug(
-      `Merged results: ${mergedResults.length} servers after filtering`
-    );
-    return mergedResults;
   }
 }
