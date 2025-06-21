@@ -20,7 +20,7 @@ export class InstallMcpServerToolHandler extends BaseToolHandler {
       name: 'install-mcp-server',
       description: `
         此工具用于安装MCP服务器。
-        请告诉我您想要安装哪个 MCP 以及其 githubUrl，我将会告诉您如何安装对应的 MCP，
+        请告诉我您想要安装哪个 MCP 以及其来源 Url比如 githubUrl，我将会告诉您如何安装对应的 MCP，
         并指导您在不同AI助手环境中正确配置MCP服务器。
       `,
       inputSchema: {
@@ -30,16 +30,16 @@ export class InstallMcpServerToolHandler extends BaseToolHandler {
             type: 'string',
             description: `请输入您想要安装的MCP名称。`,
           },
-          githubUrl: {
+          sourceUrl: {
             type: 'string',
-            description: `请输入您想要安装的MCP的githubUrl。`,
+            description: `请输入您想要安装的MCP的来源 Url。`,
           },
           mcpClient: {
             type: 'string',
             description: `可选，请指定您使用的MCP客户端（如Claude Desktop、Windsurf、Cursor、Cline等）。不同客户端的配置方式可能不同。`,
           },
         },
-        required: ['mcpName', 'githubUrl'],
+        required: ['mcpName', 'sourceUrl'],
       },
     };
   }
@@ -53,22 +53,20 @@ export class InstallMcpServerToolHandler extends BaseToolHandler {
       const { arguments: args } = request.params;
       const parsedArgs = GeneralArgumentsSchema.parse(args);
       const mcpName = parsedArgs.mcpName;
-      const githubUrl = parsedArgs.githubUrl;
+      const sourceUrl = parsedArgs.sourceUrl;
       const mcpClient = parsedArgs.mcpClient || '';
 
-      if (!mcpName || !githubUrl) {
-        return this.createErrorResponse('Both mcpName and githubUrl parameters are required for install-mcp-server tool');
+      if (!mcpName || !sourceUrl) {
+        return this.createErrorResponse('Both mcpName and Url parameters are required for install-mcp-server tool');
       }
 
       logger.info('Processing install-mcp-server request', 'Installation', {
         mcpName,
-        githubUrl,
+        sourceUrl,
         mcpClient,
       });
-
-      // Get GitHub README content
       const installationGuide = await this.installationGuideService.generateInstallationGuide(
-        githubUrl,
+        sourceUrl,
         mcpName,
       );
 

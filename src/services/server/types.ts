@@ -7,13 +7,13 @@ export const GeneralArgumentsSchema = z
     capabilities: z.union([z.string().array(), z.string()]).optional().default([]),
     query: z.string().min(1).optional(),
     mcpName: z.string().min(1).optional(),
-    githubUrl: z.string().url().optional(),
+    sourceUrl: z.string().url().optional(),
     mcpClient: z.string().optional(),
   })
   .refine(
-    data => !!(data.taskDescription || data.query || (data.mcpName && data.githubUrl)),
+    data => !!(data.taskDescription || data.query || (data.mcpName && data.sourceUrl)),
     {
-      message: 'At least taskDescription/query or both mcpName and githubUrl must be provided',
+      message: 'At least taskDescription/query or both mcpName and sourceUrl must be provided',
     },
   )
   .transform(data => {

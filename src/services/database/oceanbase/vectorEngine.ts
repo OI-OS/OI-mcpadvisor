@@ -15,7 +15,7 @@ const serverResponseToMetadata = (
   const metadata: Record<string, any> = {
     title: data.title,
     description: data.description,
-    github_url: data.github_url,
+    github_url: data.sourceUrl,
   };
 
   // 处理分类信息
@@ -44,7 +44,7 @@ const searchResultToServerResponse = (result: {
     id: result.id,
     title: result.metadata.title,
     description: result.metadata.description,
-    github_url: result.metadata.github_url,
+    sourceUrl: result.metadata.github_url,
     similarity: result.similarity,
   };
 

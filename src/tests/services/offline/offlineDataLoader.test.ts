@@ -73,8 +73,8 @@ describe('OfflineDataLoader', () => {
     expect(data).toHaveLength(2);
     expect(data[0].title).toBe('测试服务器1显示名称'); // 使用 display_name
     expect(data[1].title).toBe('测试服务器2'); // 使用 name
-    expect(data[0].github_url).toBe('https://github.com/example/test-server-1');
-    expect(data[1].github_url).toBe('https://github.com/example/test-server-2');
+    expect(data[0].sourceUrl).toBe('https://github.com/example/test-server-1');
+    expect(data[1].sourceUrl).toBe('https://github.com/example/test-server-2');
   });
   
   test('当数据文件不存在时应返回空数组', async () => {

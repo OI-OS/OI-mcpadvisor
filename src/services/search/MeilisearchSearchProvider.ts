@@ -43,7 +43,7 @@ const convertHitToServerResponse = (
   id: hit.id,
   title: hit.title,
   description: hit.description,
-  github_url: hit.github_url,
+  sourceUrl: hit.github_url,
   similarity: hit._rankingScore || 0.5,
   installations: hit.installations || {},
 });

@@ -16,13 +16,13 @@ export const formatServersToText = (servers: MCPServerResponse[]): string => {
 
   return servers
     .map((server, index) => {
-      const similarityPercentage = (server.similarity * 100).toFixed(1);
+      const similarityPercentage =((server.score || server.similarity || 0) * 100).toFixed(1);
       return [
         `Server ${index + 1}:`,
         `Title: ${server.title}`,
         `Description: ${server.description}`,
-        `GitHub URL: ${server.github_url}`,
-        `Similarity: ${similarityPercentage}%`,
+        `Source URL: ${server.sourceUrl}`,
+        `Score: ${similarityPercentage}%`,
         '',
       ].join('\n');
     })

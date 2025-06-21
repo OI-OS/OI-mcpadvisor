@@ -33,7 +33,7 @@ describe('MCP Compass Application', () => {
       {
         title: 'Test MCP Server',
         description: 'A test MCP server',
-        github_url: 'https://github.com/test/mcp-server',
+        sourceUrl: 'https://github.com/test/mcp-server',
         similarity: 0.9,
       },
     ] as MCPServerResponse[];

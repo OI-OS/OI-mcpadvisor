@@ -253,7 +253,7 @@ export class EnhancedMemoryVectorEngine implements IWritableVectorSearchEngine {
 
     // 处理向量结果（70%权重）
     vectorResults.forEach(result => {
-      const key = result.github_url || result.title;
+      const key = result.sourceUrl || result.title;
       resultMap.set(key, {
         ...result,
         similarity: (result.similarity || 0) * 0.7,
@@ -262,7 +262,7 @@ export class EnhancedMemoryVectorEngine implements IWritableVectorSearchEngine {
 
     // 合并文本结果（30%权重）
     textResults.forEach(result => {
-      const key = result.github_url || result.title;
+      const key = result.sourceUrl || result.title;
       if (resultMap.has(key)) {
         // 如果已存在，合并相似度分数
         const existing = resultMap.get(key)!;

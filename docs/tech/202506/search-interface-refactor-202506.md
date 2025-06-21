@@ -38,7 +38,7 @@ interface SearchParams {
 2. **逻辑更新**
    - `taskDescription` 作为主要相似度匹配文本。
    - `keywords` 用于额外向量或布尔过滤。
-   - `capabilities` 与服务器元数据字段比对，提高精准度。
+   - `capabilities` 参与向量搜索，提高推荐准确度。
 
 ### 3.3 调用链改造
 - 所有直接调用 `search(string)` 的代码需改为 `search({ taskDescription, keywords, capabilities })`。

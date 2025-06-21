@@ -56,7 +56,7 @@ class MockVectorSearchEngine implements IVectorSearchEngine {
       id: id,
       title: metadata.name || `MCP Server ${id}`,
       description: metadata.description || `Description for ${id}`,
-      github_url: metadata.github_url || `https://github.com/example/${id}`,
+      sourceUrl: metadata.github_url || `https://github.com/example/${id}`,
       similarity: 0, // 初始相似度为 0，在搜索时计算
       categories: metadata.categories || 'test',
       tags: metadata.tags || ['test', 'mock']
