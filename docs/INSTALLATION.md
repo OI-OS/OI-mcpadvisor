@@ -97,7 +97,15 @@ MCP Advisor 可以使用以下环境变量进行配置。所有环境变量都�
 
 ### 核心配置
 
-| `CORS_ORIGIN` | CORS 允许的源（逗号分隔） | `*` | 否 |
+### HTTP 服务器配置（SSE/REST 传输）
+
+| 变量 | 描述 | 默认值 | 必需 |
+|----------|-------------|---------|----------|
+| `SERVER_PORT` | HTTP 服务器端口 | `3000` | 否 |
+| `SERVER_HOST` | HTTP 服务器主机 | `localhost` | 否 |
+| `SSE_PATH` | SSE 端点路径 | `/sse` | 否 |
+| `MESSAGE_PATH` | 消息端点路径 | `/messages` | 否 |
+| `ENDPOINT` | REST 端点路径 | `/rest` | 否 |
 
 ### Nacos Provider 配置
 

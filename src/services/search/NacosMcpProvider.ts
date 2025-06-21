@@ -16,8 +16,12 @@ export class NacosMcpProvider implements SearchProvider {
   /**
    * Creates a new instance of NacosMcpProvider
    * @param config Configuration for the Nacos MCP provider
+   * @param testMode If true, skips automatic initialization (for testing)
    */
-  constructor(config: NacosMcpProviderConfig & { authToken?: string }) {
+  constructor(
+    config: NacosMcpProviderConfig & { authToken?: string },
+    private readonly testMode: boolean = false
+  ) {
     this.config = {
       minSimilarity: 0.3,
       limit: 10,
@@ -26,15 +30,14 @@ export class NacosMcpProvider implements SearchProvider {
       mcpPort: 3000,
       ...config,
     };
-
-    // Initialize the Nacos client
-    this.initializeClient();
   }
 
   /**
-   * Initialize the Nacos client
+   * Initialize the Nacos client.
+   * This must be called after construction and before any other methods.
+   * @throws Error if initialization fails
    */
-  private async initializeClient(): Promise<void> {
+  async init(): Promise<void> {
     if (this.isInitialized) {
       return;
     }
@@ -42,6 +45,12 @@ export class NacosMcpProvider implements SearchProvider {
     // Prevent multiple initializations
     if (this.initializationPromise) {
       return this.initializationPromise;
+    }
+    
+    // In test mode, skip real initialization
+    if (this.testMode) {
+      this.isInitialized = true;
+      return;
     }
     
     // Create a new promise for initialization
@@ -84,11 +93,20 @@ export class NacosMcpProvider implements SearchProvider {
    * Search for MCP servers using the provided search parameters
    * @param params Search parameters including task description and keywords
    * @returns Array of MCP server responses
+   * @throws Error if provider is not initialized or initialization fails
    */
   async search(params: SearchParams): Promise<MCPServerResponse[]> {
-    // Check if the provider is closed
-    if (!this.isInitialized || !this.nacosClient) {
-      throw new Error('NacosMcpProvider is not initialized');
+    // Ensure we're initialized
+    if (!this.isInitialized) {
+      try {
+        await this.init();
+      } catch (error) {
+        throw new Error(`Failed to initialize NacosMcpProvider: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    
+    if (!this.nacosClient) {
+      throw new Error('NacosClient is not available');
     }
 
     const { taskDescription, keywords = [] } = params;
