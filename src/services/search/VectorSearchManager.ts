@@ -25,7 +25,7 @@ export const convertToServerResponse = (
   id: key,
   title: server.display_name,
   description: server.description,
-  github_url: server.repository.url,
+  sourceUrl: server.repository.url,
   similarity: 0, // 将在搜索时计算
 });
 

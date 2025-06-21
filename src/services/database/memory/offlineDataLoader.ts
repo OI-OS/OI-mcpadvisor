@@ -134,7 +134,7 @@ export class OfflineDataLoader {
         name: item.name, // 添加name字段，这可能是搜索时用到的
         display_name: item.display_name, // 添加display_name字段
         description: item.description || '',
-        github_url: item.repository?.url || item.homepage || '',
+        sourceUrl: item.repository?.url || item.homepage || '',
         categories: item.categories || [],
         tags: item.tags || [],
       }));
@@ -221,7 +221,7 @@ export class OfflineDataLoader {
           const normalizedVector = normalizeVector(vector);
 
           // 使用github_url作为唯一ID
-          const id = server.github_url || `fallback-${server.title}`;
+          const id = server.sourceUrl || `fallback-${server.title}`;
 
           result.push({
             id,

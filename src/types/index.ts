@@ -1,17 +1,16 @@
 import type { SearchParams } from './search.js';
 
-
-/**
- * Response structure from the COMPASS API
- */
 export interface MCPServerResponse {
   id?: string;
   title: string;
   description: string;
-  github_url: string;
+  sourceUrl: string;
+  /**
+   * @deprecated 搜索相似度，已废弃
+   */
   similarity: number;
   /**
-   * 用于排序的分数，通常与 similarity 相同
+   * 用于排序的分数，提供了一个统一的度量标准，方便按统一标准进行加权、合并和重新排序
    */
   score?: number;
   installations?: Record<string, any>;
@@ -25,12 +24,8 @@ export interface MCPServerResponse {
    * 可以是字符串数组或逗号分隔的字符串
    */
   tags?: string[] | string;
-  /**
-   * 来源，标记结果是在线还是离线获取
-   */
-  source?: 'online' | 'offline';
-}
 
+}
 
 
 export interface SearchProvider {
@@ -52,8 +47,4 @@ export interface SearchOptions {
    * 排序方向，默认为降序 (desc)
    */
   sortOrder?: 'asc' | 'desc';
-  /**
-   * 分类过滤
-   */
-  categories?: string[];
 }

@@ -29,20 +29,20 @@ const testData: MCPServerResponse[] = [
     title: 'AI Assistant MCP Server',
     description:
       'A powerful MCP server for AI assistants with advanced capabilities',
-    github_url: 'https://github.com/example/ai-assistant-mcp',
+    sourceUrl: 'https://github.com/example/ai-assistant-mcp',
     similarity: 0,
   },
   {
     title: 'Data Processing MCP Server',
     description: 'Process and transform data with this efficient MCP server',
-    github_url: 'https://github.com/example/data-processing-mcp',
+    sourceUrl: 'https://github.com/example/data-processing-mcp',
     similarity: 0,
   },
   {
     title: 'Vector Search Engine',
     description:
       'High-performance vector search engine for similarity matching',
-    github_url: 'https://github.com/example/vector-search-engine',
+    sourceUrl: 'https://github.com/example/vector-search-engine',
     similarity: 0,
   },
 ];
@@ -120,7 +120,7 @@ describe('OceanBase Integration', () => {
         // 存储向量数据
         for (const data of embeddedData) {
           await vectorEngine.addEntry(
-            data.github_url.split('/').pop() || 'unknown',
+            data.sourceUrl.split('/').pop() || 'unknown',
             data.vector,
             data,
           );

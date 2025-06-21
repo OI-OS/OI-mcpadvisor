@@ -342,7 +342,7 @@ To Implement the above features, we need to:
 Use [inspector](https://github.com/modelcontextprotocol/inspector) for testing:
 
 ```bash 
-ENABLE_FILE_LOGGING=true node YOUR-MCPADVISOR-PATH/build/index.js npx @modelcontextprotocol/inspector
+ENABLE_FILE_LOGGING=true  npx @modelcontextprotocol/inspector node YOUR-MCPADVISOR-PATH/build/index.js
 ```
 
 

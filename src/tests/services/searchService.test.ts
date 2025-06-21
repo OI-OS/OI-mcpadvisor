@@ -16,19 +16,19 @@ describe('SearchService', () => {
           {
             title: 'Test Server 1',
             description: 'A test server for AI applications',
-            github_url: 'https://github.com/test/server1',
+            sourceUrl: 'https://github.com/test/server1',
             similarity: 0.95,
           },
           {
             title: 'Test Server 2',
             description: 'Another test server for data processing',
-            github_url: 'https://github.com/test/server2',
+            sourceUrl: 'https://github.com/test/server2',
             similarity: 0.85,
           },
           {
             title: 'Test Server 3',
             description: 'A third test server for various tasks',
-            github_url: 'https://github.com/test/server3',
+            sourceUrl: 'https://github.com/test/server3',
             similarity: 0.75,
           },
         ];

@@ -19,9 +19,9 @@ import logger from '../utils/logger.js';
  * 提供者优先级配置
  */
 const PROVIDER_PRIORITIES: Record<string, number> = {
-  OfflineSearchProvider: 10, // 离线提供者优先级最高
+  OfflineSearchProvider: 5,
   GetMcpSearchProvider: 5,
-  CompassSearchProvider: 8,
+  CompassSearchProvider: 10,
   MeilisearchSearchProvider: 9,
 };
 
@@ -234,7 +234,7 @@ export class SearchService {
                 topResults: results.slice(0, 3).map(r => ({
                   title: r.title,
                   similarity: r.similarity,
-                  github_url: r.github_url,
+                  github_url: r.sourceUrl,
                 })),
               },
             );
@@ -305,7 +305,7 @@ export class SearchService {
           const resultWithPriority = { ...result, providerPriority: priority };
 
           // 如果 github_url 为空，使用标题作为键
-          const key = result.github_url || `title:${result.title}`;
+          const key = result.sourceUrl || `title:${result.title}`;
 
           if (!resultsMap.has(key)) {
             // 新结果，直接添加
@@ -367,7 +367,7 @@ export class SearchService {
           topResults: mergedResults.slice(0, 3).map(r => ({
             title: r.title,
             similarity: r.similarity,
-            github_url: r.github_url,
+            github_url: r.sourceUrl,
           })),
         });
       }
@@ -454,7 +454,7 @@ export class SearchService {
           results: mergedResults.map(r => ({
             title: r.title,
             similarity: r.similarity.toFixed(4),
-            github_url: r.github_url,
+            github_url: r.sourceUrl,
           })),
         },
       );

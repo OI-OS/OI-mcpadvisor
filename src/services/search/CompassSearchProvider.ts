@@ -64,7 +64,8 @@ export class CompassSearchProvider implements SearchProvider {
       const res = [];
       for (const d of data) {
         res.push({
-          similarity: d.score + 0.3,
+          similarity: d.score,
+          sourceUrl: d.github_url,
           ...d,
         });
       }
