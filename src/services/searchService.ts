@@ -13,8 +13,8 @@ import logger from '../utils/logger.js';
  */
 const PROVIDER_PRIORITIES: Record<string, number> = {
   OfflineSearchProvider: 5,
-  GetMcpSearchProvider: 5,
-  CompassSearchProvider: 10,
+  GetMcpSearchProvider: 10,
+  CompassSearchProvider: 8,
   MeilisearchSearchProvider: 9,
 };
 
@@ -23,7 +23,7 @@ const PROVIDER_PRIORITIES: Record<string, number> = {
  */
 const DEFAULT_SEARCH_OPTIONS: SearchOptions = {
   limit: 5,
-  minSimilarity: 0.5,
+  minSimilarity: 0.4,
 };
 
 /**
