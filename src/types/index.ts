@@ -1,6 +1,5 @@
-/**
- * Type definitions for the application
- */
+import type { SearchParams } from './search.js';
+
 
 /**
  * Response structure from the COMPASS API
@@ -32,27 +31,12 @@ export interface MCPServerResponse {
   source?: 'online' | 'offline';
 }
 
-/**
- * Search provider interface for extensibility
- */
-/**
- * @deprecated 旧版搜索提供者接口，预计在 v2.2.0 移除。
- */
-import type { SearchParams } from './search.js';
 
-/**
- * @deprecated 使用 SearchProviderV2。此处保持兼容但参数已结构化。
- */
+
 export interface SearchProvider {
   search(params: SearchParams): Promise<MCPServerResponse[]>;
 }
 
-/**
- * V2 搜索提供者接口，采用结构化搜索参数。
- */
-export interface SearchProviderV2 {
-  search(params: SearchParams): Promise<MCPServerResponse[]>;
-}
 
 /**
  * Search options for configuring search behavior

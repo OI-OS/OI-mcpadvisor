@@ -1,4 +1,4 @@
-import { MCPServerResponse, SearchProviderV2 } from '../../types/index.js';
+import { MCPServerResponse, SearchProvider } from '../../types/index.js';
 import type { SearchParams } from '../../types/search.js';
 import { ICache } from '../interfaces/cache.js';
 import { MemoryCache } from '../cache/memoryCache.js';
@@ -20,7 +20,7 @@ import logger from '../../utils/logger.js';
  * GetMCP 搜索提供者实现
  * 使用向量搜索引擎和 GetMCP API 资源获取器
  */
-export class GetMcpSearchProvider implements SearchProviderV2 {
+export class GetMcpSearchProvider implements SearchProvider {
   private resourceFetcher: IGetMcpResourceFetcher;
   private cache: ICache<GetMcpApiResponse>;
   private vectorEngine: IVectorSearchEngine;

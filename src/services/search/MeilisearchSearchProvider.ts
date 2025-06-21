@@ -3,7 +3,7 @@
  * 使用 Meilisearch 搜索引擎和 GetMCP API 资源获取器
  */
 
-import { MCPServerResponse, SearchProviderV2 } from '../../types/index.js';
+import { MCPServerResponse, SearchProvider } from '../../types/index.js';
 import type { SearchParams } from '../../types/search.js';
 import { ICache } from '../interfaces/cache.js';
 import { MemoryCache } from '../cache/memoryCache.js';
@@ -52,7 +52,7 @@ const convertHitToServerResponse = (
  * Meilisearch 搜索提供者实现
  * 注意：由于 API 密钥只有读取权限，此实现只支持搜索操作
  */
-export class MeilisearchSearchProvider implements SearchProviderV2 {
+export class MeilisearchSearchProvider implements SearchProvider {
   private resourceFetcher: IGetMcpResourceFetcher;
   private cache: ICache<GetMcpApiResponse>;
 
