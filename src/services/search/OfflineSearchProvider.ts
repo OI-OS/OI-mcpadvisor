@@ -39,9 +39,8 @@ export interface OfflineSearchProviderConfig {
  * 支持向量搜索和文本匹配的混合搜索策略
  */
 import type { SearchParams } from '../../types/search.js';
-import { SearchProviderV2 } from '../../types/index.js';
 
-export class OfflineSearchProvider implements SearchProvider, SearchProviderV2 {
+export class OfflineSearchProvider implements SearchProvider {
   private readonly vectorEngine: EnhancedMemoryVectorEngine;
   private readonly config: OfflineSearchProviderConfig;
   private dataLoaded = false;
