@@ -29,6 +29,11 @@ MCP Advisor 是一个发现和推荐服务，帮助 AI 助手使用自然语言�
    - 作为普通用户发现一个 MCP 很好用，我希望能够快速用上这个MCP
    - 直接指示：`"安装一下这个 MCP： https://github.com/Deepractice/PromptX`
 
+3. **企业内部MCP服务器发现与安装**
+   - 作为内部的 MCP 管理者，我同样希望运用 MCP Advisor 提供企业内部的 MCP 服务器发现与安装服务
+   - 可以配置 MySQL 的 transport 或者 Nacos 的环境变量实现和您自己的 MCP 数据源无缝连接
+   
+
 ### 演示
 
 https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
@@ -91,6 +96,7 @@ graph TD
             Providers --> MeilisearchProvider["Meilisearch Provider"]
             Providers --> GetMcpProvider["GetMCP Provider"]
             Providers --> CompassProvider["Compass Provider"]
+            Providers --> NacosProvider["Nacos 服务发现"]
             Providers --> OfflineProvider["Offline Provider"]
         end
         
@@ -115,6 +121,7 @@ graph TD
    - **Meilisearch Provider**: 使用 Meilisearch 的向量搜索
    - **GetMCP Provider**: 来自 GetMCP 注册表的 API 搜索
    - **Compass Provider**: 来自 Compass 注册表的 API 搜索
+   - **Nacos Provider**: 从 Nacos 服务注册中心发现 MCP 服务器
    - **Offline Provider**: 结合文本和向量的混合搜索
 
 3. **混合搜索策略**
