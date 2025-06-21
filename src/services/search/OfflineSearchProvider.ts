@@ -360,18 +360,7 @@ export class OfflineSearchProvider implements SearchProvider {
       const filteredResults = results.filter(
         result => (result.similarity || 0) >= this.config.minSimilarity!,
       );
-
-      // 调试信息：检查过滤后的结果
-      console.log(`[DEBUG] 文本搜索 - 过滤后剩余 ${filteredResults.length} 个结果`);
-      
-      // 检查是否包含小红书相关服务器
-      const filteredRedNoteServers = filteredResults.filter(server => 
-        server.id === 'rednote-mcp' || server.id === 'mcp-hotnews-server'
-      );
-      
-      console.log(`[DEBUG] 文本搜索 - 过滤后剩余 ${filteredRedNoteServers.length} 个小红书相关服务器:`, 
-        filteredRedNoteServers.map(s => ({ id: s.id, title: s.title, similarity: s.similarity }))
-      );
+      logger.debug(`[DEBUG] 文本搜索 - 过滤后剩余 ${filteredResults.length} 个结果`);
 
       return filteredResults;
     } catch (error) {

@@ -10,7 +10,9 @@ import { OfflineSearchProvider } from './OfflineSearchProvider.js';
 import { GetMcpSearchProvider } from './GetMcpSearchProvider.js';
 import { CompassSearchProvider } from './CompassSearchProvider.js';
 import { MeilisearchSearchProvider } from './MeilisearchSearchProvider.js';
+import { NacosMcpProvider } from './NacosMcpProvider.js';
 import logger from '../../utils/logger.js';
+import type { NacosMcpProviderConfig } from '../../types/nacos.js';
 
 /**
  * Search using the Offline provider
@@ -223,8 +225,64 @@ export async function searchMeilisearch(
  * @param providerName Name of the provider ('offline', 'getmcp', 'compass', 'meilisearch')
  * @returns The corresponding search function
  */
+/**
+ * Search using the Nacos MCP provider
+ * @param query Search query or params
+ * @param options Search options
+ * @param config Nacos MCP provider configuration
+ * @returns Array of MCP server responses
+ */
+export async function searchNacosMcp(
+  query: string | SearchParams,
+  options: SearchOptions = {},
+  config: NacosMcpProviderConfig
+): Promise<MCPServerResponse[]> {
+  const searchParams = typeof query === 'string' 
+    ? { taskDescription: query }
+    : query;
+
+  try {
+    logger.info(`Searching Nacos MCP with query: "${query}"`, 'NacosMcpSearch', {
+      query,
+      options,
+    });
+
+    const startTime = Date.now();
+    const provider = new NacosMcpProvider({
+      ...config,
+      minSimilarity: options.minSimilarity || 0.3,
+      limit: options.limit || 10,
+      debug: process.env.NODE_ENV === 'development',
+    });
+
+    logger.debug('Using NacosMcpProvider', 'NacosMcpSearch');
+    const service = new SearchService([provider]);
+    const results = await service.search(searchParams, options);
+    const duration = Date.now() - startTime;
+
+    logger.info(
+      `Nacos MCP search completed in ${duration}ms with ${results.length} results`,
+      'NacosMcpSearch',
+      {
+        duration,
+        resultCount: results.length,
+      },
+    );
+
+    return results;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(`Error searching Nacos MCP: ${errorMessage}`, 'NacosMcpSearch', {
+      error: errorMessage,
+    });
+    throw error;
+  }
+}
+
 export function getSearchFunction(providerName: string) {
-  switch (providerName.toLowerCase()) {
+  const normalizedProviderName = providerName.toLowerCase();
+  
+  switch (normalizedProviderName) {
     case 'offline':
       return searchOffline;
     case 'getmcp':
@@ -233,6 +291,24 @@ export function getSearchFunction(providerName: string) {
       return searchCompass;
     case 'meilisearch':
       return searchMeilisearch;
+    case 'nacos':
+    case 'nacos-mcp':
+      return (query: string | SearchParams, options: SearchOptions & { authToken?: string } = {}) => {
+        // Create config with required fields and optional authToken
+        const config = {
+          serverAddr: process.env.NACOS_SERVER_ADDR || 'http://localhost:8848',
+          username: process.env.NACOS_USERNAME || 'nacos',
+          password: process.env.NACOS_PASSWORD || 'nacos',
+          mcpHost: process.env.MCP_HOST || 'localhost',
+          mcpPort: process.env.MCP_PORT ? parseInt(process.env.MCP_PORT, 10) : 3000,
+          authToken: options.authToken || process.env.MCP_AUTH_TOKEN || '',
+        };
+        
+        // Remove authToken from options to avoid passing it twice
+        const { authToken, ...searchOptions } = options;
+        
+        return searchNacosMcp(query, searchOptions, config);
+      };
     default:
       throw new Error(`Unknown search provider: ${providerName}`);
   }

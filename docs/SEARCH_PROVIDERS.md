@@ -64,6 +64,40 @@ GETMCP_API_URL=https://api.getmcp.org
 - Environments without local search infrastructure
 - Supplementing local search results with community data
 
+### Nacos Provider
+
+A provider that integrates with Nacos (Naming and Configuration Service) to discover MCP servers registered in a Nacos cluster.
+
+**Key Features:**
+- Dynamic discovery of MCP servers from Nacos
+- Support for Nacos authentication and namespaces
+- Automatic health checking of registered services
+- Integration with existing Nacos service infrastructure
+
+**Configuration:**
+```
+SEARCH_PROVIDER=nacos
+NACOS_SERVER_ADDR=localhost:8848
+NACOS_NAMESPACE=public
+NACOS_GROUP=DEFAULT_GROUP
+NACOS_USERNAME=nacos
+NACOS_PASSWORD=nacos
+MCP_SERVICE_NAME=mcp-servers
+```
+
+**Environment Variables:**
+- `NACOS_SERVER_ADDR`: Comma-separated list of Nacos server addresses (required)
+- `NACOS_NAMESPACE`: Nacos namespace ID (default: public)
+- `NACOS_GROUP`: Nacos group name (default: DEFAULT_GROUP)
+- `NACOS_USERNAME`: Username for Nacos authentication (optional)
+- `NACOS_PASSWORD`: Password for Nacos authentication (optional)
+- `MCP_SERVICE_NAME`: Service name for MCP servers in Nacos (default: mcp-servers)
+
+**Best For:**
+- Enterprise environments using Nacos for service discovery
+- Dynamic MCP server registration and discovery
+- Environments requiring service health monitoring
+
 ### Compass Provider
 
 An API-based provider that queries the Compass registry for MCP server information.
