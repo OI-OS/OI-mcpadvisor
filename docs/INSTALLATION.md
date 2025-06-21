@@ -97,22 +97,20 @@ MCP Advisor 可以使用以下环境变量进行配置。所有环境变量都�
 
 ### 核心配置
 
-| 变量 | 描述 | 默认值 | 必需 |
-|----------|-------------|---------|----------|
-| `TRANSPORT_TYPE` | 传输方法 (`stdio`, `sse`, `rest`) | `stdio` | 否 |
-| `SERVER_NAME` | MCP 服务器名称 | `mcpadvisor` | 否 |
-| `SERVER_VERSION` | MCP 服务器版本 | `1.0.0` | 否 |
-
-### HTTP 服务器配置（SSE/REST 传输）
-
-| 变量 | 描述 | 默认值 | 必需 |
-|----------|-------------|---------|----------|
-| `SERVER_PORT` | HTTP 服务器端口 | `3000` | 否 |
-| `SERVER_HOST` | HTTP 服务器主机 | `localhost` | 否 |
-| `SSE_PATH` | SSE 端点路径 | `/sse` | 否 |
-| `MESSAGE_PATH` | 消息端点路径 | `/messages` | 否 |
-| `ENDPOINT` | REST 端点路径 | `/rest` | 否 |
 | `CORS_ORIGIN` | CORS 允许的源（逗号分隔） | `*` | 否 |
+
+### Nacos Provider 配置
+
+如果您选择使用 Nacos 作为搜索提供者，则需要配置以下环境变量：
+
+| 环境变量 | 描述 | 默认值 | 必填 |
+|---------|------|--------|------|
+| `NACOS_SERVER_ADDR` | Nacos 服务器地址 | 无 | 是 |
+| `NACOS_NAMESPACE` | Nacos 命名空间 | `public` | 否 |
+| `NACOS_GROUP` | Nacos 分组 | `DEFAULT_GROUP` | 否 |
+| `NACOS_USERNAME` | Nacos 用户名 | 无 | 如果 Nacos 需要认证 |
+| `NACOS_PASSWORD` | Nacos 密码 | 无 | 如果 Nacos 需要认证 |
+| `MCP_SERVICE_NAME` | MCP 服务在 Nacos 中的名称 | `mcp-servers` | 否 |
 
 ### API 配置
 
