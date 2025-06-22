@@ -34,6 +34,54 @@ MCP Advisor is a discovery and recommendation service that helps AI assistants e
 https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
 
 
+## Nacos Provider Setup
+
+The Nacos provider allows MCP Advisor to discover and recommend MCP servers registered in a Nacos service registry. This is particularly useful in microservices environments where MCP servers are dynamically registered with Nacos.
+
+### Prerequisites
+
+- A running Nacos server (v2.0.0 or later recommended)
+- Valid Nacos authentication credentials
+- MCP servers registered in Nacos with appropriate metadata
+
+### Configuration
+
+Configure the Nacos provider using the following environment variables:
+
+```bash
+# Required
+NACOS_SERVER_ADDR=your-nacos-server:8848
+NACOS_USERNAME=your-username
+NACOS_PASSWORD=your-password
+
+# Optional
+MCP_HOST=localhost             # Default: localhost
+MCP_PORT=3000                  # Default: 3000
+AUTH_TOKEN=your-auth-token     # Optional: For MCP server authentication
+NACOS_DEBUG=false              # Enable debug logging
+```
+
+### Features
+
+- **Service Discovery**: Automatically discovers MCP servers registered in Nacos
+- **Vector Search**: Uses semantic search to find the most relevant MCP servers for a given query
+- **Real-time Updates**: Periodically syncs with Nacos to keep the server list up-to-date
+- **Fallback Search**: Falls back to keyword search if vector search is unavailable
+
+### Usage
+
+Once configured, the Nacos provider will be automatically enabled and used when searching for MCP servers. You can query it using natural language, for example:
+
+```
+Find MCP servers for insurance risk analysis
+```
+
+Or more specifically:
+
+```
+Search for MCP servers with natural language processing capabilities
+```
+
 ## Documentation Navigation
 
 - [Installation Guide](docs/INSTALLATION.md) - Detailed installation and configuration instructions

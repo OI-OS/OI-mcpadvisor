@@ -145,13 +145,11 @@ export class SearchService {
   }
 
   /**
-   * Search for MCP servers using all providers (v2 params)
+   * Search for MCP servers using all providers
    * @param params - Structured search parameters
    * @param options - Optional search configuration
    */
-  // 兼容重载签名
   async search(params: SearchParams, options?: SearchOptions): Promise<MCPServerResponse[]>;
-  async search(query: string, options?: SearchOptions): Promise<MCPServerResponse[]>;
   async search(
     arg: string | SearchParams,
     options?: SearchOptions,
