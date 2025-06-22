@@ -4,7 +4,7 @@ import { RestServerTransport } from '@chatmcp/sdk/server/rest.js';
 import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { SERVER_NAME, SERVER_VERSION } from '../../config/constants.js';
-import { SearchService } from '../searchService.js';
+import { SearchService } from '../SearchService.js';
 import { TransportType, TransportConfig } from './types.js';
 import { BaseToolHandler } from './tools/BaseToolHandler.js';
 import { RecommendMcpServerToolHandler } from './tools/RecommendMcpServerToolHandler.js';
@@ -22,7 +22,6 @@ export class ServerService {
   private toolHandlers: BaseToolHandler[] = [];
   private expressServer?: ExpressServer;
 
-  private isInitialized = false;
 
   constructor(searchService: SearchService) {
     if (!searchService) {
@@ -35,7 +34,6 @@ export class ServerService {
       this.server = this.initializeServer();
       this.initializeToolHandlers();
       this.registerHandlers();
-      this.isInitialized = true;
       logger.info('ServerService initialized successfully');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown initialization error';

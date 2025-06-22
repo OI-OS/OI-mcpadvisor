@@ -1,5 +1,5 @@
 import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { SearchService } from '../../searchService.js';
+import { SearchService } from '../../SearchService.js';
 import { formatServersToMCPContent } from '../../../utils/formatter.js';
 import { BaseToolHandler } from './BaseToolHandler.js';
 import { GeneralArgumentsSchema } from '../types.js';

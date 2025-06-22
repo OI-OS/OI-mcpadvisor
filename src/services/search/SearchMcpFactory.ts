@@ -3,7 +3,7 @@
  * Centralizes search functionality for different MCP search providers
  */
 
-import { SearchService } from '../searchService.js';
+import { SearchService } from '../SearchService.js';
 import { SearchOptions, MCPServerResponse } from '../../types/index.js';
 import type { SearchParams } from '../../types/search.js';
 import { OfflineSearchProvider } from './OfflineSearchProvider.js';

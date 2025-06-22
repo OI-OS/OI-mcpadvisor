@@ -4,7 +4,7 @@
 
 import { describe, test, expect, beforeEach, vi, afterEach } from 'vitest';
 import { CompassSearchProvider } from '../../services/search/CompassSearchProvider.js';
-import { SearchService } from '../../services/searchService.js';
+import { SearchService } from '../../services/SearchService.js';
 import { MCPServerResponse } from '../../types/index.js';
 import logger from '../../utils/logger.js';
 
@@ -189,8 +189,8 @@ describe('MCP Compass Application', () => {
     // Create search service with multiple providers
     const searchService = new SearchService([mockProvider1, mockProvider2]);
 
-    // Perform a search
-    const results = await searchService.search('test query');
+    // Perform a search with SearchParams
+    const results = await searchService.search({ taskDescription: 'test query' });
 
     // Check sorting order by similarity
     expect(results[0].title).toBe('Common Server');
