@@ -1,6 +1,6 @@
 import axios from 'axios';
-import { NacosMcpServer } from '../../types/nacos.js';
-import logger from '../../utils/logger.js';
+import { NacosMcpServer } from '../../../types/nacos.js';
+import logger from '../../../utils/logger.js';
 
 interface Tool {
   name: string;
@@ -207,13 +207,10 @@ export class NacosHttpClient {
 
         logger.info(`Updating mcp tools for ${mcpName}`);
 
-        const updateUrl = `http://${this.nacosAddr}/nacos/v3/admin/ai/mcp`;
-        const updateResponse = await axios.put(updateUrl, params, {
+        const updateResponse = await this.client.put('/nacos/v3/admin/ai/mcp', params, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'charset': 'utf-8',
-            'userName': this.userName,
-            'password': this.passwd
+            // Other headers like userName and password are already configured in the client
           }
         });
 
