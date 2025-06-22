@@ -59,6 +59,82 @@ export class NacosHttpClient {
     });
   }
 
+  /**
+   * Make a GET request to the Nacos server
+   * @param url The URL to make the request to
+   * @param config Optional Axios request config
+   * @returns The response data
+   * @throws {Error} If the request fails or returns an error status
+   */
+  async get<T = any>(url: string, config?: any): Promise<{ data: T }> {
+    try {
+      const response = await this.client.get<T>(url, config);
+      return response;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`GET request to ${url} failed: ${errorMessage}`);
+      throw new Error(`Failed to fetch from Nacos: ${errorMessage}`);
+    }
+  }
+
+  /**
+   * Get service details from Nacos server
+   * @param serviceName The name of the service to fetch details for
+   * @param groupName The group name of the service (default: 'DEFAULT_GROUP')
+   * @returns Service details including metadata
+   * @throws {Error} If the service is not found or there's an error fetching details
+   */
+  async getServiceDetail(serviceName: string, groupName: string = 'DEFAULT_GROUP') {
+    try {
+      // First try to get the service using the MCP API if available
+      try {
+        const mcpServer = await this.getMcpServerByName(serviceName);
+        if (mcpServer) {
+          return {
+            name: serviceName,
+            groupName,
+            metadata: {
+              ...mcpServer.agentConfig,
+              description: mcpServer.description,
+              lastUpdated: new Date().toISOString()
+            }
+          };
+        }
+      } catch (error) {
+        logger.debug(`Failed to fetch MCP server details for ${serviceName}: ${error}`);
+        // Continue with regular service API if MCP API fails
+      }
+
+      // Fall back to standard Nacos service API
+      const response = await this.client.get(`/nacos/v1/ns/service`, {
+        params: {
+          serviceName,
+          groupName,
+          namespaceId: 'public',
+          clusterName: 'DEFAULT',
+          healthyOnly: false
+        }
+      });
+
+      if (!response.data) {
+        throw new Error(`Service ${serviceName} not found in group ${groupName}`);
+      }
+
+      return {
+        name: serviceName,
+        groupName,
+        metadata: {
+          ...response.data,
+          lastUpdated: new Date().toISOString()
+        }
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to get service details for ${serviceName}: ${errorMessage}`);
+      throw new Error(`Failed to get service details: ${errorMessage}`);
+    }
+  }
+
   async isReady(): Promise<boolean> {
     try {
       const response = await this.client.get<{ data: unknown }>('/nacos/v3/admin/ai/mcp/list');

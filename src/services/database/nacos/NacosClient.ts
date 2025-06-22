@@ -91,9 +91,13 @@ export class NacosClient implements INacosClient {
   }
 
   /**
-   * Get service details
+   * Get service details from Nacos server
+   * @param serviceName The name of the service to fetch details for
+   * @param groupName The group name of the service (default: 'DEFAULT_GROUP')
+   * @returns Service details including metadata
+   * @throws {Error} If the client is not initialized or service details cannot be fetched
    */
-  async getServiceDetail(serviceName: string, groupName: string): Promise<{
+  async getServiceDetail(serviceName: string, groupName: string = 'DEFAULT_GROUP'): Promise<{
     name: string;
     groupName: string;
     metadata: Record<string, any>;
@@ -101,18 +105,8 @@ export class NacosClient implements INacosClient {
     if (!this.isInitialized) {
       throw new Error('NacosClient is not initialized');
     }
-    
-    // This is a simplified example - implement actual Nacos API call
-    return {
-      name: serviceName,
-      groupName,
-      metadata: {
-        id: `${serviceName}-${groupName}`,
-        description: `Service ${serviceName} in group ${groupName}`,
-        tags: [],
-        lastUpdated: new Date().toISOString()
-      }
-    };
+
+    return this.httpClient.getServiceDetail(serviceName, groupName);
   }
 
   /**
