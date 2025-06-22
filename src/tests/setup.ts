@@ -5,6 +5,29 @@
 
 import { vi, beforeEach, afterEach } from 'vitest';
 
+// 在测试环境中禁用原生模块以避免 onnxruntime-node 绑定问题
+vi.mock('@xenova/transformers', () => ({
+  pipeline: vi.fn(() => 
+    Promise.resolve((text: string) => ({
+      data: new Array(384).fill(0).map(() => Math.random())
+    }))
+  ),
+  env: {
+    allowLocalModels: false,
+    useFS: false,
+    useBrowserCache: false,
+    remoteHost: 'https://hf-mirror.com',
+    backends: {
+      onnx: {
+        wasm: {
+          numThreads: 1,
+          wasmPaths: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/'
+        }
+      }
+    }
+  }
+}));
+
 // 设置全局 fetch 模拟
 global.fetch = vi.fn();
 
