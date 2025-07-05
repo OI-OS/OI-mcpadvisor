@@ -29,6 +29,7 @@ MCP Advisor is a discovery and recommendation service that helps AI assistants e
    - As a regular user who discovers a useful MCP server, I want to install and start using it as quickly as possible.
    - Example prompt: `"Install this MCP: https://github.com/Deepractice/PromptX"`
 
+   ![](https://xiaohui-zhangjiakou.oss-cn-zhangjiakou.aliyuncs.com/image/202506221717969.png)
 ### Demo
 
 https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
@@ -130,7 +131,7 @@ For more installation methods, see the [Installation Guide](docs/INSTALLATION.md
 
 ### Architecture Overview
 
-MCP Advisor adopts a modular architecture with clear separation of concerns and functional programming principles:
+MCP Advisor adopts a modular architecture with clean separation of concerns and functional programming principles. The codebase has been recently refactored (2025) to improve maintainability and scalability:
 
 ```mermaid
 graph TD
@@ -158,6 +159,35 @@ graph TD
     end
 ```
 
+### Project Structure
+
+The codebase follows clean architecture principles with organized directory structure:
+
+```
+src/
+├── services/
+│   ├── core/                    # Core business logic
+│   │   ├── installation/        # Installation guide services
+│   │   ├── search/             # Search providers
+│   │   └── server/             # MCP server implementation
+│   ├── providers/              # External service providers
+│   │   ├── meilisearch/        # Meilisearch integration
+│   │   ├── nacos/              # Nacos service discovery
+│   │   ├── oceanbase/          # OceanBase vector database
+│   │   └── offline/            # Offline search engine
+│   ├── common/                 # Shared utilities
+│   │   ├── api/                # API clients
+│   │   ├── cache/              # Caching mechanisms
+│   │   └── vector/             # Vector operations
+│   └── interfaces/             # Type definitions
+├── types/                      # TypeScript type definitions
+├── utils/                      # Utility functions
+└── tests/                      # Test suites
+    ├── unit/                   # Unit tests
+    ├── integration/            # Integration tests
+    └── e2e/                    # End-to-end tests
+```
+
 ### Core Components
 
 1. **Search Service Layer**
@@ -169,6 +199,7 @@ graph TD
    - **Meilisearch Provider**: Vector search using Meilisearch
    - **GetMCP Provider**: API search from the GetMCP registry
    - **Compass Provider**: API search from the Compass registry
+   - **Nacos Provider**: Service discovery integration
    - **Offline Provider**: Hybrid search combining text and vectors
 
 3. **Hybrid Search Strategy**
@@ -224,9 +255,86 @@ For more technical details, see [TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md
 1. Clone the repository
 2. Install dependencies:
    ```bash
-   npm install
+   pnpm install
    ```
-3. Configure environment variables (see [INSTALLATION.md](docs/INSTALLATION.md))
+3. Build the project:
+   ```bash
+   pnpm run build
+   ```
+4. Configure environment variables (see [INSTALLATION.md](docs/INSTALLATION.md))
+
+### Testing
+
+MCP Advisor includes comprehensive testing suites to ensure code quality and functionality:
+
+#### Unit Tests
+```bash
+# Run unit tests
+pnpm run test
+
+# Run tests in watch mode
+pnpm run test:watch
+
+# Generate coverage report
+pnpm run test:coverage
+```
+
+#### End-to-End Tests
+The project includes automated E2E tests using Playwright that test the complete MCP Inspector workflow:
+
+```bash
+# Run E2E tests with browser UI (recommended for development)
+pnpm run test:e2e:headed
+
+# Run E2E tests in headless mode (CI/CD)
+pnpm run test:e2e
+
+# Debug E2E tests interactively
+pnpm run test:e2e:debug
+```
+
+#### Manual Testing with MCP Inspector
+For manual testing and development, use the MCP Inspector:
+
+```bash
+# Start MCP Inspector with file logging
+ENABLE_FILE_LOGGING=true npx @modelcontextprotocol/inspector node build/index.js
+```
+
+#### Automated E2E Testing Script
+For convenience, use the automated testing script that handles the complete testing workflow:
+
+```bash
+# Run complete E2E test suite (builds, starts inspector, runs tests)
+./scripts/run-e2e-test.sh
+
+# Available modes:
+./scripts/run-e2e-test.sh headed    # Browser visible (default)
+./scripts/run-e2e-test.sh headless # Background testing
+./scripts/run-e2e-test.sh debug    # Debug mode
+./scripts/run-e2e-test.sh ui       # Playwright UI mode
+```
+
+The automated testing covers:
+- ✅ **Recommendation functionality** - Natural language MCP server discovery
+- ✅ **Installation guide generation** - Automated installation instructions
+- ✅ **Error handling** - Graceful error responses
+- ✅ **Performance testing** - Response time validation
+
+#### Code Quality
+```bash
+# Run linting
+pnpm run lint
+
+# Fix linting issues
+pnpm run lint:fix
+
+# Format code
+pnpm run format
+
+# Check all quality standards
+pnpm run check
+```
 
 ### Library Usage
 
@@ -253,16 +361,45 @@ For more development details, see [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md).
 
 ## Contribution Guidelines
 
-1. Follow commit message conventions:
-   - Use lowercase types (feat, fix, docs, etc.)
-   - Write descriptive messages in sentence format
+We welcome contributions to MCP Advisor! The project has been recently refactored to improve code organization and maintainability.
 
-2. Ensure code quality:
-   - Run tests: `npm test`
-   - Check types: `npm run type-check`
-   - Lint code: `npm run lint`
+### Development Workflow
 
-For detailed contribution guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+1. **Fork and Clone**: Fork the repository and clone your fork
+2. **Setup Environment**: Follow the development environment setup above
+3. **Create Branch**: Create a feature branch from `main`
+4. **Make Changes**: Implement your changes following our coding standards
+5. **Test**: Run all tests to ensure your changes don't break existing functionality:
+   ```bash
+   pnpm run check          # Lint and format check
+   pnpm run test           # Unit tests
+   pnpm run test:e2e       # End-to-end tests
+   ```
+6. **Commit**: Follow conventional commit message format:
+   ```
+   feat: add new search provider integration
+   fix: resolve vector search performance issue
+   docs: update installation guide
+   test: add e2e tests for recommendation workflow
+   refactor: reorganize services directory structure
+   ```
+7. **Pull Request**: Submit a PR with clear description of changes
+
+### Code Quality Standards
+
+- **TypeScript**: Use strict typing, avoid `any`
+- **Testing**: Maintain test coverage above 80%
+- **Documentation**: Update docs for new features
+- **Architecture**: Follow clean architecture principles
+- **Performance**: Consider performance implications
+
+### Recent Improvements (2025)
+
+- ✅ **Directory restructuring** for better maintainability
+- ✅ **Comprehensive test suites** with unit, integration, and E2E tests
+- ✅ **Automated testing workflows** using Playwright
+- ✅ **Improved error handling** and logging
+- ✅ **Clean architecture** implementation
 
 ## Usage Examples
 
@@ -382,11 +519,45 @@ To Implement the above features, we need to:
 
 ## Testing
 
-Use [inspector](https://github.com/modelcontextprotocol/inspector) for testing:
+### Manual Testing
+
+Use [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for interactive testing:
 
 ```bash 
-ENABLE_FILE_LOGGING=true  npx @modelcontextprotocol/inspector node YOUR-MCPADVISOR-PATH/build/index.js
+ENABLE_FILE_LOGGING=true npx @modelcontextprotocol/inspector node build/index.js
 ```
+
+### Automated Testing
+
+The project includes comprehensive automated testing:
+
+#### Quick Test
+```bash
+# Run all tests
+pnpm run check && pnpm run test && pnpm run test:e2e
+```
+
+#### Complete E2E Testing Workflow
+```bash
+# Automated script that builds, starts inspector, and runs tests
+./scripts/run-e2e-test.sh
+```
+
+This automated testing covers:
+- **Recommendation functionality** - Natural language MCP server discovery
+- **Installation guide generation** - Automated installation instructions  
+- **Error handling** - Graceful error responses
+- **Performance validation** - Response time testing
+
+#### Test Structure
+```
+tests/
+├── unit/           # Unit tests for individual components
+├── integration/    # Integration tests for provider interactions
+└── e2e/           # End-to-end tests using Playwright
+```
+
+For detailed testing information, see the [Developer Guide](#developer-quick-start) section.
 
 
 

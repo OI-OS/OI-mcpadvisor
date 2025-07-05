@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   test: {
@@ -21,7 +24,7 @@ export default defineConfig({
     
     // 转换设置
     testTransformMode: {
-      web: ['\.js$', '\.ts$', '\.jsx$', '\.tsx$'],
+      web: ['\\.js$', '\\.ts$', '\\.jsx$', '\\.tsx$'],
     },
     
     // 覆盖率配置
