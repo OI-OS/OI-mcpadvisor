@@ -3,9 +3,9 @@ import {
   MCPServerResponse, 
   SearchOptions
 } from '../types/index.js';
-import { RerankMcpServer } from './search/RerankMcpService.js';
+import { RerankMcpServer } from './core/search/RerankMcpService.js';
 import type { SearchParams } from '../types/search.js';
-import { OfflineSearchProvider } from './search/OfflineSearchProvider.js';
+import { OfflineSearchProvider } from './core/search/OfflineSearchProvider.js';
 import logger from '../utils/logger.js';
 
 /**

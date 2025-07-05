@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-import { SearchService } from './services/SearchService.js';
-import { CompassSearchProvider } from './services/search/CompassSearchProvider.js';
-import { ServerService, TransportType, TransportConfig } from './services/server/index.js';
+import { SearchService } from './services/searchService.js';
+import { CompassSearchProvider } from './services/core/search/CompassSearchProvider.js';
+import { ServerService, TransportType, TransportConfig } from './services/core/server/index.js';
 import logger from './utils/logger.js';
-import { GetMcpSearchProvider } from './services/search/GetMcpSearchProvider.js';
-import { MeilisearchSearchProvider } from './services/search/MeilisearchSearchProvider.js';
+import { GetMcpSearchProvider } from './services/core/search/GetMcpSearchProvider.js';
+import { MeilisearchSearchProvider } from './services/core/search/MeilisearchSearchProvider.js';
 import { getParamValue } from '@chatmcp/sdk/utils/index.js';
-import { NacosMcpProvider } from './services/search/NacosMcpProvider.js';
+import { NacosMcpProvider } from './services/core/search/NacosMcpProvider.js';
 import type { SearchProvider } from './types/index.js';
 
 /**

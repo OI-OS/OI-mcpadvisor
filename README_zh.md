@@ -48,6 +48,42 @@ https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
 - [最佳实践](docs/BEST_PRACTICES.md) - 编码规范和贡献者最佳实践
 - [故障排除](docs/TROUBLESHOOTING.md) - 常见问题和解决方案
 - [搜索提供者](docs/SEARCH_PROVIDERS.md) - 搜索提供者详情
+- [发展路线图](ROADMAP.md) - 未来发展计划
+
+## 2025年重构更新 🚀
+
+项目在2025年进行了重大重构，提升了代码组织和可维护性：
+
+### ✅ 主要改进
+
+- **🏗️ 目录结构重构** - 采用清洁架构原则重新组织代码
+- **🧪 全面测试覆盖** - 单元测试、集成测试和端到端测试
+- **🤖 自动化测试** - 基于 Playwright 的完整自动化测试流程
+- **🔧 改进的错误处理** - 更好的错误处理和日志记录
+- **📦 模块化设计** - 清晰的服务分层和依赖管理
+
+### 新的项目结构
+
+```
+src/
+├── services/
+│   ├── core/                    # 核心业务逻辑
+│   │   ├── installation/        # 安装指南服务
+│   │   ├── search/             # 搜索提供者
+│   │   └── server/             # MCP服务器实现
+│   ├── providers/              # 外部服务提供者
+│   │   ├── meilisearch/        # Meilisearch集成
+│   │   ├── nacos/              # Nacos服务发现
+│   │   ├── oceanbase/          # OceanBase向量数据库
+│   │   └── offline/            # 离线搜索引擎
+│   ├── common/                 # 共享工具
+│   └── interfaces/             # 类型定义
+├── tests/                      # 测试套件
+│   ├── unit/                   # 单元测试
+│   ├── integration/            # 集成测试
+│   └── e2e/                    # 端到端测试
+└── scripts/                    # 自动化脚本
+```
 - [API 参考](docs/API_REFERENCE.md) - API 文档
 - [路线图](ROADMAP.md) - 项目未来发展计划
 - [贡献指南](CONTRIBUTING.md) - 如何贡献代码
@@ -177,9 +213,62 @@ MCP Advisor 实现了强大的错误处理和日志系统：
 1. 克隆仓库
 2. 安装依赖项：
    ```bash
-   npm install
+   pnpm install
    ```
-3. 配置环境变量（参见 [INSTALLATION.md](docs/INSTALLATION.md)）
+3. 构建项目：
+   ```bash
+   pnpm run build
+   ```
+4. 配置环境变量（参见 [INSTALLATION.md](docs/INSTALLATION.md)）
+
+### 测试
+
+MCP Advisor 包含全面的测试套件以确保代码质量和功能性：
+
+#### 单元测试
+```bash
+# 运行单元测试
+pnpm run test
+
+# 监听模式运行测试
+pnpm run test:watch
+
+# 生成覆盖率报告
+pnpm run test:coverage
+```
+
+#### 端到端测试
+项目包含使用 Playwright 的自动化端到端测试，测试完整的 MCP Inspector 工作流程：
+
+```bash
+# 运行端到端测试（推荐用于开发）
+pnpm run test:e2e:headed
+
+# 无头模式运行端到端测试（CI/CD）
+pnpm run test:e2e
+
+# 交互式调试端到端测试
+pnpm run test:e2e:debug
+```
+
+#### 自动化测试脚本
+为了方便使用，使用自动化测试脚本处理完整的测试工作流：
+
+```bash
+# 运行完整的端到端测试套件（构建、启动inspector、运行测试）
+./scripts/run-e2e-test.sh
+
+# 可用模式：
+./scripts/run-e2e-test.sh headed    # 浏览器可见（默认）
+./scripts/run-e2e-test.sh headless # 后台测试
+./scripts/run-e2e-test.sh debug    # 调试模式
+```
+
+自动化测试覆盖：
+- ✅ **推荐功能** - 自然语言 MCP 服务器发现
+- ✅ **安装指南生成** - 自动化安装说明
+- ✅ **错误处理** - 优雅的错误响应
+- ✅ **性能测试** - 响应时间验证
 
 ### 库使用
 
@@ -206,16 +295,45 @@ MCP Advisor 支持多种传输方式：
 
 ## 贡献指南
 
-1. 遵循提交消息约定：
-   - 使用小写类型（feat, fix, docs 等）
-   - 编写描述性消息，采用句子格式
+我们欢迎对 MCP Advisor 的贡献！项目最近进行了重构以改善代码组织和可维护性。
 
-2. 确保代码质量：
-   - 运行测试：`npm test`
-   - 检查类型：`npm run type-check`
-   - 代码检查：`npm run lint`
+### 开发工作流
 
-详细的贡献指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+1. **Fork 和克隆**：Fork 仓库并克隆您的 fork
+2. **设置环境**：按照上面的开发环境设置
+3. **创建分支**：从 `main` 创建功能分支
+4. **进行更改**：按照我们的编码标准实现您的更改
+5. **测试**：运行所有测试以确保您的更改不会破坏现有功能：
+   ```bash
+   pnpm run check          # 代码检查和格式检查
+   pnpm run test           # 单元测试
+   pnpm run test:e2e       # 端到端测试
+   ```
+6. **提交**：遵循常规提交消息格式：
+   ```
+   feat: 添加新的搜索提供者集成
+   fix: 解决向量搜索性能问题
+   docs: 更新安装指南
+   test: 为推荐工作流添加端到端测试
+   refactor: 重新组织服务目录结构
+   ```
+7. **拉取请求**：提交带有清晰更改描述的 PR
+
+### 代码质量标准
+
+- **TypeScript**：使用严格类型，避免 `any`
+- **测试**：保持测试覆盖率在 80% 以上
+- **文档**：为新功能更新文档
+- **架构**：遵循清洁架构原则
+- **性能**：考虑性能影响
+
+### 最近改进（2025年）
+
+- ✅ **目录重构** 提升可维护性
+- ✅ **全面测试套件** 包含单元、集成和端到端测试
+- ✅ **自动化测试工作流** 使用 Playwright
+- ✅ **改进的错误处理** 和日志记录
+- ✅ **清洁架构** 实现
 
 ## 使用示例
 
@@ -300,11 +418,45 @@ MCP Advisor 正在从简单的推荐系统发展为智能代理编排平台。�
 
 ## 测试
 
-使用 [inspector](https://github.com/modelcontextprotocol/inspector) 进行测试：
+### 手动测试
+
+使用 [MCP Inspector](https://github.com/modelcontextprotocol/inspector) 进行交互式测试：
 
 ```bash 
-npx @modelcontextprotocol/inspector
+ENABLE_FILE_LOGGING=true npx @modelcontextprotocol/inspector node build/index.js
 ```
+
+### 自动化测试
+
+项目包含全面的自动化测试：
+
+#### 快速测试
+```bash
+# 运行所有测试
+pnpm run check && pnpm run test && pnpm run test:e2e
+```
+
+#### 完整端到端测试工作流
+```bash
+# 自动化脚本，构建、启动 inspector 并运行测试
+./scripts/run-e2e-test.sh
+```
+
+此自动化测试涵盖：
+- **推荐功能** - 自然语言 MCP 服务器发现
+- **安装指南生成** - 自动化安装说明
+- **错误处理** - 优雅的错误响应
+- **性能验证** - 响应时间测试
+
+#### 测试结构
+```
+tests/
+├── unit/           # 单个组件的单元测试
+├── integration/    # 提供者交互的集成测试
+└── e2e/           # 使用 Playwright 的端到端测试
+```
+
+详细的测试信息请参阅[开发者指南](#开发者快速上手)部分。
 
 
 
