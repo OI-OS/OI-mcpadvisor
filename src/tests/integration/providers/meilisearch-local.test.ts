@@ -23,13 +23,9 @@ describe('Local Meilisearch Provider Integration', () => {
     // 创建控制器实例
     controller = new LocalMeilisearchController(TEST_CONFIG);
     
-    console.log('Test config:', TEST_CONFIG);
-    
     // 检查 Meilisearch 是否可用
     try {
-      console.log('Checking Meilisearch health...');
       const isHealthy = await controller.healthCheck();
-      console.log('Health check result:', isHealthy);
       
       if (isHealthy) {
         isMeilisearchAvailable = true;

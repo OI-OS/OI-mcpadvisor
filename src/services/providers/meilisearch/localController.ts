@@ -62,7 +62,6 @@ export class LocalMeilisearchController implements ILocalMeilisearchController {
       return true;
     } catch (error) {
       logger.warn('Local Meilisearch health check failed:', error);
-      console.error('Health check error details:', error); // 临时调试
       return false;
     }
   }
