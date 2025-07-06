@@ -11,6 +11,8 @@ MCPAdvisor is a TypeScript-based CLI tool for discovering and recommending MCP (
 - `pnpm run test:watch` - Run tests in watch mode
 - `pnpm run test:coverage` - Run tests with coverage report
 - `pnpm run test:jest` - Run Jest tests (alternative test runner)
+- `pnpm run test:e2e` - Run end-to-end tests with Playwright
+- `pnpm run test:meilisearch:e2e` - Smart Meilisearch E2E testing (auto-starts services)
 
 ### Code Quality
 - `pnpm run lint` - Run ESLint
@@ -138,6 +140,7 @@ const dataPath = path.resolve(__dirname, '../../../../data/file.json');
 - Use `try/catch` or Promise `.catch()` for async errors
 - Log error details for debugging
 - Provide graceful fallbacks when possible
+- Scripts must return proper exit codes (0 for success, 1+ for failure)
 
 ```typescript
 // Good practice
@@ -153,6 +156,56 @@ async function loadData(): Promise<Data[]> {
     return []; // Graceful fallback
   }
 }
+
+// Shell script error handling
+# Good practice
+if ! curl -f http://localhost:7700/health; then
+    echo 'Service not available' >&2
+    exit 1  # Proper error exit code
+fi
+```
+
+### Security Best Practices
+- **Never hardcode secrets**: API keys, passwords, tokens must use environment variables
+- **Secure defaults**: Avoid weak default passwords; force users to set secure values
+- **Environment validation**: Check required environment variables at startup
+- **GitHub Secrets**: Use `${{ secrets.SECRET_NAME }}` in CI/CD workflows
+- **Documentation security**: Remove any hardcoded keys from docs and examples
+
+```typescript
+// Good practice - Environment variable validation
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Required environment variable ${name} is not set`);
+  }
+  return value;
+}
+
+const apiKey = getRequiredEnv('MEILISEARCH_API_KEY');
+
+// Avoid - Hardcoded secrets
+const apiKey = 'abc123def456'; // NEVER do this
+```
+
+### Docker & Container Best Practices
+- **Required environment variables**: Use `${VAR:?Error message}` to force variable setting
+- **Health checks**: Implement proper health check endpoints
+- **Resource limits**: Set appropriate memory and CPU limits
+- **Security contexts**: Run containers with non-root users when possible
+
+```yaml
+# Good practice - Force environment variable
+environment:
+  MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?Please set MEILI_MASTER_KEY environment variable}
+
+# Good practice - Health check with proper timeout
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
 ```
 
 ## Testing Guidelines
@@ -174,6 +227,22 @@ async function loadData(): Promise<Data[]> {
 - **Edge cases**: Test boundary values, null values, invalid inputs
 - **Error handling**: Explicitly test error conditions and exception handling
 - **Performance**: Tests should execute quickly
+- **Environment isolation**: Save/restore environment variables in beforeEach/afterEach
+- **Content validation**: Verify result content relevance, not just quantity
+- **Network requests**: Avoid global mocking that blocks integration tests
+
+### Integration Test Best Practices
+- **Real network requests**: Integration tests should use real HTTP requests, not mocks
+- **Global fetch mocking**: Avoid `global.fetch = vi.fn()` in setup - it breaks HTTP clients
+- **Targeted mocking**: Only mock specific functions in individual test files
+- **API key configuration**: Use environment variable fallbacks for test configurations
+- **Service availability**: Always check service health before running integration tests
+
+### Common Integration Test Issues
+- **Fetch mocking conflicts**: Global fetch mocks prevent HTTP clients from working
+- **API key mismatches**: Test configurations must use correct authentication
+- **Service availability**: Tests fail if external services (like Meilisearch) aren't running
+- **Environment variables**: Test and runtime environments may have different variable names
 
 ### Mocking & Stubs
 - Use `vi.fn()` to create mock functions
@@ -183,21 +252,40 @@ async function loadData(): Promise<Data[]> {
 
 ### Async Testing
 - Always use `async/await` for async operations
-- Avoid `setTimeout` for waiting; use framework tools
+- Use smart waiting: `page.waitForFunction()` instead of fixed `page.waitForTimeout()`
 - Test both Promise resolution and rejection
+- Set appropriate timeouts (CI: 180s, local: 60s for container health checks)
 
 ```typescript
-// Example: Good test structure
+// Example: Good test structure with environment isolation
 describe('UserService', () => {
   let service: UserService;
   let mockRepository: MockRepository;
+  let originalEnvVars: Record<string, string | undefined> = {};
 
   beforeEach(() => {
+    // Save original environment variables
+    originalEnvVars = {
+      API_KEY: process.env.API_KEY,
+      DATABASE_URL: process.env.DATABASE_URL
+    };
+    
     mockRepository = {
       findUser: vi.fn(),
       saveUser: vi.fn().mockResolvedValue({ id: '1', name: 'Test' })
     };
     service = new UserService(mockRepository);
+  });
+
+  afterEach(() => {
+    // Restore original environment variables
+    Object.entries(originalEnvVars).forEach(([key, value]) => {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    });
   });
 
   describe('createUser', () => {
@@ -218,6 +306,23 @@ describe('UserService', () => {
         .rejects
         .toThrow('Username cannot be empty');
     });
+  });
+});
+
+// Example: Smart waiting in E2E tests
+describe('Search functionality', () => {
+  it('should display search results', async ({ page }) => {
+    await page.getByRole('button', { name: 'Search' }).click();
+    
+    // Good practice - Wait for content to appear
+    await page.waitForFunction(() => {
+      const content = document.body.textContent || '';
+      return content.includes('Results:') || content.includes('No results');
+    }, { timeout: 15000 });
+    
+    // Verify content quality, not just presence
+    const results = await page.locator('[data-testid="search-results"]').count();
+    expect(results).toBeGreaterThan(0);
   });
 });
 ```
@@ -261,7 +366,31 @@ Add data directory to package.json files field and improve path
 resolution logic to support proper data file loading in packaged
 environments.
 
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
 Fixes #123
+```
+
+### Auto-Commit Template
+When Claude Code makes automatic commits, always include:
+- Clear conventional commit message
+- Optional body explaining the change  
+- Standard footer with Claude Code signature
+- Optional issue reference
+
+Template format:
+```
+<type>[optional scope]: <description>
+
+[optional body explaining the change]
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
+[optional footer like "Fixes #123"]
 ```
 
 ## Important Technical Notes
@@ -270,6 +399,26 @@ Fixes #123
 - Main entry point is `src/index.ts`
 - Built files go to `build/` directory
 - Husky is configured for git hooks
+
+## Common Issues & Solutions from Code Reviews
+- **Interface naming conflicts**: Use `IClassName` for interfaces to avoid class/interface conflicts
+- **Hardcoded paths**: Replace absolute paths like `/Users/username/...` with `$(pwd)/...` in scripts
+- **CI timeouts**: GitHub Actions containers need longer timeouts (180s vs 60s local)
+- **Test pollution**: Always save/restore environment variables in tests
+- **Health check logic**: Ensure scripts return correct exit codes for monitoring
+- **Security vulnerabilities**: Never commit hardcoded API keys or weak default passwords
+- **Path portability**: Use relative paths and proper path utilities for cross-platform compatibility
+- **Global fetch mocking**: Avoid global fetch mocks in test setup - breaks integration tests
+- **API key configuration**: Use proper environment variable fallbacks in test configurations
+- **Service dependencies**: Check external service availability before running integration tests
+
+## Meilisearch Testing & Integration
+- **Local setup**: Use binary installation for development, Docker for CI/CD
+- **Test environment**: Remove global fetch mocking to allow real HTTP requests
+- **API configuration**: Use environment variable fallbacks: `TEST_KEY || MASTER_KEY || default`
+- **Health checks**: Always verify service availability before running integration tests
+- **Error debugging**: Use systematic approach: API → Client → Test Environment
+- **Network isolation**: Integration tests need real network, unit tests can use mocks
 
 ## When Working on This Project
 1. Always run `pnpm run check` before committing
@@ -282,3 +431,15 @@ Fixes #123
 8. Provide proper error handling with context
 9. Follow the naming conventions consistently
 10. Write meaningful commit messages following Conventional Commits
+
+## Security & Quality Checklist Before Submitting PRs
+- [ ] No hardcoded API keys, passwords, or tokens in code or documentation
+- [ ] All secrets use environment variables or GitHub Secrets
+- [ ] Scripts return proper exit codes (0 for success, 1+ for failure)
+- [ ] Tests save/restore environment variables to prevent pollution
+- [ ] Use smart waiting mechanisms in E2E tests instead of fixed timeouts
+- [ ] Verify test result content quality, not just quantity
+- [ ] Use relative paths in scripts for cross-platform compatibility
+- [ ] Interface and class names don't conflict (use `IClassName` pattern)
+- [ ] CI timeouts are appropriate for container operations (180s recommended)
+- [ ] Docker configurations use required environment variables, not weak defaults

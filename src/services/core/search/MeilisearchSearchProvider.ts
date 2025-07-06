@@ -1,6 +1,6 @@
 /**
  * Meilisearch 搜索提供者实现
- * 使用 Meilisearch 搜索引擎和 GetMCP API 资源获取器
+ * 使用 Meilisearch 搜索引擎和 GetMCP API 资源获取器，支持本地和云端实例
  */
 
 import { MCPServerResponse, SearchProvider } from '../../../types/index.js';
@@ -13,7 +13,7 @@ import {
   GetMcpResourceFetcher,
   IGetMcpResourceFetcher,
 } from '../../common/api/getMcpResourceFetcher.js';
-import { meilisearchClient } from '../../providers/meilisearch/controller.js';
+import { meilisearchClient, FailoverMeilisearchClient, MeilisearchClient } from '../../providers/meilisearch/controller.js';
 import logger from '../../../utils/logger.js';
 
 /**
@@ -50,11 +50,12 @@ const convertHitToServerResponse = (
 
 /**
  * Meilisearch 搜索提供者实现
- * 注意：由于 API 密钥只有读取权限，此实现只支持搜索操作
+ * 支持本地和云端实例，包含故障转移机制
  */
 export class MeilisearchSearchProvider implements SearchProvider {
   private resourceFetcher: IGetMcpResourceFetcher;
   private cache: ICache<GetMcpApiResponse>;
+  private client: MeilisearchClient;
 
   /**
    * 构造函数
@@ -62,12 +63,14 @@ export class MeilisearchSearchProvider implements SearchProvider {
   constructor(
     resourceFetcher?: IGetMcpResourceFetcher,
     cache?: ICache<GetMcpApiResponse>,
+    client?: MeilisearchClient,
   ) {
     this.resourceFetcher =
       resourceFetcher || new GetMcpResourceFetcher(GETMCP_API_URL);
     this.cache = cache || new MemoryCache<GetMcpApiResponse>(CACHE_TTL_MS);
+    this.client = client || new FailoverMeilisearchClient();
 
-    logger.info('MeilisearchSearchProvider initialized');
+    logger.info('MeilisearchSearchProvider initialized with failover support');
   }
 
   /**
@@ -82,7 +85,7 @@ export class MeilisearchSearchProvider implements SearchProvider {
       await this.ensureDataLoaded();
 
       // 执行 Meilisearch 搜索
-      const results = await meilisearchClient.search(query, { limit: 10 });
+      const results = await this.client.search(query, { limit: 10 });
       const serverResponses = results.hits.map(convertHitToServerResponse);
 
       logger.debug(`Found ${serverResponses.length} results from Meilisearch`);
@@ -92,6 +95,21 @@ export class MeilisearchSearchProvider implements SearchProvider {
         `Error searching with Meilisearch: ${error instanceof Error ? error.message : String(error)}`,
       );
       throw error;
+    }
+  }
+
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<boolean> {
+    try {
+      if (this.client.healthCheck) {
+        return await this.client.healthCheck();
+      }
+      return true;
+    } catch (error) {
+      logger.error('Meilisearch health check failed:', error);
+      return false;
     }
   }
 

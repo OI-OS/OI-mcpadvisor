@@ -3,280 +3,242 @@
 ## 1. 概述
 
 ### 1.1 项目背景
-MCPAdvisor 当前使用 Meilisearch 云服务进行 MCP 服务器的搜索和推荐。为了提供更好的数据控制、成本优化和本地化部署选项，需要集成本地自托管 Meilisearch 实例。
+MCPAdvisor 当前使用 Meilisearch 云服务进行 MCP 服务器的搜索和推荐。项目已经重新组织了架构，采用了分层设计：
+- `src/services/core/` - 核心业务逻辑
+- `src/services/providers/` - 各种数据提供者实现
+- `src/services/common/` - 通用组件
+- 已集成 Playwright 进行端到端测试
+
+为了提供更好的数据控制、成本优化和本地化部署选项，需要集成本地自托管 Meilisearch 实例。
 
 ### 1.2 技术目标
 - 实现云端/本地 Meilisearch 实例的无缝切换
 - 保持现有功能完整性和 API 兼容性
-- 提供完整的本地部署和运维方案
+- 与现有的分层架构和测试体系集成
+- 利用已有的 Playwright E2E 测试框架
 - 采用设计模式最佳实践确保代码可维护性
 
 ## 2. 架构设计
 
-### 2.1 总体架构
+### 2.1 当前架构分析
+
+项目现在已经采用了清晰的分层架构：
 
 ```mermaid
 graph TB
-    subgraph "Application Layer"
-        A[SearchService] --> B[MeilisearchProvider]
-        A --> C[OfflineProvider]
-        A --> D[CompassProvider]
+    subgraph "核心层 (src/services/core/)"
+        A[SearchService] --> B[MeilisearchSearchProvider]
+        A --> C[OfflineSearchProvider]
+        A --> D[CompassSearchProvider]
+        A --> E[NacosMcpProvider]
+        F[InstallationService] --> G[各种Extractors]
+        H[ServerService] --> I[工具处理器]
     end
     
-    subgraph "Configuration Layer"
-        E[ConfigManager] --> F[MeilisearchConfig]
-        E --> G[EnvironmentConfig]
+    subgraph "提供者层 (src/services/providers/)"
+        J[meilisearch/controller] --> K[Meilisearch Client]
+        L[offline/offlineDataLoader] --> M[内存向量引擎]
+        N[nacos/NacosClient] --> O[Nacos服务]
+        P[oceanbase/controller] --> Q[OceanBase]
     end
     
-    subgraph "Meilisearch Layer"
-        B --> H[MeilisearchClientFactory]
-        H --> I[CloudMeilisearchClient]
-        H --> J[LocalMeilisearchClient]
+    subgraph "通用层 (src/services/common/)"
+        R[cache/memoryCache] --> S[缓存管理]
+        T[vector/VectorDB] --> U[向量数据库]
+        V[api/getMcpResourceFetcher] --> W[API资源获取]
     end
     
-    subgraph "Data Layer"
-        K[DataLoader] --> L[LocalDataSync]
-        K --> M[CloudDataSync]
+    subgraph "测试层"
+        X[Vitest单元测试] --> Y[集成测试]
+        Z[Playwright E2E] --> AA[端到端测试]
     end
     
-    subgraph "Infrastructure Layer"
-        N[Docker Compose] --> O[Meilisearch Container]
-        N --> P[Nginx Proxy]
-        Q[Health Monitor] --> O
-    end
-    
-    I --> R[Meilisearch Cloud]
-    J --> O
-    L --> O
-    M --> R
+    B --> J
+    E --> N
+    A --> R
     
     style A fill:#e1f5fe
-    style H fill:#f3e5f5
-    style O fill:#e8f5e8
-    style R fill:#fff3e0
+    style J fill:#f3e5f5
+    style X fill:#e8f5e8
+    style Z fill:#fff3e0
 ```
 
-### 2.2 组件设计
+### 2.2 集成点分析
 
-#### 2.2.1 配置管理模块（Config Pattern）
+基于现有架构，Meilisearch 本地集成需要在以下层面进行：
+
+1. **提供者层增强** (`src/services/providers/meilisearch/`)
+   - 扩展现有的 `controller.ts`
+   - 添加本地实例管理功能
+   - 保持与核心层的接口兼容
+
+2. **核心层适配** (`src/services/core/search/`)
+   - `MeilisearchSearchProvider.ts` 无需大改
+   - 通过依赖注入使用不同的提供者
+
+3. **配置层管理** (`src/config/`)
+   - 扩展现有的 `meilisearch.ts` 配置
+   - 支持多实例配置管理
+
+4. **测试层集成**
+   - 扩展现有的 Vitest 测试框架
+   - 利用 Playwright 进行 E2E 验证
+
+### 2.3 具体实现方案
+
+#### 2.3.1 提供者层增强
 
 ```typescript
-// Strategy Pattern + Factory Pattern
-interface MeilisearchInstanceConfig {
-  type: 'cloud' | 'self-hosted';
+// src/services/providers/meilisearch/localController.ts
+import { MeiliSearch } from 'meilisearch';
+import { MeilisearchInstanceConfig } from '../../../config/meilisearch.js';
+import logger from '../../../utils/logger.js';
+
+export interface LocalMeilisearchController {
+  search(query: string, options?: Record<string, any>): Promise<any>;
+  healthCheck(): Promise<boolean>;
+  addDocuments?(documents: any[]): Promise<any>;
+}
+
+export class LocalMeilisearchController implements LocalMeilisearchController {
+  private client: MeiliSearch;
+  private config: MeilisearchInstanceConfig;
+  
+  constructor(config: MeilisearchInstanceConfig) {
+    this.config = config;
+    this.client = new MeiliSearch({
+      host: config.host,
+      apiKey: config.masterKey
+    });
+  }
+  
+  async search(query: string, options: Record<string, any> = {}): Promise<any> {
+    try {
+      const index = this.client.index(this.config.indexName);
+      const results = await index.search(query, {
+        limit: 10,
+        ...options
+      });
+      
+      logger.debug(`Local Meilisearch search for "${query}" returned ${results.hits.length} results`);
+      return results;
+    } catch (error) {
+      logger.error('Local Meilisearch search failed:', error);
+      throw error;
+    }
+  }
+  
+  async healthCheck(): Promise<boolean> {
+    try {
+      await this.client.health();
+      return true;
+    } catch (error) {
+      logger.warn('Local Meilisearch health check failed:', error);
+      return false;
+    }
+  }
+  
+  async addDocuments(documents: any[]): Promise<any> {
+    try {
+      const index = this.client.index(this.config.indexName);
+      const task = await index.addDocuments(documents);
+      logger.info(`Added ${documents.length} documents to local Meilisearch, task: ${task.taskUid}`);
+      return task;
+    } catch (error) {
+      logger.error('Failed to add documents to local Meilisearch:', error);
+      throw error;
+    }
+  }
+}
+```
+
+#### 2.3.2 配置管理增强
+
+```typescript
+// src/config/meilisearch.ts (扩展现有配置)
+export interface MeilisearchInstanceConfig {
+  type: 'cloud' | 'local';
   host: string;
   apiKey?: string;
   masterKey?: string;
   indexName: string;
-  port?: number;
-  ssl?: boolean;
 }
 
-// Builder Pattern
-class MeilisearchConfigBuilder {
-  private config: Partial<MeilisearchInstanceConfig> = {};
+export class MeilisearchConfigManager {
+  private static instance: MeilisearchConfigManager;
   
-  setType(type: 'cloud' | 'self-hosted'): this {
-    this.config.type = type;
-    return this;
-  }
-  
-  setHost(host: string): this {
-    this.config.host = host;
-    return this;
-  }
-  
-  setCredentials(apiKey?: string, masterKey?: string): this {
-    this.config.apiKey = apiKey;
-    this.config.masterKey = masterKey;
-    return this;
-  }
-  
-  build(): MeilisearchInstanceConfig {
-    this.validate();
-    return this.config as MeilisearchInstanceConfig;
-  }
-  
-  private validate(): void {
-    if (!this.config.type || !this.config.host) {
-      throw new Error('Type and host are required');
+  static getInstance(): MeilisearchConfigManager {
+    if (!MeilisearchConfigManager.instance) {
+      MeilisearchConfigManager.instance = new MeilisearchConfigManager();
     }
-  }
-}
-
-// Configuration Factory
-class MeilisearchConfigFactory {
-  static createCloudConfig(): MeilisearchInstanceConfig {
-    return new MeilisearchConfigBuilder()
-      .setType('cloud')
-      .setHost('https://edge.meilisearch.com')
-      .setCredentials(process.env.MEILISEARCH_CLOUD_API_KEY)
-      .build();
+    return MeilisearchConfigManager.instance;
   }
   
-  static createLocalConfig(): MeilisearchInstanceConfig {
-    return new MeilisearchConfigBuilder()
-      .setType('self-hosted')
-      .setHost(process.env.MEILISEARCH_LOCAL_HOST || 'http://localhost:7700')
-      .setCredentials(undefined, process.env.MEILISEARCH_MASTER_KEY)
-      .build();
+  getActiveConfig(): MeilisearchInstanceConfig {
+    const instanceType = process.env.MEILISEARCH_INSTANCE || 'cloud';
+    
+    if (instanceType === 'local') {
+      return {
+        type: 'local',
+        host: process.env.MEILISEARCH_LOCAL_HOST || 'http://localhost:7700',
+        masterKey: process.env.MEILISEARCH_MASTER_KEY || 'developmentKey',
+        indexName: process.env.MEILISEARCH_INDEX_NAME || 'mcp_servers'
+      };
+    }
+    
+    // 保持现有云端配置
+    return {
+      type: 'cloud',
+      host: 'https://edge.meilisearch.com',
+      apiKey: process.env.MEILISEARCH_CLOUD_API_KEY || 'your-cloud-api-key-here',
+      indexName: 'mcp_server_info_from_getmcp_io'
+    };
   }
 }
 ```
 
-#### 2.2.2 客户端管理模块（Abstract Factory Pattern）
+#### 2.3.3 核心层适配
 
 ```typescript
-// Abstract Factory Pattern
-abstract class MeilisearchClientFactory {
-  abstract createClient(): MeilisearchClient;
-  abstract createDataLoader(): DataLoader;
-  abstract createHealthChecker(): HealthChecker;
-}
+// src/services/core/search/MeilisearchSearchProvider.ts (修改现有文件)
+import { MeilisearchConfigManager } from '../../../config/meilisearch.js';
+import { LocalMeilisearchController } from '../../providers/meilisearch/localController.js';
+import { meilisearchClient } from '../../providers/meilisearch/controller.js'; // 现有云端客户端
 
-// Concrete Factory for Cloud
-class CloudMeilisearchFactory extends MeilisearchClientFactory {
-  constructor(private config: MeilisearchInstanceConfig) {
-    super();
-  }
+export class MeilisearchSearchProvider implements SearchProvider {
+  private primaryController: any;
+  private fallbackController: any;
+  private config: MeilisearchInstanceConfig;
   
-  createClient(): MeilisearchClient {
-    return new CloudMeilisearchClient(this.config);
-  }
-  
-  createDataLoader(): DataLoader {
-    return new CloudDataLoader(this.config);
-  }
-  
-  createHealthChecker(): HealthChecker {
-    return new CloudHealthChecker(this.config);
-  }
-}
-
-// Concrete Factory for Local
-class LocalMeilisearchFactory extends MeilisearchClientFactory {
-  constructor(private config: MeilisearchInstanceConfig) {
-    super();
-  }
-  
-  createClient(): MeilisearchClient {
-    return new LocalMeilisearchClient(this.config);
-  }
-  
-  createDataLoader(): DataLoader {
-    return new LocalDataLoader(this.config);
-  }
-  
-  createHealthChecker(): HealthChecker {
-    return new LocalHealthChecker(this.config);
-  }
-}
-
-// Client Manager (Singleton Pattern)
-class MeilisearchClientManager {
-  private static instance: MeilisearchClientManager;
-  private factory: MeilisearchClientFactory;
-  private client: MeilisearchClient;
-  
-  private constructor() {}
-  
-  static getInstance(): MeilisearchClientManager {
-    if (!MeilisearchClientManager.instance) {
-      MeilisearchClientManager.instance = new MeilisearchClientManager();
+  constructor() {
+    this.config = MeilisearchConfigManager.getInstance().getActiveConfig();
+    
+    if (this.config.type === 'local') {
+      this.primaryController = new LocalMeilisearchController(this.config);
+      this.fallbackController = meilisearchClient; // 云端作为fallback
+    } else {
+      this.primaryController = meilisearchClient;
+      // 云端模式不需要fallback
     }
-    return MeilisearchClientManager.instance;
   }
-  
-  initialize(config: MeilisearchInstanceConfig): void {
-    this.factory = config.type === 'cloud' 
-      ? new CloudMeilisearchFactory(config)
-      : new LocalMeilisearchFactory(config);
-    this.client = this.factory.createClient();
-  }
-  
-  getClient(): MeilisearchClient {
-    if (!this.client) {
-      throw new Error('Client not initialized');
-    }
-    return this.client;
-  }
-}
-```
-
-#### 2.2.3 搜索服务模块（Strategy Pattern + Observer Pattern）
-
-```typescript
-// Strategy Pattern for Search
-interface SearchStrategy {
-  search(params: SearchParams): Promise<MCPServerResponse[]>;
-  isHealthy(): Promise<boolean>;
-}
-
-class MeilisearchSearchStrategy implements SearchStrategy {
-  constructor(private client: MeilisearchClient) {}
   
   async search(params: SearchParams): Promise<MCPServerResponse[]> {
     const query = this.buildQuery(params);
-    const results = await this.client.search(query);
-    return this.transformResults(results);
-  }
-  
-  async isHealthy(): Promise<boolean> {
-    return await this.client.healthCheck();
-  }
-  
-  private buildQuery(params: SearchParams): string {
-    return [
-      params.taskDescription,
-      ...(params.keywords || []),
-      ...(params.capabilities || [])
-    ].join(' ').trim();
-  }
-  
-  private transformResults(results: any): MCPServerResponse[] {
-    return results.hits.map(hit => ({
-      id: hit.id,
-      title: hit.title,
-      description: hit.description,
-      sourceUrl: hit.github_url,
-      similarity: hit._rankingScore || 0.5,
-      installations: hit.installations || {}
-    }));
-  }
-}
-
-// Observer Pattern for Health Monitoring
-interface HealthObserver {
-  onHealthChange(healthy: boolean): void;
-}
-
-class HealthMonitor {
-  private observers: HealthObserver[] = [];
-  private healthStatus: Map<string, boolean> = new Map();
-  
-  addObserver(observer: HealthObserver): void {
-    this.observers.push(observer);
-  }
-  
-  removeObserver(observer: HealthObserver): void {
-    const index = this.observers.indexOf(observer);
-    if (index > -1) {
-      this.observers.splice(index, 1);
-    }
-  }
-  
-  updateHealth(service: string, healthy: boolean): void {
-    const wasHealthy = this.healthStatus.get(service);
-    this.healthStatus.set(service, healthy);
     
-    if (wasHealthy !== healthy) {
-      this.notifyObservers(healthy);
+    try {
+      const results = await this.primaryController.search(query);
+      return this.transformResults(results);
+    } catch (error) {
+      if (this.fallbackController) {
+        logger.warn('Primary Meilisearch failed, falling back to cloud');
+        const results = await this.fallbackController.search(query);
+        return this.transformResults(results);
+      }
+      throw error;
     }
   }
   
-  private notifyObservers(healthy: boolean): void {
-    this.observers.forEach(observer => observer.onHealthChange(healthy));
-  }
+  // 保持现有的 buildQuery 和 transformResults 方法不变
 }
 ```
 
@@ -325,7 +287,7 @@ gantt
     section Phase 1
     配置系统重构          :active, p1-1, 2024-07-05, 3d
     抽象工厂实现          :p1-2, after p1-1, 2d
-    Docker部署方案        :p1-3, after p1-2, 2d
+    二进制部署方案        :p1-3, after p1-2, 2d
     
     section Phase 2
     客户端管理器实现      :p2-1, after p1-3, 3d
@@ -348,59 +310,61 @@ gantt
 - 性能基准测试
 - 部署文档完善
 
-### 3.2 Docker 部署方案
+### 3.2 本地二进制部署方案
 
-```yaml
-# docker-compose.meilisearch.yml
-version: '3.8'
+#### 3.2.1 Meilisearch 二进制安装
 
-services:
-  meilisearch:
-    image: getmeili/meilisearch:v1.15
-    container_name: mcpadvisor-meilisearch
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-aSampleMasterKey}
-      MEILI_ENV: ${MEILI_ENV:-development}
-      MEILI_DB_PATH: /meili_data
-      MEILI_HTTP_ADDR: 0.0.0.0:7700
-      MEILI_LOG_LEVEL: INFO
-      MEILI_MAX_INDEXING_MEMORY: 100MB
-      MEILI_MAX_INDEXING_THREADS: 2
-    volumes:
-      - meili_data:/meili_data
-      - meili_logs:/var/log/meilisearch
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '1'
-        reservations:
-          memory: 128M
-          cpus: '0.5'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+```bash
+# 使用官方安装脚本
+curl -L https://install.meilisearch.com | sh
 
-  nginx:
-    image: nginx:alpine
-    container_name: mcpadvisor-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - meilisearch
-    restart: unless-stopped
+# 或者手动下载
+# Linux/macOS
+wget https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-linux-amd64
+chmod +x meilisearch-linux-amd64
+sudo mv meilisearch-linux-amd64 /usr/local/bin/meilisearch
 
-volumes:
-  meili_data:
-  meili_logs:
+# Windows
+curl -L https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-windows-amd64.exe -o meilisearch.exe
+```
+
+#### 3.2.2 配置文件
+
+```toml
+# meilisearch.toml
+db_path = "./meili_data"
+env = "development"
+http_addr = "0.0.0.0:7700"
+log_level = "INFO"
+max_indexing_memory = "100MB"
+max_indexing_threads = 2
+
+# 安全配置
+master_key = "your-secure-master-key-here"
+ssl_cert_path = ""
+ssl_key_path = ""
+
+# 性能配置
+max_task_db_size = "100GB"
+max_index_size = "100GB"
+```
+
+#### 3.2.3 启动配置
+
+```bash
+# 直接启动
+meilisearch --config-file-path ./meilisearch.toml
+
+# 或使用环境变量
+export MEILI_MASTER_KEY="your-secure-master-key-here"
+export MEILI_ENV="development"
+export MEILI_DB_PATH="./meili_data"
+export MEILI_HTTP_ADDR="0.0.0.0:7700"
+export MEILI_LOG_LEVEL="INFO"
+export MEILI_MAX_INDEXING_MEMORY="100MB"
+export MEILI_MAX_INDEXING_THREADS="2"
+
+meilisearch
 ```
 
 ### 3.3 数据初始化方案
@@ -818,238 +782,25 @@ class MeilisearchProvider {
 }
 ```
 
-### 5.3 实际运行测试方案
+### 5.3 集成测试方案（利用现有架构）
 
-#### 5.3.1 测试环境准备
-
-```typescript
-// src/tests/setup/test-environment.ts
-import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
-import path from 'path';
-
-export class TestEnvironment {
-  private static meilisearchContainer: string | null = null;
-  
-  static async setupMeilisearch(): Promise<{ host: string; masterKey: string }> {
-    console.log('🚀 Setting up test Meilisearch instance...');
-    
-    // Check if Docker is available
-    try {
-      execSync('docker --version', { stdio: 'ignore' });
-    } catch (error) {
-      throw new Error('Docker is required for integration tests');
-    }
-    
-    // Generate test master key
-    const masterKey = 'test-master-key-' + Date.now();
-    
-    // Start Meilisearch container
-    const containerName = `meilisearch-test-${Date.now()}`;
-    const command = `docker run -d --name ${containerName} -p 0:7700 \
-      -e MEILI_MASTER_KEY=${masterKey} \
-      -e MEILI_ENV=development \
-      getmeili/meilisearch:v1.15`;
-    
-    try {
-      execSync(command, { stdio: 'ignore' });
-      this.meilisearchContainer = containerName;
-      
-      // Get mapped port
-      const portCommand = `docker port ${containerName} 7700`;
-      const portOutput = execSync(portCommand, { encoding: 'utf8' });
-      const port = portOutput.trim().split(':')[1];
-      const host = `http://localhost:${port}`;
-      
-      // Wait for Meilisearch to be ready
-      await this.waitForMeilisearch(host);
-      
-      console.log(`✅ Test Meilisearch ready at ${host}`);
-      return { host, masterKey };
-    } catch (error) {
-      console.error('Failed to start test Meilisearch:', error);
-      throw error;
-    }
-  }
-  
-  static async teardownMeilisearch(): Promise<void> {
-    if (this.meilisearchContainer) {
-      console.log('🧹 Cleaning up test Meilisearch...');
-      try {
-        execSync(`docker stop ${this.meilisearchContainer}`, { stdio: 'ignore' });
-        execSync(`docker rm ${this.meilisearchContainer}`, { stdio: 'ignore' });
-      } catch (error) {
-        console.warn('Failed to cleanup test container:', error);
-      }
-      this.meilisearchContainer = null;
-    }
-  }
-  
-  private static async waitForMeilisearch(host: string, timeout = 30000): Promise<void> {
-    const start = Date.now();
-    while (Date.now() - start < timeout) {
-      try {
-        const response = await fetch(`${host}/health`);
-        if (response.ok) {
-          return;
-        }
-      } catch (error) {
-        // Continue waiting
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    throw new Error(`Meilisearch not ready within ${timeout}ms`);
-  }
-  
-  static async loadTestData(host: string, masterKey: string): Promise<void> {
-    console.log('📊 Loading test data...');
-    
-    // Load actual MCP data for testing
-    const dataPath = path.join(process.cwd(), 'data', 'mcp_server_list.json');
-    let testData: any[];
-    
-    try {
-      const rawData = readFileSync(dataPath, 'utf8');
-      const mcpData = JSON.parse(rawData);
-      
-      // Convert to Meilisearch format and take first 50 for testing
-      testData = Object.entries(mcpData).slice(0, 50).map(([id, server]: [string, any]) => ({
-        id,
-        title: server.display_name,
-        description: server.description,
-        github_url: server.repository.url,
-        categories: server.categories.join(','),
-        tags: server.tags.join(','),
-        installations: server.installations
-      }));
-    } catch (error) {
-      // Fallback test data if real data not available
-      testData = [
-        {
-          id: 'test-file-manager',
-          title: 'File Manager',
-          description: 'A comprehensive file management tool for MCP',
-          github_url: 'https://github.com/test/file-manager',
-          categories: 'file,management,utility',
-          tags: 'fs,files,directory,read,write',
-          installations: { npm: 'file-manager-mcp' }
-        },
-        {
-          id: 'test-database-helper',
-          title: 'Database Helper',
-          description: 'Database operations and query management',
-          github_url: 'https://github.com/test/db-helper',
-          categories: 'database,sql,orm',
-          tags: 'mysql,postgres,crud,migration,query',
-          installations: { npm: 'db-helper-mcp' }
-        },
-        {
-          id: 'test-web-scraper',
-          title: 'Web Scraper',
-          description: 'Extract data from websites using various methods',
-          github_url: 'https://github.com/test/web-scraper',
-          categories: 'web,scraping,automation',
-          tags: 'http,html,api,crawler,extraction',
-          installations: { npm: 'web-scraper-mcp' }
-        }
-      ];
-    }
-    
-    // Create index and add documents
-    const indexName = 'mcp_servers_test';
-    
-    // Create index
-    const createIndexResponse = await fetch(`${host}/indexes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${masterKey}`
-      },
-      body: JSON.stringify({
-        uid: indexName,
-        primaryKey: 'id'
-      })
-    });
-    
-    if (!createIndexResponse.ok && createIndexResponse.status !== 409) {
-      throw new Error(`Failed to create index: ${createIndexResponse.statusText}`);
-    }
-    
-    // Configure searchable attributes
-    await fetch(`${host}/indexes/${indexName}/settings/searchable-attributes`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${masterKey}`
-      },
-      body: JSON.stringify(['title', 'description', 'categories', 'tags'])
-    });
-    
-    // Add documents
-    const addDocsResponse = await fetch(`${host}/indexes/${indexName}/documents`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${masterKey}`
-      },
-      body: JSON.stringify(testData)
-    });
-    
-    if (!addDocsResponse.ok) {
-      throw new Error(`Failed to add documents: ${addDocsResponse.statusText}`);
-    }
-    
-    const task = await addDocsResponse.json();
-    
-    // Wait for indexing to complete
-    await this.waitForTask(host, masterKey, task.taskUid);
-    console.log(`✅ Loaded ${testData.length} test documents`);
-  }
-  
-  private static async waitForTask(host: string, masterKey: string, taskUid: number): Promise<void> {
-    const maxWait = 30000; // 30 seconds
-    const start = Date.now();
-    
-    while (Date.now() - start < maxWait) {
-      const response = await fetch(`${host}/tasks/${taskUid}`, {
-        headers: { 'Authorization': `Bearer ${masterKey}` }
-      });
-      
-      if (response.ok) {
-        const task = await response.json();
-        if (task.status === 'succeeded') {
-          return;
-        }
-        if (task.status === 'failed') {
-          throw new Error(`Task failed: ${task.error}`);
-        }
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    throw new Error('Task did not complete within timeout');
-  }
-}
-```
-
-#### 5.3.2 实际运行的集成测试
+#### 5.3.1 Vitest 集成测试
 
 ```typescript
-// src/tests/integration/meilisearch-real.test.ts
+// src/tests/integration/providers/meilisearch-local.test.ts
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { TestEnvironment } from '../setup/test-environment.js';
-import { MeilisearchProvider } from '../../services/search/MeilisearchProvider.js';
-import { MeilisearchConfig } from '../../types/meilisearch.js';
+import { TestEnvironment } from '../../setup/test-environment.js';
+import { LocalMeilisearchController } from '../../../services/providers/meilisearch/localController.js';
+import { MeilisearchConfigManager } from '../../../config/meilisearch.js';
 
-describe('Meilisearch Real Integration Tests', () => {
-  let testConfig: MeilisearchConfig;
-  let provider: MeilisearchProvider;
-  let fallbackProvider: MeilisearchProvider;
+describe('Local Meilisearch Provider Integration', () => {
+  let controller: LocalMeilisearchController;
+  let testConfig: any;
   
   beforeAll(async () => {
-    // Setup test Meilisearch instance
+    // Setup test Meilisearch instance using existing TestEnvironment
     const { host, masterKey } = await TestEnvironment.setupMeilisearch();
+    await TestEnvironment.loadTestData(host, masterKey);
     
     testConfig = {
       type: 'local',
@@ -1058,313 +809,188 @@ describe('Meilisearch Real Integration Tests', () => {
       indexName: 'mcp_servers_test'
     };
     
-    // Load test data
-    await TestEnvironment.loadTestData(host, masterKey);
-    
-    // Create providers
-    provider = new MeilisearchProvider(testConfig);
-    
-    // Create fallback provider (using cloud config as fallback)
-    const fallbackConfig: MeilisearchConfig = {
-      type: 'cloud',
-      host: 'https://edge.meilisearch.com',
-      apiKey: process.env.MEILISEARCH_CLOUD_API_KEY || 'fallback-key',
-      indexName: 'mcp_server_info_from_getmcp_io'
-    };
-    
-    fallbackProvider = new MeilisearchProvider(testConfig, fallbackConfig);
-  }, 60000); // 60 second timeout for setup
-  
-  afterAll(async () => {
-    await TestEnvironment.teardownMeilisearch();
-  });
-  
-  describe('Basic Search Functionality', () => {
-    it('should perform successful search with results', async () => {
-      const params = {
-        taskDescription: 'file management',
-        keywords: ['file', 'directory'],
-        capabilities: ['read', 'write']
-      };
-      
-      const results = await provider.search(params);
-      
-      expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBeGreaterThan(0);
-      
-      // Verify result structure
-      const firstResult = results[0];
-      expect(firstResult).toHaveProperty('id');
-      expect(firstResult).toHaveProperty('title');
-      expect(firstResult).toHaveProperty('description');
-      expect(firstResult).toHaveProperty('sourceUrl');
-      expect(firstResult).toHaveProperty('similarity');
-      expect(typeof firstResult.similarity).toBe('number');
-      expect(firstResult.similarity).toBeGreaterThan(0);
-    });
-    
-    it('should return relevant results for database queries', async () => {
-      const params = {
-        taskDescription: 'database operations',
-        keywords: ['sql', 'mysql'],
-        capabilities: ['crud']
-      };
-      
-      const results = await provider.search(params);
-      
-      expect(results.length).toBeGreaterThan(0);
-      
-      // Check if results contain database-related content
-      const hasRelevantResult = results.some(result => 
-        result.title.toLowerCase().includes('database') ||
-        result.description.toLowerCase().includes('database') ||
-        result.description.toLowerCase().includes('sql')
-      );
-      
-      expect(hasRelevantResult).toBe(true);
-    });
-    
-    it('should handle empty search queries gracefully', async () => {
-      const params = {
-        taskDescription: '',
-        keywords: [],
-        capabilities: []
-      };
-      
-      const results = await provider.search(params);
-      
-      expect(Array.isArray(results)).toBe(true);
-      // Should return all results when query is empty
-      expect(results.length).toBeGreaterThanOrEqual(0);
-    });
-    
-    it('should handle search for non-existent content', async () => {
-      const params = {
-        taskDescription: 'non-existent-functionality-12345',
-        keywords: ['xyz-non-existent'],
-        capabilities: ['impossible-capability']
-      };
-      
-      const results = await provider.search(params);
-      
-      expect(Array.isArray(results)).toBe(true);
-      // May return empty results or low-similarity results
-      expect(results.length).toBeGreaterThanOrEqual(0);
-    });
-  });
-  
-  describe('Health Check', () => {
-    it('should return true for healthy instance', async () => {
-      const isHealthy = await provider.healthCheck();
-      expect(isHealthy).toBe(true);
-    });
-  });
-  
-  describe('Error Handling', () => {
-    it('should handle invalid query parameters', async () => {
-      const params = {
-        taskDescription: 'test',
-        keywords: null as any,
-        capabilities: undefined as any
-      };
-      
-      // Should not throw error, should handle gracefully
-      const results = await provider.search(params);
-      expect(Array.isArray(results)).toBe(true);
-    });
-  });
-  
-  describe('Performance Tests', () => {
-    it('should complete search within reasonable time', async () => {
-      const params = {
-        taskDescription: 'web scraping automation',
-        keywords: ['http', 'api'],
-        capabilities: ['extraction']
-      };
-      
-      const startTime = Date.now();
-      const results = await provider.search(params);
-      const duration = Date.now() - startTime;
-      
-      expect(results).toBeDefined();
-      expect(duration).toBeLessThan(5000); // Should complete within 5 seconds
-    });
-    
-    it('should handle concurrent searches', async () => {
-      const params = [
-        { taskDescription: 'file operations', keywords: ['file'], capabilities: ['read'] },
-        { taskDescription: 'database queries', keywords: ['sql'], capabilities: ['query'] },
-        { taskDescription: 'web requests', keywords: ['http'], capabilities: ['fetch'] }
-      ];
-      
-      const startTime = Date.now();
-      const promises = params.map(param => provider.search(param));
-      const results = await Promise.all(promises);
-      const duration = Date.now() - startTime;
-      
-      expect(results).toHaveLength(3);
-      results.forEach(result => {
-        expect(Array.isArray(result)).toBe(true);
-      });
-      expect(duration).toBeLessThan(10000); // All should complete within 10 seconds
-    });
-  });
-});
-```
-
-#### 5.3.3 端到端测试
-
-```typescript
-// src/tests/e2e/meilisearch-e2e.test.ts
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { TestEnvironment } from '../setup/test-environment.js';
-import { searchService } from '../../services/searchService.js';
-
-describe('Meilisearch End-to-End Tests', () => {
-  let originalEnv: any;
-  
-  beforeAll(async () => {
-    // Backup original environment
-    originalEnv = { ...process.env };
-    
-    // Setup test environment
-    const { host, masterKey } = await TestEnvironment.setupMeilisearch();
-    await TestEnvironment.loadTestData(host, masterKey);
-    
-    // Configure environment for local Meilisearch
-    process.env.MEILISEARCH_INSTANCE = 'local';
-    process.env.MEILISEARCH_LOCAL_HOST = host;
-    process.env.MEILISEARCH_MASTER_KEY = masterKey;
-    process.env.MEILISEARCH_INDEX_NAME = 'mcp_servers_test';
+    controller = new LocalMeilisearchController(testConfig);
   }, 60000);
   
   afterAll(async () => {
-    // Restore environment
-    process.env = originalEnv;
     await TestEnvironment.teardownMeilisearch();
   });
   
-  it('should perform complete search workflow', async () => {
-    // Test the complete search service workflow
-    const query = 'file management system';
-    const results = await searchService.search({
-      taskDescription: query,
-      keywords: ['file', 'fs'],
-      capabilities: ['read', 'write']
-    });
+  it('should perform basic search with local controller', async () => {
+    const results = await controller.search('file management');
     
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBeGreaterThan(0);
-    
-    // Verify that results contain expected metadata
-    const firstResult = results[0];
-    expect(firstResult).toHaveProperty('metadata');
-    expect(firstResult.metadata).toHaveProperty('provider');
+    expect(results).toBeDefined();
+    expect(results.hits).toBeInstanceOf(Array);
+    expect(results.hits.length).toBeGreaterThan(0);
   });
   
-  it('should handle fallback when local instance fails', async () => {
-    // Temporarily break the local connection
-    const originalHost = process.env.MEILISEARCH_LOCAL_HOST;
-    process.env.MEILISEARCH_LOCAL_HOST = 'http://localhost:9999'; // Invalid port
+  it('should pass health check for local instance', async () => {
+    const isHealthy = await controller.healthCheck();
+    expect(isHealthy).toBe(true);
+  });
+  
+  it('should handle document addition for local instance', async () => {
+    const testDoc = {
+      id: 'test-new-doc',
+      title: 'Test Document',
+      description: 'A test document for verification'
+    };
     
-    try {
-      const results = await searchService.search({
-        taskDescription: 'test fallback',
-        keywords: ['test']
-      });
-      
-      // Should still get results from fallback (offline provider)
-      expect(Array.isArray(results)).toBe(true);
-    } finally {
-      // Restore original host
-      process.env.MEILISEARCH_LOCAL_HOST = originalHost;
-    }
+    const task = await controller.addDocuments([testDoc]);
+    expect(task).toBeDefined();
+    expect(task.taskUid).toBeDefined();
   });
 });
 ```
 
-#### 5.3.4 配置和启动测试
+#### 5.3.2 Playwright E2E 测试扩展
 
 ```typescript
-// src/tests/config/meilisearch-config-real.test.ts
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { TestEnvironment } from '../setup/test-environment.js';
-import { MeilisearchConfigBuilder, MeilisearchConfigFactory } from '../../config/meilisearch.js';
+// tests/e2e/meilisearch-local-e2e.spec.ts
+import { test, expect } from '@playwright/test';
 
-describe('Meilisearch Configuration Real Tests', () => {
-  let testHost: string;
-  let testMasterKey: string;
-  
-  beforeAll(async () => {
-    const config = await TestEnvironment.setupMeilisearch();
-    testHost = config.host;
-    testMasterKey = config.masterKey;
-  });
-  
-  afterAll(async () => {
-    await TestEnvironment.teardownMeilisearch();
-  });
-  
-  it('should connect to real Meilisearch instance', async () => {
-    const config = new MeilisearchConfigBuilder()
-      .setType('local')
-      .setHost(testHost)
-      .setCredentials(undefined, testMasterKey)
-      .setIndexName('test-index')
-      .build();
+test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
+  test.beforeEach(async ({ page }) => {
+    // 设置环境变量启用本地 Meilisearch
+    process.env.MEILISEARCH_INSTANCE = 'local';
+    process.env.MEILISEARCH_LOCAL_HOST = 'http://localhost:7700';
+    process.env.MEILISEARCH_MASTER_KEY = 'testkey';
     
-    // Test actual connection
-    const response = await fetch(`${config.host}/health`, {
-      headers: {
-        'Authorization': `Bearer ${config.masterKey}`
-      }
+    // 使用现有的测试配置
+    const fullUrl = `${process.env.MCP_INSPECTOR_URL || 'http://localhost:6274'}/?MCP_PROXY_AUTH_TOKEN=${process.env.MCP_AUTH_TOKEN}`;
+    await page.goto(fullUrl);
+    
+    // 连接到MCP服务器
+    await page.getByRole('button', { name: 'Connect' }).click();
+    await page.waitForTimeout(2000);
+    await page.getByRole('button', { name: 'List Tools' }).click();
+    await page.waitForTimeout(1000);
+  });
+  
+  test('本地 Meilisearch 搜索功能验证', async ({ page }) => {
+    // 使用推荐工具测试本地搜索
+    await page.getByText('此工具用于寻找合适且专业MCP').click();
+    
+    await page.getByRole('textbox', { name: 'taskDescription' })
+      .fill('本地文件管理和数据处理工具');
+    
+    await page.getByRole('button', { name: 'Run Tool' }).click();
+    await page.waitForTimeout(8000);
+    
+    // 验证返回结果
+    const pageContent = await page.content();
+    expect(pageContent).toContain('Title:');
+    
+    // 截图保存结果（带本地标识）
+    await page.screenshot({ 
+      path: 'test-results/meilisearch-local-search.png',
+      fullPage: true 
     });
-    
-    expect(response.ok).toBe(true);
   });
   
-  it('should handle invalid credentials gracefully', async () => {
-    const config = new MeilisearchConfigBuilder()
-      .setType('local')
-      .setHost(testHost)
-      .setCredentials(undefined, 'invalid-key')
-      .setIndexName('test-index')
-      .build();
+  test('本地 Meilisearch 故障转移测试', async ({ page }) => {
+    // 模拟本地实例不可用，测试 fallback 到云端
+    process.env.MEILISEARCH_LOCAL_HOST = 'http://localhost:9999'; // 无效端口
     
-    // Test connection with invalid key
-    const response = await fetch(`${config.host}/indexes`, {
-      headers: {
-        'Authorization': `Bearer ${config.masterKey}`
-      }
+    await page.getByText('此工具用于寻找合适且专业MCP').click();
+    await page.getByRole('textbox', { name: 'taskDescription' })
+      .fill('测试故障转移机制');
+    
+    await page.getByRole('button', { name: 'Run Tool' }).click();
+    await page.waitForTimeout(10000);
+    
+    // 应该仍然能获得结果（来自 fallback）
+    const pageContent = await page.content();
+    const hasResults = pageContent.includes('Title:') || pageContent.includes('results');
+    
+    if (hasResults) {
+      console.log('✅ 故障转移成功：从云端获得结果');
+    } else {
+      console.log('⚠️ 故障转移可能未按预期工作');
+    }
+    
+    await page.screenshot({ 
+      path: 'test-results/meilisearch-fallback-test.png',
+      fullPage: true 
     });
+  });
+  
+  test('性能对比测试：本地 vs 云端', async ({ page }) => {
+    const testCases = [
+      { instance: 'local', description: '本地实例性能测试' },
+      { instance: 'cloud', description: '云端实例性能测试' }
+    ];
     
-    expect(response.status).toBe(403); // Forbidden
+    const results = [];
+    
+    for (const testCase of testCases) {
+      process.env.MEILISEARCH_INSTANCE = testCase.instance;
+      
+      await page.getByText('此工具用于寻找合适且专业MCP').click();
+      await page.getByRole('textbox', { name: 'taskDescription' })
+        .fill('文件系统操作和数据分析');
+      
+      const startTime = Date.now();
+      await page.getByRole('button', { name: 'Run Tool' }).click();
+      await page.waitForTimeout(5000);
+      const endTime = Date.now();
+      
+      const responseTime = endTime - startTime;
+      results.push({ instance: testCase.instance, responseTime });
+      
+      console.log(`⏱️ ${testCase.description}: ${responseTime}ms`);
+      
+      await page.screenshot({ 
+        path: `test-results/performance-${testCase.instance}.png`,
+        fullPage: true 
+      });
+    }
+    
+    // 比较性能结果
+    const localTime = results.find(r => r.instance === 'local')?.responseTime || 0;
+    const cloudTime = results.find(r => r.instance === 'cloud')?.responseTime || 0;
+    
+    console.log(`📊 性能对比 - 本地: ${localTime}ms, 云端: ${cloudTime}ms`);
+    
+    // 验证响应时间都在合理范围内
+    expect(localTime).toBeLessThan(15000);
+    expect(cloudTime).toBeLessThan(15000);
   });
 });
 ```
 
-### 5.4 测试执行指南
-
-#### 5.4.1 测试脚本配置
+#### 5.3.3 测试脚本更新
 
 ```json
-// package.json 测试脚本
+// package.json 测试脚本更新
 {
   "scripts": {
-    "test:meilisearch:real": "vitest run src/tests/integration/meilisearch-real.test.ts",
-    "test:meilisearch:e2e": "vitest run src/tests/e2e/meilisearch-e2e.test.ts",
-    "test:meilisearch:config": "vitest run src/tests/config/meilisearch-config-real.test.ts",
-    "test:meilisearch:all": "vitest run src/tests/**/*meilisearch*.test.ts",
-    "test:meilisearch:watch": "vitest src/tests/**/*meilisearch*.test.ts"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:jest": "jest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    
+    // 新增 Meilisearch 相关测试
+    "test:meilisearch": "vitest run src/tests/integration/providers/meilisearch*.test.ts",
+    "test:meilisearch:local": "vitest run src/tests/integration/providers/meilisearch-local.test.ts",
+    "test:meilisearch:e2e": "playwright test tests/e2e/meilisearch-local-e2e.spec.ts",
+    "test:meilisearch:all": "pnpm test:meilisearch && pnpm test:meilisearch:e2e",
+    
+    // 其他现有脚本...
   }
 }
 ```
 
-#### 5.4.2 CI/CD 实际测试配置
+#### 5.3.4 CI/CD 集成（GitHub Actions 更新）
 
 ```yaml
-# .github/workflows/meilisearch-real-tests.yml
-name: Meilisearch Real Tests
+# .github/workflows/meilisearch-integration.yml
+name: Meilisearch Local Integration Tests
 
 on: [push, pull_request]
 
@@ -1379,25 +1005,20 @@ jobs:
         with:
           node-version: '18'
           
+      - name: Install Meilisearch binary
+        run: curl -L https://install.meilisearch.com | sh
+        
       - name: Install dependencies
         run: pnpm install
         
       - name: Build project
         run: pnpm run build
         
-      - name: Run real integration tests
-        run: pnpm test:meilisearch:real
+      - name: Run Meilisearch integration tests
+        run: pnpm test:meilisearch
         timeout-minutes: 10
         
-      - name: Run end-to-end tests
-        run: pnpm test:meilisearch:e2e
-        timeout-minutes: 10
-        
-      - name: Run configuration tests
-        run: pnpm test:meilisearch:config
-        timeout-minutes: 5
-
-  performance-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
     
     steps:
@@ -1407,24 +1028,60 @@ jobs:
         with:
           node-version: '18'
           
+      - name: Install Meilisearch binary
+        run: curl -L https://install.meilisearch.com | sh
+        
+      - name: Start Meilisearch service
+        run: |
+          export MEILI_MASTER_KEY="testkey123"
+          export MEILI_ENV="development"
+          meilisearch &
+          sleep 10
+          curl -f http://localhost:7700/health
+        
       - name: Install dependencies
         run: pnpm install
         
-      - name: Run performance benchmarks
-        run: |
-          pnpm test:meilisearch:real --reporter=verbose
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        
+      - name: Build project
+        run: pnpm run build
+        
+      - name: Run Meilisearch E2E tests
+        run: pnpm test:meilisearch:e2e
         timeout-minutes: 15
+        env:
+          MCP_INSPECTOR_URL: ${{ secrets.MCP_INSPECTOR_URL }}
+          MCP_AUTH_TOKEN: ${{ secrets.MCP_AUTH_TOKEN }}
+          MEILI_MASTER_KEY: "testkey123"
+          
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
 ```
 
-### 5.5 测试覆盖率和验证
+### 5.4 测试覆盖和验证
 
-- **实际运行覆盖率**: 100% 核心功能实际运行测试
-- **端到端流程**: 完整的搜索工作流验证
-- **性能验证**: 实际响应时间和并发测试
-- **错误处理**: 真实错误场景测试
-- **配置验证**: 实际连接和认证测试
+#### 5.4.1 测试矩阵
 
-这个测试方案完全避免了 mock，使用真实的 Meilisearch 实例进行测试，确保功能的实际可用性和可靠性。
+| 测试类型 | 工具 | 覆盖范围 | 预期结果 |
+|---------|------|----------|----------|
+| 单元测试 | Vitest | 配置管理、控制器逻辑 | 90%+ 代码覆盖率 |
+| 集成测试 | Vitest + Docker | 真实 Meilisearch 交互 | 功能完整性验证 |
+| E2E测试 | Playwright | 完整用户场景 | 端到端流程验证 |
+| 性能测试 | Playwright | 响应时间对比 | 性能基准验证 |
+| 故障转移 | Playwright | 错误场景处理 | 容错性验证 |
+
+#### 5.4.2 验证标准
+
+- **功能验证**: 本地搜索结果与云端结果一致性 > 85%
+- **性能验证**: 本地搜索响应时间 < 云端搜索响应时间
+- **可靠性验证**: 故障转移机制 100% 有效
+- **兼容性验证**: 现有 E2E 测试 100% 通过
 
 ### 5.4 测试执行指南
 
@@ -1463,19 +1120,20 @@ jobs:
       
   integration-tests:
     runs-on: ubuntu-latest
-    services:
-      meilisearch:
-        image: getmeili/meilisearch:v1.15
-        env:
-          MEILI_MASTER_KEY: testkey
-          MEILI_ENV: development
-        ports:
-          - 7700:7700
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+      - name: Install Meilisearch binary
+        run: curl -L https://install.meilisearch.com | sh
+      - name: Start Meilisearch
+        run: |
+          export MEILI_MASTER_KEY="testkey"
+          export MEILI_ENV="development"
+          meilisearch &
+          sleep 10
+          curl -f http://localhost:7700/health
       - run: pnpm install
       - run: pnpm test:meilisearch:integration
         env:
@@ -1494,36 +1152,60 @@ jobs:
 
 ## 6. 简化部署与运维方案
 
-### 6.1 Docker 部署
+### 6.1 二进制部署
 
-```yaml
-# docker-compose.meilisearch.yml
-version: '3.8'
+#### 6.1.1 系统服务配置
 
-services:
-  meilisearch:
-    image: getmeili/meilisearch:v1.15
-    container_name: mcpadvisor-meilisearch
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-aSampleMasterKey}
-      MEILI_ENV: ${MEILI_ENV:-development}
-      MEILI_DB_PATH: /meili_data
-      MEILI_HTTP_ADDR: 0.0.0.0:7700
-      MEILI_MAX_INDEXING_MEMORY: 100MB
-      MEILI_MAX_INDEXING_THREADS: 2
-    volumes:
-      - meili_data:/meili_data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+```ini
+# /etc/systemd/system/meilisearch.service
+[Unit]
+Description=Meilisearch
+After=network.target
 
-volumes:
-  meili_data:
+[Service]
+Type=simple
+User=meilisearch
+Group=meilisearch
+ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/meilisearch/meilisearch.toml
+Restart=on-failure
+RestartSec=1
+
+# 环境变量
+Environment=MEILI_MASTER_KEY=your-secure-master-key-here
+Environment=MEILI_ENV=production
+Environment=MEILI_DB_PATH=/var/lib/meilisearch/data
+Environment=MEILI_HTTP_ADDR=0.0.0.0:7700
+Environment=MEILI_LOG_LEVEL=INFO
+Environment=MEILI_MAX_INDEXING_MEMORY=100MB
+Environment=MEILI_MAX_INDEXING_THREADS=2
+
+# 安全配置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/meilisearch
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### 6.1.2 用户和目录配置
+
+```bash
+# 创建专用用户
+sudo useradd --system --shell /bin/false --home /var/lib/meilisearch meilisearch
+
+# 创建必要目录
+sudo mkdir -p /var/lib/meilisearch/data
+sudo mkdir -p /etc/meilisearch
+sudo mkdir -p /var/log/meilisearch
+
+# 设置权限
+sudo chown -R meilisearch:meilisearch /var/lib/meilisearch
+sudo chown -R meilisearch:meilisearch /var/log/meilisearch
+sudo chmod 750 /var/lib/meilisearch
+sudo chmod 750 /var/log/meilisearch
 ```
 
 ### 6.2 基础启动脚本
@@ -1536,10 +1218,14 @@ set -e
 
 echo "🚀 Starting local Meilisearch..."
 
-# Check if Docker is running
-if ! docker info > /dev/null 2>&1; then
-    echo "❌ Docker is not running. Please start Docker first."
-    exit 1
+# Check if Meilisearch binary is available
+if ! command -v meilisearch &> /dev/null; then
+    echo "❌ Meilisearch binary not found. Installing..."
+    curl -L https://install.meilisearch.com | sh
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to install Meilisearch"
+        exit 1
+    fi
 fi
 
 # Set default master key if not provided
@@ -1548,8 +1234,21 @@ if [ -z "$MEILI_MASTER_KEY" ]; then
     echo "Using default master key for development"
 fi
 
-# Start Meilisearch
-docker-compose -f docker-compose.meilisearch.yml up -d
+# Set default environment variables
+export MEILI_ENV="${MEILI_ENV:-development}"
+export MEILI_DB_PATH="${MEILI_DB_PATH:-./meili_data}"
+export MEILI_HTTP_ADDR="${MEILI_HTTP_ADDR:-0.0.0.0:7700}"
+export MEILI_LOG_LEVEL="${MEILI_LOG_LEVEL:-INFO}"
+export MEILI_MAX_INDEXING_MEMORY="${MEILI_MAX_INDEXING_MEMORY:-100MB}"
+export MEILI_MAX_INDEXING_THREADS="${MEILI_MAX_INDEXING_THREADS:-2}"
+
+# Create data directory if it doesn't exist
+mkdir -p "$(dirname "$MEILI_DB_PATH")"
+
+# Start Meilisearch in background
+echo "Starting Meilisearch with data path: $MEILI_DB_PATH"
+meilisearch &
+MEILI_PID=$!
 
 # Wait for health check
 echo "⏳ Waiting for Meilisearch to be ready..."
@@ -1558,6 +1257,7 @@ counter=0
 while ! curl -sf http://localhost:7700/health > /dev/null 2>&1; do
     if [ $counter -eq $timeout ]; then
         echo "❌ Meilisearch failed to start within ${timeout}s"
+        kill $MEILI_PID 2>/dev/null || true
         exit 1
     fi
     counter=$((counter + 1))
@@ -1565,6 +1265,11 @@ while ! curl -sf http://localhost:7700/health > /dev/null 2>&1; do
 done
 
 echo "✅ Meilisearch is ready at http://localhost:7700"
+echo "Process ID: $MEILI_PID"
+echo "To stop: kill $MEILI_PID"
+
+# Keep script running to maintain process
+wait $MEILI_PID
 ```
 
 ### 6.3 基础监控
@@ -1615,14 +1320,14 @@ export class MeilisearchMonitor {
    - 实现环境变量支持
    - 添加配置验证
 
-2. **Docker 部署**
-   - 设置 docker-compose 文件
+2. **二进制部署**
+   - 设置二进制安装脚本
    - 创建启动脚本
    - 验证本地部署
 
 3. **基础测试**
    - 配置测试用例
-   - Docker 启动测试
+   - 二进制启动测试
    - 连接测试
 
 ### 7.2 Phase 2: 核心功能 (3-4 天)
@@ -1695,8 +1400,8 @@ export class MeilisearchMonitor {
 
 ### 9.2 运维风险
 
-- **风险**: Docker 环境问题
-- **应对**: 提供详细部署文档，支持多种部署方式
+- **风险**: 二进制依赖问题
+- **应对**: 提供详细部署文档，支持多种安装方式
 
 - **风险**: 资源占用过高
 - **应对**: 设置资源限制，提供监控工具

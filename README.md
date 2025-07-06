@@ -89,6 +89,10 @@ Search for MCP servers with natural language processing capabilities
 - [User Guide](docs/USER_GUIDE.md) - How to use MCP Advisor
 - [Architecture Documentation](docs/ARCHITECTURE.md) - System architecture details
 - [Technical Details](docs/TECHNICAL_DETAILS.md) - Advanced technical features
+<<<<<<< HEAD
+- [Testing Guide](docs/TESTING.md) - Comprehensive testing documentation
+=======
+>>>>>>> @{-1}
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Search Providers](docs/SEARCH_PROVIDERS.md) - Search provider details
 - [Roadmap](ROADMAP.md) - Future development plans
@@ -265,75 +269,15 @@ For more technical details, see [TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md
 
 ### Testing
 
-MCP Advisor includes comprehensive testing suites to ensure code quality and functionality:
+MCP Advisor includes comprehensive testing suites to ensure code quality and functionality. For detailed testing information including unit tests, integration tests, end-to-end testing, and manual testing procedures, see the [Testing Guide](docs/TESTING.md).
 
-#### Unit Tests
+#### Quick Test Commands
 ```bash
-# Run unit tests
-pnpm run test
+# Run all tests
+pnpm run check && pnpm run test && pnpm run test:e2e
 
-# Run tests in watch mode
-pnpm run test:watch
-
-# Generate coverage report
-pnpm run test:coverage
-```
-
-#### End-to-End Tests
-The project includes automated E2E tests using Playwright that test the complete MCP Inspector workflow:
-
-```bash
-# Run E2E tests with browser UI (recommended for development)
-pnpm run test:e2e:headed
-
-# Run E2E tests in headless mode (CI/CD)
-pnpm run test:e2e
-
-# Debug E2E tests interactively
-pnpm run test:e2e:debug
-```
-
-#### Manual Testing with MCP Inspector
-For manual testing and development, use the MCP Inspector:
-
-```bash
-# Start MCP Inspector with file logging
-ENABLE_FILE_LOGGING=true npx @modelcontextprotocol/inspector node build/index.js
-```
-
-#### Automated E2E Testing Script
-For convenience, use the automated testing script that handles the complete testing workflow:
-
-```bash
-# Run complete E2E test suite (builds, starts inspector, runs tests)
+# Automated E2E testing script
 ./scripts/run-e2e-test.sh
-
-# Available modes:
-./scripts/run-e2e-test.sh headed    # Browser visible (default)
-./scripts/run-e2e-test.sh headless # Background testing
-./scripts/run-e2e-test.sh debug    # Debug mode
-./scripts/run-e2e-test.sh ui       # Playwright UI mode
-```
-
-The automated testing covers:
-- ✅ **Recommendation functionality** - Natural language MCP server discovery
-- ✅ **Installation guide generation** - Automated installation instructions
-- ✅ **Error handling** - Graceful error responses
-- ✅ **Performance testing** - Response time validation
-
-#### Code Quality
-```bash
-# Run linting
-pnpm run lint
-
-# Fix linting issues
-pnpm run lint:fix
-
-# Format code
-pnpm run format
-
-# Check all quality standards
-pnpm run check
 ```
 
 ### Library Usage
@@ -516,50 +460,6 @@ To Implement the above features, we need to:
 - [ ] Support MCP Resources to read log
 - [ ] Utilize Professional Rerank Module like https://github.com/PrithivirajDamodaran/FlashRank or Qwen Rerank Model
 - [ ] Support Cline marketplace: https://api.cline.bot/v1/mcp/marketplace
-
-## Testing
-
-### Manual Testing
-
-Use [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for interactive testing:
-
-```bash 
-ENABLE_FILE_LOGGING=true npx @modelcontextprotocol/inspector node build/index.js
-```
-
-### Automated Testing
-
-The project includes comprehensive automated testing:
-
-#### Quick Test
-```bash
-# Run all tests
-pnpm run check && pnpm run test && pnpm run test:e2e
-```
-
-#### Complete E2E Testing Workflow
-```bash
-# Automated script that builds, starts inspector, and runs tests
-./scripts/run-e2e-test.sh
-```
-
-This automated testing covers:
-- **Recommendation functionality** - Natural language MCP server discovery
-- **Installation guide generation** - Automated installation instructions  
-- **Error handling** - Graceful error responses
-- **Performance validation** - Response time testing
-
-#### Test Structure
-```
-tests/
-├── unit/           # Unit tests for individual components
-├── integration/    # Integration tests for provider interactions
-└── e2e/           # End-to-end tests using Playwright
-```
-
-For detailed testing information, see the [Developer Guide](#developer-quick-start) section.
-
-
 
 ## License
 

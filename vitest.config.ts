@@ -13,8 +13,15 @@ export default defineConfig({
     environment: 'node',
     
     // 测试文件匹配模式
-    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['**/jest-to-vitest.ts', '**/setup.ts', 'node_modules', 'build'],
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: [
+      '**/jest-to-vitest.ts', 
+      '**/setup.ts', 
+      'node_modules', 
+      'build',
+      'tests/e2e/**',  // 排除 E2E 测试文件
+      'tests/**/*.spec.ts'  // 排除 Playwright 测试文件
+    ],
     
     // 设置测试超时时间 (ms)
     testTimeout: 30000,

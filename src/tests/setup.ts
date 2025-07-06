@@ -28,8 +28,9 @@ vi.mock('@xenova/transformers', () => ({
   }
 }));
 
-// 设置全局 fetch 模拟
-global.fetch = vi.fn();
+// 在集成测试中，我们需要真实的网络请求，所以不模拟 fetch
+// 只在特定的单元测试中模拟 fetch，而不是全局模拟
+// global.fetch = vi.fn();
 
 // 模拟 logger 以避免测试中的实际日志记录
 vi.mock('../utils/logger.js', () => ({
