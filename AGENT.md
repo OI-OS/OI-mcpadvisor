@@ -24,3 +24,24 @@
 - **Testing**: Vitest framework, descriptive test names in Chinese, use vi.mock() for mocking
 - **Formatting**: Prettier (single quotes, 2 spaces, trailing commas, 80 char width)
 - **Logging**: Use winston logger from `utils/logger.js`, structured logging
+
+## Security Best Practices
+- **No hardcoded secrets**: Never commit API keys, passwords, or tokens to code
+- **Environment variables**: Use `.env` files for local development, GitHub Secrets for CI/CD
+- **Default security**: Avoid weak default passwords/keys, force users to set secure values
+- **Error handling**: Scripts must return proper exit codes (0 for success, 1+ for failure)
+- **Secrets management**: Use `process.env.VARIABLE_NAME` with required validation
+
+## Testing Best Practices  
+- **Environment isolation**: Save/restore environment variables in beforeEach/afterEach
+- **Smart waiting**: Use `page.waitForFunction()` instead of fixed `page.waitForTimeout()`
+- **Content validation**: Verify result content relevance, not just quantity
+- **Cross-platform**: Use relative paths `$(pwd)` instead of hardcoded absolute paths
+- **Timeout configuration**: Set appropriate timeouts (CI: 180s, local: 60s)
+
+## Common Issues & Solutions
+- **Interface naming**: Use `IClassName` for interfaces to avoid class/interface conflicts
+- **Path portability**: Replace `/Users/username/...` with `$(pwd)/...` in scripts
+- **CI timeouts**: GitHub Actions needs longer timeouts for container health checks
+- **Test pollution**: Always clean up environment variables modified during tests
+- **Health checks**: Ensure scripts return correct exit codes for monitoring
