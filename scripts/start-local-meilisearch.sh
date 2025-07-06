@@ -1,6 +1,6 @@
 #!/bin/bash
 # 启动本地 Meilisearch 实例
-# 支持二进制文件和Docker两种方式
+# 使用二进制文件
 
 set -e
 
@@ -16,7 +16,7 @@ fi
 
 # Check if meilisearch binary exists
 if [ -f "./meilisearch" ]; then
-    echo "📦 Found Meilisearch binary, starting with binary..."
+    echo "📦 Found Meilisearch binary, starting..."
     
     # Check if already running
     if lsof -i :7700 > /dev/null 2>&1; then
@@ -29,21 +29,10 @@ if [ -f "./meilisearch" ]; then
     MEILISEARCH_PID=$!
     echo "🔄 Started Meilisearch with PID: $MEILISEARCH_PID"
     
-elif command -v docker &> /dev/null; then
-    echo "🐳 Using Docker to start Meilisearch..."
-    
-    # Check if Docker is running
-    if ! docker info > /dev/null 2>&1; then
-        echo "❌ Docker is not running. Please start Docker first."
-        exit 1
-    fi
-    
-    # Start with Docker
-    docker compose -f docker-compose.meilisearch.yml up -d
-    
 else
-    echo "❌ Neither Meilisearch binary nor Docker found"
-    echo "Please install Meilisearch or Docker first"
+    echo "❌ Meilisearch binary not found"
+    echo "Please install Meilisearch first:"
+    echo "  curl -L https://install.meilisearch.com | sh"
     exit 1
 fi
 
@@ -66,14 +55,9 @@ done
 echo "✅ Meilisearch is ready at http://localhost:7700"
 echo "🔑 Master key: $MEILI_MASTER_KEY"
 echo ""
-if [ -f "./meilisearch" ]; then
-    echo "To stop Meilisearch, run:"
-    echo "  pkill -f meilisearch"
-    echo "  # or find PID: lsof -i :7700 and kill <PID>"
-else
-    echo "To stop Meilisearch, run:"
-    echo "  docker compose -f docker-compose.meilisearch.yml down"
-fi
+echo "To stop Meilisearch, run:"
+echo "  pkill -f meilisearch"
+echo "  # or find PID: lsof -i :7700 and kill <PID>"
 echo ""
 echo "To use local Meilisearch in MCPAdvisor, set these environment variables:"
 echo "  export MEILISEARCH_INSTANCE=local"

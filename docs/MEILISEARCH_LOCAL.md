@@ -77,7 +77,7 @@ pnpm meilisearch:health
 - ✅ **Automatic Failover**: Falls back to cloud instance if local fails
 - ✅ **Health Monitoring**: Built-in health checks and monitoring
 - ✅ **Environment-based Configuration**: Easy switching between local/cloud
-- ✅ **Docker Deployment**: One-command local setup
+- ✅ **Binary Installation**: Fast and lightweight setup
 - ✅ **Comprehensive Testing**: Unit, integration, and E2E tests
 - ✅ **Performance Monitoring**: Response time tracking and comparison
 
@@ -104,14 +104,14 @@ When `MEILISEARCH_INSTANCE=cloud`:
 
 ### Local Meilisearch Won't Start
 ```bash
-# Check Docker
-docker info
+# Check if binary exists
+ls -la ./meilisearch
 
 # Check port conflicts
 lsof -i :7700
 
 # View detailed logs
-docker-compose -f docker-compose.meilisearch.yml logs
+tail -f meilisearch.log
 ```
 
 ### Tests Failing
@@ -130,15 +130,15 @@ MEILISEARCH_INSTANCE=local pnpm test:meilisearch:local
 ### Performance Issues
 - Check available memory: Local Meilisearch is configured with 256MB limit
 - Monitor response times using the built-in monitoring tools
-- Consider adjusting `MEILI_MAX_INDEXING_MEMORY` in docker-compose.yml
+- Consider adjusting Meilisearch configuration for your system resources
 
 ## Production Deployment
 
 For production use:
 
 1. **Security**: Use a strong master key
-2. **Resources**: Adjust memory and CPU limits in docker-compose.yml
-3. **Persistence**: Ensure volume mounts are properly configured
+2. **Resources**: Monitor system resources and adjust as needed
+3. **Persistence**: Ensure data directory permissions are correct
 4. **Monitoring**: Enable the monitoring system
 5. **Backup**: Implement regular data backups
 

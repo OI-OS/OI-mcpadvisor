@@ -287,7 +287,7 @@ gantt
     section Phase 1
     配置系统重构          :active, p1-1, 2024-07-05, 3d
     抽象工厂实现          :p1-2, after p1-1, 2d
-    Docker部署方案        :p1-3, after p1-2, 2d
+    二进制部署方案        :p1-3, after p1-2, 2d
     
     section Phase 2
     客户端管理器实现      :p2-1, after p1-3, 3d
@@ -310,59 +310,61 @@ gantt
 - 性能基准测试
 - 部署文档完善
 
-### 3.2 Docker 部署方案
+### 3.2 本地二进制部署方案
 
-```yaml
-# docker-compose.meilisearch.yml
-version: '3.8'
+#### 3.2.1 Meilisearch 二进制安装
 
-services:
-  meilisearch:
-    image: getmeili/meilisearch:v1.15
-    container_name: mcpadvisor-meilisearch
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-aSampleMasterKey}
-      MEILI_ENV: ${MEILI_ENV:-development}
-      MEILI_DB_PATH: /meili_data
-      MEILI_HTTP_ADDR: 0.0.0.0:7700
-      MEILI_LOG_LEVEL: INFO
-      MEILI_MAX_INDEXING_MEMORY: 100MB
-      MEILI_MAX_INDEXING_THREADS: 2
-    volumes:
-      - meili_data:/meili_data
-      - meili_logs:/var/log/meilisearch
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '1'
-        reservations:
-          memory: 128M
-          cpus: '0.5'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+```bash
+# 使用官方安装脚本
+curl -L https://install.meilisearch.com | sh
 
-  nginx:
-    image: nginx:alpine
-    container_name: mcpadvisor-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - meilisearch
-    restart: unless-stopped
+# 或者手动下载
+# Linux/macOS
+wget https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-linux-amd64
+chmod +x meilisearch-linux-amd64
+sudo mv meilisearch-linux-amd64 /usr/local/bin/meilisearch
 
-volumes:
-  meili_data:
-  meili_logs:
+# Windows
+curl -L https://github.com/meilisearch/meilisearch/releases/latest/download/meilisearch-windows-amd64.exe -o meilisearch.exe
+```
+
+#### 3.2.2 配置文件
+
+```toml
+# meilisearch.toml
+db_path = "./meili_data"
+env = "development"
+http_addr = "0.0.0.0:7700"
+log_level = "INFO"
+max_indexing_memory = "100MB"
+max_indexing_threads = 2
+
+# 安全配置
+master_key = "your-secure-master-key-here"
+ssl_cert_path = ""
+ssl_key_path = ""
+
+# 性能配置
+max_task_db_size = "100GB"
+max_index_size = "100GB"
+```
+
+#### 3.2.3 启动配置
+
+```bash
+# 直接启动
+meilisearch --config-file-path ./meilisearch.toml
+
+# 或使用环境变量
+export MEILI_MASTER_KEY="your-secure-master-key-here"
+export MEILI_ENV="development"
+export MEILI_DB_PATH="./meili_data"
+export MEILI_HTTP_ADDR="0.0.0.0:7700"
+export MEILI_LOG_LEVEL="INFO"
+export MEILI_MAX_INDEXING_MEMORY="100MB"
+export MEILI_MAX_INDEXING_THREADS="2"
+
+meilisearch
 ```
 
 ### 3.3 数据初始化方案
@@ -1003,6 +1005,9 @@ jobs:
         with:
           node-version: '18'
           
+      - name: Install Meilisearch binary
+        run: curl -L https://install.meilisearch.com | sh
+        
       - name: Install dependencies
         run: pnpm install
         
@@ -1023,6 +1028,17 @@ jobs:
         with:
           node-version: '18'
           
+      - name: Install Meilisearch binary
+        run: curl -L https://install.meilisearch.com | sh
+        
+      - name: Start Meilisearch service
+        run: |
+          export MEILI_MASTER_KEY="testkey123"
+          export MEILI_ENV="development"
+          meilisearch &
+          sleep 10
+          curl -f http://localhost:7700/health
+        
       - name: Install dependencies
         run: pnpm install
         
@@ -1038,6 +1054,7 @@ jobs:
         env:
           MCP_INSPECTOR_URL: ${{ secrets.MCP_INSPECTOR_URL }}
           MCP_AUTH_TOKEN: ${{ secrets.MCP_AUTH_TOKEN }}
+          MEILI_MASTER_KEY: "testkey123"
           
       - uses: actions/upload-artifact@v3
         if: always()
@@ -1103,19 +1120,20 @@ jobs:
       
   integration-tests:
     runs-on: ubuntu-latest
-    services:
-      meilisearch:
-        image: getmeili/meilisearch:v1.15
-        env:
-          MEILI_MASTER_KEY: testkey
-          MEILI_ENV: development
-        ports:
-          - 7700:7700
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
+      - name: Install Meilisearch binary
+        run: curl -L https://install.meilisearch.com | sh
+      - name: Start Meilisearch
+        run: |
+          export MEILI_MASTER_KEY="testkey"
+          export MEILI_ENV="development"
+          meilisearch &
+          sleep 10
+          curl -f http://localhost:7700/health
       - run: pnpm install
       - run: pnpm test:meilisearch:integration
         env:
@@ -1134,36 +1152,60 @@ jobs:
 
 ## 6. 简化部署与运维方案
 
-### 6.1 Docker 部署
+### 6.1 二进制部署
 
-```yaml
-# docker-compose.meilisearch.yml
-version: '3.8'
+#### 6.1.1 系统服务配置
 
-services:
-  meilisearch:
-    image: getmeili/meilisearch:v1.15
-    container_name: mcpadvisor-meilisearch
-    ports:
-      - "7700:7700"
-    environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-aSampleMasterKey}
-      MEILI_ENV: ${MEILI_ENV:-development}
-      MEILI_DB_PATH: /meili_data
-      MEILI_HTTP_ADDR: 0.0.0.0:7700
-      MEILI_MAX_INDEXING_MEMORY: 100MB
-      MEILI_MAX_INDEXING_THREADS: 2
-    volumes:
-      - meili_data:/meili_data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+```ini
+# /etc/systemd/system/meilisearch.service
+[Unit]
+Description=Meilisearch
+After=network.target
 
-volumes:
-  meili_data:
+[Service]
+Type=simple
+User=meilisearch
+Group=meilisearch
+ExecStart=/usr/local/bin/meilisearch --config-file-path /etc/meilisearch/meilisearch.toml
+Restart=on-failure
+RestartSec=1
+
+# 环境变量
+Environment=MEILI_MASTER_KEY=your-secure-master-key-here
+Environment=MEILI_ENV=production
+Environment=MEILI_DB_PATH=/var/lib/meilisearch/data
+Environment=MEILI_HTTP_ADDR=0.0.0.0:7700
+Environment=MEILI_LOG_LEVEL=INFO
+Environment=MEILI_MAX_INDEXING_MEMORY=100MB
+Environment=MEILI_MAX_INDEXING_THREADS=2
+
+# 安全配置
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/meilisearch
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### 6.1.2 用户和目录配置
+
+```bash
+# 创建专用用户
+sudo useradd --system --shell /bin/false --home /var/lib/meilisearch meilisearch
+
+# 创建必要目录
+sudo mkdir -p /var/lib/meilisearch/data
+sudo mkdir -p /etc/meilisearch
+sudo mkdir -p /var/log/meilisearch
+
+# 设置权限
+sudo chown -R meilisearch:meilisearch /var/lib/meilisearch
+sudo chown -R meilisearch:meilisearch /var/log/meilisearch
+sudo chmod 750 /var/lib/meilisearch
+sudo chmod 750 /var/log/meilisearch
 ```
 
 ### 6.2 基础启动脚本
@@ -1176,10 +1218,14 @@ set -e
 
 echo "🚀 Starting local Meilisearch..."
 
-# Check if Docker is running
-if ! docker info > /dev/null 2>&1; then
-    echo "❌ Docker is not running. Please start Docker first."
-    exit 1
+# Check if Meilisearch binary is available
+if ! command -v meilisearch &> /dev/null; then
+    echo "❌ Meilisearch binary not found. Installing..."
+    curl -L https://install.meilisearch.com | sh
+    if [ $? -ne 0 ]; then
+        echo "❌ Failed to install Meilisearch"
+        exit 1
+    fi
 fi
 
 # Set default master key if not provided
@@ -1188,8 +1234,21 @@ if [ -z "$MEILI_MASTER_KEY" ]; then
     echo "Using default master key for development"
 fi
 
-# Start Meilisearch
-docker-compose -f docker-compose.meilisearch.yml up -d
+# Set default environment variables
+export MEILI_ENV="${MEILI_ENV:-development}"
+export MEILI_DB_PATH="${MEILI_DB_PATH:-./meili_data}"
+export MEILI_HTTP_ADDR="${MEILI_HTTP_ADDR:-0.0.0.0:7700}"
+export MEILI_LOG_LEVEL="${MEILI_LOG_LEVEL:-INFO}"
+export MEILI_MAX_INDEXING_MEMORY="${MEILI_MAX_INDEXING_MEMORY:-100MB}"
+export MEILI_MAX_INDEXING_THREADS="${MEILI_MAX_INDEXING_THREADS:-2}"
+
+# Create data directory if it doesn't exist
+mkdir -p "$(dirname "$MEILI_DB_PATH")"
+
+# Start Meilisearch in background
+echo "Starting Meilisearch with data path: $MEILI_DB_PATH"
+meilisearch &
+MEILI_PID=$!
 
 # Wait for health check
 echo "⏳ Waiting for Meilisearch to be ready..."
@@ -1198,6 +1257,7 @@ counter=0
 while ! curl -sf http://localhost:7700/health > /dev/null 2>&1; do
     if [ $counter -eq $timeout ]; then
         echo "❌ Meilisearch failed to start within ${timeout}s"
+        kill $MEILI_PID 2>/dev/null || true
         exit 1
     fi
     counter=$((counter + 1))
@@ -1205,6 +1265,11 @@ while ! curl -sf http://localhost:7700/health > /dev/null 2>&1; do
 done
 
 echo "✅ Meilisearch is ready at http://localhost:7700"
+echo "Process ID: $MEILI_PID"
+echo "To stop: kill $MEILI_PID"
+
+# Keep script running to maintain process
+wait $MEILI_PID
 ```
 
 ### 6.3 基础监控
@@ -1255,14 +1320,14 @@ export class MeilisearchMonitor {
    - 实现环境变量支持
    - 添加配置验证
 
-2. **Docker 部署**
-   - 设置 docker-compose 文件
+2. **二进制部署**
+   - 设置二进制安装脚本
    - 创建启动脚本
    - 验证本地部署
 
 3. **基础测试**
    - 配置测试用例
-   - Docker 启动测试
+   - 二进制启动测试
    - 连接测试
 
 ### 7.2 Phase 2: 核心功能 (3-4 天)
@@ -1335,8 +1400,8 @@ export class MeilisearchMonitor {
 
 ### 9.2 运维风险
 
-- **风险**: Docker 环境问题
-- **应对**: 提供详细部署文档，支持多种部署方式
+- **风险**: 二进制依赖问题
+- **应对**: 提供详细部署文档，支持多种安装方式
 
 - **风险**: 资源占用过高
 - **应对**: 设置资源限制，提供监控工具

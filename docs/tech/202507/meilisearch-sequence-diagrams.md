@@ -301,35 +301,38 @@ sequenceDiagram
     end
 ```
 
-## 8. 部署与升级时序
+## 8. 二进制部署与升级时序
 
 ```mermaid
 sequenceDiagram
     participant Deploy as DeploymentService
-    participant Docker as DockerEngine
+    participant Binary as BinaryManager
     participant HC as HealthChecker
-    participant LB as LoadBalancer
+    participant Service as SystemService
     participant App as Application
     
-    Deploy->>Docker: pullImage(meilisearch:latest)
-    Docker-->>Deploy: image pulled
-    Deploy->>Docker: createContainer(config)
-    Docker-->>Deploy: container created
-    Deploy->>Docker: startContainer()
-    Docker-->>Deploy: container started
+    Deploy->>Binary: downloadBinary(version)
+    Binary-->>Deploy: binary downloaded
+    Deploy->>Binary: verifyChecksum()
+    Binary-->>Deploy: checksum verified
+    Deploy->>Service: stopService()
+    Service-->>Deploy: service stopped
+    Deploy->>Binary: installBinary()
+    Binary-->>Deploy: binary installed
+    Deploy->>Service: startService()
+    Service-->>Deploy: service started
     
     Deploy->>HC: waitForHealthy()
     
     loop Health Check
-        HC->>Docker: healthCheck()
-        Docker-->>HC: health status
+        HC->>Service: healthCheck()
+        Service-->>HC: health status
         
         alt Healthy
             HC-->>Deploy: service ready
-            Deploy->>LB: addBackend(newInstance)
-            LB->>App: routeTraffic(newInstance)
-            Deploy->>Docker: removeOldContainer()
-            Docker-->>Deploy: old container removed
+            Deploy->>App: routeTraffic(newInstance)
+            Deploy->>Binary: cleanupOldBinary()
+            Binary-->>Deploy: cleanup complete
         else Unhealthy
             HC->>HC: wait(checkInterval)
         end
@@ -377,6 +380,6 @@ stateDiagram-v2
 5. **配置管理**: 热更新、验证、应用
 6. **错误处理**: 多层次错误恢复机制
 7. **性能监控**: 指标收集、性能分析、告警
-8. **部署升级**: 滚动更新、健康检查、流量切换
+8. **二进制部署**: 版本升级、健康检查、服务切换
 
 这些时序图为开发和运维团队提供了清晰的系统行为指南，有助于理解系统的复杂交互过程和故障处理机制。

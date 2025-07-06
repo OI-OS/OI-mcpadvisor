@@ -40,7 +40,12 @@ playwright-report/
 # private docs
 recommend-mcp-prd.md
 
+# Meilisearch data and binaries
+data.ms/
+dumps/
+meilisearch
+
 # Optional: package manager locks
 # Uncomment if you want to ignore these
-# package-lock.json
+package-lock.json
 # yarn.lock
