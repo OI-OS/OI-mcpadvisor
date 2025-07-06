@@ -46,7 +46,7 @@ export class MeilisearchConfigManager {
     return {
       type: 'cloud',
       host: 'https://edge.meilisearch.com',
-      apiKey: process.env.MEILISEARCH_CLOUD_API_KEY || 'e43e778dabc417c862cafbe4da7cdd6f7fcb80ba36b63adb1e470527e76061f0',
+      apiKey: process.env.MEILISEARCH_CLOUD_API_KEY || 'your-cloud-api-key-here',
       indexName: 'mcp_server_info_from_getmcp_io'
     };
   }
@@ -62,7 +62,7 @@ export class MeilisearchConfigManager {
       return {
         type: 'cloud',
         host: 'https://edge.meilisearch.com',
-        apiKey: process.env.MEILISEARCH_CLOUD_API_KEY || 'e43e778dabc417c862cafbe4da7cdd6f7fcb80ba36b63adb1e470527e76061f0',
+        apiKey: process.env.MEILISEARCH_CLOUD_API_KEY || 'your-cloud-api-key-here',
         indexName: 'mcp_server_info_from_getmcp_io'
       };
     }
@@ -77,6 +77,6 @@ export class MeilisearchConfigManager {
  */
 export const MEILISEARCH_CONFIG = {
   host: 'https://edge.meilisearch.com',
-  apiKey: 'e43e778dabc417c862cafbe4da7cdd6f7fcb80ba36b63adb1e470527e76061f0',
+  apiKey: 'your-cloud-api-key-here',
   indexName: 'mcp_server_info_from_getmcp_io',
 };

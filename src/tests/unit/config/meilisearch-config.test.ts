@@ -93,12 +93,12 @@ describe('MeilisearchConfigManager', () => {
   
   it('should handle custom cloud API key from environment', () => {
     process.env.MEILISEARCH_INSTANCE = 'cloud';
-    process.env.MEILISEARCH_CLOUD_API_KEY = 'custom-cloud-key';
+    process.env.MEILISEARCH_CLOUD_API_KEY = 'test-custom-key';
     
     const manager = MeilisearchConfigManager.getInstance();
     const config = manager.getActiveConfig();
     
     expect(config.type).toBe('cloud');
-    expect(config.apiKey).toBe('custom-cloud-key');
+    expect(config.apiKey).toBe('test-custom-key');
   });
 });

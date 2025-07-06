@@ -25,6 +25,11 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
   let originalEnvVars: Record<string, string | undefined> = {};
   
   test.beforeEach(async ({ page }) => {
+    // Skip E2E tests in CI if MCP_AUTH_TOKEN is not available
+    if (!TEST_CONFIG.authToken) {
+      test.skip(true, 'Skipping E2E tests: MCP_AUTH_TOKEN environment variable not set');
+    }
+    
     // 保存原始环境变量
     originalEnvVars = {
       MEILISEARCH_INSTANCE: process.env.MEILISEARCH_INSTANCE,
@@ -37,11 +42,6 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     process.env.MEILISEARCH_INSTANCE = 'local';
     process.env.MEILISEARCH_LOCAL_HOST = process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700';
     process.env.MEILISEARCH_MASTER_KEY = process.env.TEST_MEILISEARCH_KEY || 'testkey';
-    
-    // 构建完整URL
-    if (!TEST_CONFIG.authToken) {
-      throw new Error('MCP_AUTH_TOKEN 环境变量未设置');
-    }
     
     fullUrl = `${TEST_CONFIG.baseUrl}/?MCP_PROXY_AUTH_TOKEN=${TEST_CONFIG.authToken}`;
     

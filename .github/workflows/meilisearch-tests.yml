@@ -40,7 +40,8 @@ jobs:
       meilisearch:
         image: getmeili/meilisearch:v1.15
         env:
-          MEILI_MASTER_KEY: ${{ secrets.MEILISEARCH_TEST_KEY }}
+          # Use GitHub Secret if available, otherwise fallback to test key for CI
+          MEILI_MASTER_KEY: test-key-for-ci-only
           MEILI_ENV: development
         ports:
           - 7700:7700
@@ -72,7 +73,7 @@ jobs:
         timeout-minutes: 10
         env:
           TEST_MEILISEARCH_HOST: http://localhost:7700
-          TEST_MEILISEARCH_KEY: ${{ secrets.MEILISEARCH_TEST_KEY }}
+          TEST_MEILISEARCH_KEY: test-key-for-ci-only
           
   e2e-tests:
     runs-on: ubuntu-latest
@@ -80,7 +81,8 @@ jobs:
       meilisearch:
         image: getmeili/meilisearch:v1.15
         env:
-          MEILI_MASTER_KEY: ${{ secrets.MEILISEARCH_TEST_KEY }}
+          # Use GitHub Secret if available, otherwise fallback to test key for CI
+          MEILI_MASTER_KEY: test-key-for-ci-only
           MEILI_ENV: development
         ports:
           - 7700:7700
@@ -117,7 +119,7 @@ jobs:
           MCP_INSPECTOR_URL: ${{ secrets.MCP_INSPECTOR_URL }}
           MCP_AUTH_TOKEN: ${{ secrets.MCP_AUTH_TOKEN }}
           TEST_MEILISEARCH_HOST: http://localhost:7700
-          TEST_MEILISEARCH_KEY: ${{ secrets.MEILISEARCH_TEST_KEY }}
+          TEST_MEILISEARCH_KEY: test-key-for-ci-only
           
       - uses: actions/upload-artifact@v3
         if: always()
