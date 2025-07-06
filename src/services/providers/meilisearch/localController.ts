@@ -14,6 +14,8 @@ export interface ILocalMeilisearchController {
   search(query: string, options?: Record<string, any>): Promise<any>;
   healthCheck(): Promise<boolean>;
   addDocuments(documents: any[]): Promise<any>;
+  createIndex(): Promise<any>;
+  configureSearchAttributes(): Promise<void>;
 }
 
 /**
@@ -55,10 +57,12 @@ export class LocalMeilisearchController implements ILocalMeilisearchController {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      await this.client.health();
+      const result = await this.client.health();
+      logger.debug('Local Meilisearch health check successful:', result);
       return true;
     } catch (error) {
       logger.warn('Local Meilisearch health check failed:', error);
+      console.error('Health check error details:', error); // 临时调试
       return false;
     }
   }

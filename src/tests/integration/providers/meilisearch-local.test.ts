@@ -11,7 +11,7 @@ import { MeilisearchInstanceConfig } from '../../../config/meilisearch.js';
 const TEST_CONFIG: MeilisearchInstanceConfig = {
   type: 'local',
   host: process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700',
-  masterKey: process.env.TEST_MEILISEARCH_KEY || 'testkey',
+  masterKey: process.env.TEST_MEILISEARCH_KEY || process.env.MEILISEARCH_MASTER_KEY || 'developmentKey123',
   indexName: 'mcp_servers_test'
 };
 
@@ -23,20 +23,21 @@ describe('Local Meilisearch Provider Integration', () => {
     // 创建控制器实例
     controller = new LocalMeilisearchController(TEST_CONFIG);
     
+    console.log('Test config:', TEST_CONFIG);
+    
     // 检查 Meilisearch 是否可用
     try {
+      console.log('Checking Meilisearch health...');
       const isHealthy = await controller.healthCheck();
+      console.log('Health check result:', isHealthy);
+      
       if (isHealthy) {
         isMeilisearchAvailable = true;
         
         // 创建测试索引
         try {
-          if ('createIndex' in controller) {
-            await (controller as any).createIndex();
-          }
-          if ('configureSearchAttributes' in controller) {
-            await (controller as any).configureSearchAttributes();
-          }
+          await controller.createIndex();
+          await controller.configureSearchAttributes();
           
           // 添加测试数据
           const testDocuments = [
