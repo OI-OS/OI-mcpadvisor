@@ -10,7 +10,7 @@ import logger from '../../../utils/logger.js';
 /**
  * 本地 Meilisearch 控制器接口
  */
-export interface LocalMeilisearchController {
+export interface ILocalMeilisearchController {
   search(query: string, options?: Record<string, any>): Promise<any>;
   healthCheck(): Promise<boolean>;
   addDocuments(documents: any[]): Promise<any>;
@@ -19,7 +19,7 @@ export interface LocalMeilisearchController {
 /**
  * 本地 Meilisearch 控制器实现
  */
-export class LocalMeilisearchController implements LocalMeilisearchController {
+export class LocalMeilisearchController implements ILocalMeilisearchController {
   private client: MeiliSearch;
   private config: MeilisearchInstanceConfig;
   

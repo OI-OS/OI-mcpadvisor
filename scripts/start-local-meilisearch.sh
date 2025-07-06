@@ -11,10 +11,12 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Set default master key if not provided
+# Check if master key is provided
 if [ -z "$MEILI_MASTER_KEY" ]; then
-    export MEILI_MASTER_KEY="developmentKey123"
-    echo "Using default master key for development"
+    echo "❌ MEILI_MASTER_KEY environment variable is required"
+    echo "Please set it to a secure value:"
+    echo "  export MEILI_MASTER_KEY=your_secure_master_key_here"
+    exit 1
 fi
 
 # Start Meilisearch

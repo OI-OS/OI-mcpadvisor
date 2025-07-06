@@ -36,7 +36,7 @@ echo "✅ 构建完成"
 # 第二步：启动 MCP Inspector
 echo ""
 echo "🔄 启动 MCP Inspector..."
-ENABLE_FILE_LOGGING=true mcp-inspector node /Users/mac/Desktop/code-open/mcpadvisor/build/index.js > mcp-inspector.log 2>&1 &
+ENABLE_FILE_LOGGING=true mcp-inspector node "$(pwd)/build/index.js" > mcp-inspector.log 2>&1 &
 MCP_INSPECTOR_PID=$!
 
 echo "⏳ 等待 MCP Inspector 启动..."

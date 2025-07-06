@@ -7,7 +7,7 @@ services:
     ports:
       - "7700:7700"
     environment:
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-aSampleMasterKey}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?Please set MEILI_MASTER_KEY environment variable}
       MEILI_ENV: ${MEILI_ENV:-development}
       MEILI_DB_PATH: /meili_data
       MEILI_HTTP_ADDR: 0.0.0.0:7700

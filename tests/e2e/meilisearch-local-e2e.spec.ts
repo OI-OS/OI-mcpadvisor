@@ -22,8 +22,17 @@ function extractResultTitles(content: string): string[] {
 
 test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
   let fullUrl: string;
+  let originalEnvVars: Record<string, string | undefined> = {};
   
   test.beforeEach(async ({ page }) => {
+    // 保存原始环境变量
+    originalEnvVars = {
+      MEILISEARCH_INSTANCE: process.env.MEILISEARCH_INSTANCE,
+      MEILISEARCH_LOCAL_HOST: process.env.MEILISEARCH_LOCAL_HOST,
+      MEILISEARCH_MASTER_KEY: process.env.MEILISEARCH_MASTER_KEY,
+      MEILISEARCH_INDEX_NAME: process.env.MEILISEARCH_INDEX_NAME
+    };
+    
     // 设置环境变量启用本地 Meilisearch
     process.env.MEILISEARCH_INSTANCE = 'local';
     process.env.MEILISEARCH_LOCAL_HOST = process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700';
@@ -48,6 +57,17 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     // 列出可用工具
     await page.getByRole('button', { name: 'List Tools' }).click();
     await page.waitForTimeout(1000);
+  });
+  
+  test.afterEach(async () => {
+    // 恢复原始环境变量
+    Object.entries(originalEnvVars).forEach(([key, value]) => {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    });
   });
   
   test('本地 Meilisearch 搜索功能验证', async ({ page }) => {
@@ -131,7 +151,13 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
       
       const startTime = Date.now();
       await page.getByRole('button', { name: 'Run Tool' }).click();
-      await page.waitForTimeout(5000);
+      
+      // 等待结果出现而不是固定超时
+      await page.waitForFunction(() => {
+        const content = document.body.textContent || '';
+        return content.includes('Title:') || content.includes('error') || content.includes('failed');
+      }, { timeout: 15000 });
+      
       const endTime = Date.now();
       
       const responseTime = endTime - startTime;
@@ -292,6 +318,31 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     // 验证两者都有结果
     expect(cloudResults.length).toBeGreaterThan(0);
     expect(localResults.length).toBeGreaterThan(0);
+    
+    // 验证结果内容的相关性（至少有一些共同的关键词）
+    const hasRelevantResults = cloudResults.some(title => 
+      title.toLowerCase().includes('data') || 
+      title.toLowerCase().includes('file') || 
+      title.toLowerCase().includes('analysis')
+    ) && localResults.some(title => 
+      title.toLowerCase().includes('data') || 
+      title.toLowerCase().includes('file') || 
+      title.toLowerCase().includes('analysis')
+    );
+    
+    expect(hasRelevantResults).toBe(true);
+    
+    // 检查是否有重复的结果（表明数据同步正确）
+    const commonResults = cloudResults.filter(cloudTitle => 
+      localResults.some(localTitle => localTitle === cloudTitle)
+    );
+    
+    console.log(`共同结果数量: ${commonResults.length}`);
+    if (commonResults.length > 0) {
+      console.log('✅ 发现相同结果，数据同步正常');
+    } else {
+      console.log('⚠️  没有发现完全相同的结果，可能存在数据同步问题');
+    }
     
     await page.screenshot({ 
       path: 'test-results/data-consistency-test.png',

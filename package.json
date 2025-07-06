@@ -84,7 +84,7 @@
     "meilisearch:start": "./scripts/start-local-meilisearch.sh",
     "meilisearch:stop": "docker-compose -f docker-compose.meilisearch.yml down",
     "meilisearch:logs": "docker-compose -f docker-compose.meilisearch.yml logs -f",
-    "meilisearch:health": "curl -f http://localhost:7700/health || echo 'Meilisearch not running'",
+    "meilisearch:health": "curl -f http://localhost:7700/health || (echo 'Meilisearch not running' && exit 1)",
     "prepare": "husky",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
