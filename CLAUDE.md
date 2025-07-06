@@ -11,6 +11,8 @@ MCPAdvisor is a TypeScript-based CLI tool for discovering and recommending MCP (
 - `pnpm run test:watch` - Run tests in watch mode
 - `pnpm run test:coverage` - Run tests with coverage report
 - `pnpm run test:jest` - Run Jest tests (alternative test runner)
+- `pnpm run test:e2e` - Run end-to-end tests with Playwright
+- `pnpm run test:meilisearch:e2e` - Smart Meilisearch E2E testing (auto-starts services)
 
 ### Code Quality
 - `pnpm run lint` - Run ESLint

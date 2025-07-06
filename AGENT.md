@@ -4,9 +4,20 @@
 - **Build**: `pnpm run build` (compiles TypeScript to build/)
 - **Test**: `pnpm test` (runs vitest), `pnpm run test:watch` (watch mode)
 - **Single test**: `pnpm test -- filename.test.ts` or `pnpm test -- --grep "test name"`
+- **E2E Test**: `pnpm run test:e2e` (Playwright E2E tests)
+- **Meilisearch E2E**: `pnpm test:meilisearch:e2e` (smart automated Meilisearch testing)
 - **Lint**: `pnpm run lint` (ESLint), `pnpm run lint:fix` (auto-fix)
 - **Format**: `pnpm run format` (Prettier), `pnpm run format:check` (check only)
 - **Type check**: `tsc --noEmit` or `pnpm run check` (lint + format check)
+- **All quality checks**: `pnpm run check && pnpm run test && pnpm run test:e2e`
+
+## Testing Strategy
+- **Unit Tests**: Test individual components with vitest (`src/tests/unit/`)
+- **Integration Tests**: Test provider interactions (`src/tests/integration/`)
+- **E2E Tests**: Test complete workflows with Playwright (`tests/e2e/`)
+- **Smart Automation**: `./scripts/run-meilisearch-e2e.sh` auto-starts all services
+- **Quality Gate**: All tests must pass before merging
+- **Documentation**: See [docs/TESTING.md](docs/TESTING.md) for comprehensive testing guide
 
 ## Architecture
 - **Main**: ESM TypeScript project with Node.js MCP server
