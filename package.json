@@ -75,7 +75,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "test:meilisearch": "vitest run src/tests/**/*meilisearch*.test.ts",
+    "test:meilisearch": "vitest run --reporter=verbose --run src/tests/unit/config/meilisearch-config.test.ts src/tests/unit/services/meilisearch-failover.test.ts src/tests/integration/providers/meilisearch-local.test.ts",
     "test:meilisearch:local": "vitest run src/tests/integration/providers/meilisearch-local.test.ts",
     "test:meilisearch:config": "vitest run src/tests/unit/config/meilisearch-config.test.ts",
     "test:meilisearch:failover": "vitest run src/tests/unit/services/meilisearch-failover.test.ts",
