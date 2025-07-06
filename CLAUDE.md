@@ -227,6 +227,20 @@ healthcheck:
 - **Performance**: Tests should execute quickly
 - **Environment isolation**: Save/restore environment variables in beforeEach/afterEach
 - **Content validation**: Verify result content relevance, not just quantity
+- **Network requests**: Avoid global mocking that blocks integration tests
+
+### Integration Test Best Practices
+- **Real network requests**: Integration tests should use real HTTP requests, not mocks
+- **Global fetch mocking**: Avoid `global.fetch = vi.fn()` in setup - it breaks HTTP clients
+- **Targeted mocking**: Only mock specific functions in individual test files
+- **API key configuration**: Use environment variable fallbacks for test configurations
+- **Service availability**: Always check service health before running integration tests
+
+### Common Integration Test Issues
+- **Fetch mocking conflicts**: Global fetch mocks prevent HTTP clients from working
+- **API key mismatches**: Test configurations must use correct authentication
+- **Service availability**: Tests fail if external services (like Meilisearch) aren't running
+- **Environment variables**: Test and runtime environments may have different variable names
 
 ### Mocking & Stubs
 - Use `vi.fn()` to create mock functions
@@ -392,6 +406,17 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - **Health check logic**: Ensure scripts return correct exit codes for monitoring
 - **Security vulnerabilities**: Never commit hardcoded API keys or weak default passwords
 - **Path portability**: Use relative paths and proper path utilities for cross-platform compatibility
+- **Global fetch mocking**: Avoid global fetch mocks in test setup - breaks integration tests
+- **API key configuration**: Use proper environment variable fallbacks in test configurations
+- **Service dependencies**: Check external service availability before running integration tests
+
+## Meilisearch Testing & Integration
+- **Local setup**: Use binary installation for development, Docker for CI/CD
+- **Test environment**: Remove global fetch mocking to allow real HTTP requests
+- **API configuration**: Use environment variable fallbacks: `TEST_KEY || MASTER_KEY || default`
+- **Health checks**: Always verify service availability before running integration tests
+- **Error debugging**: Use systematic approach: API → Client → Test Environment
+- **Network isolation**: Integration tests need real network, unit tests can use mocks
 
 ## When Working on This Project
 1. Always run `pnpm run check` before committing

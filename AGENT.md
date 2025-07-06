@@ -38,6 +38,15 @@
 - **Content validation**: Verify result content relevance, not just quantity
 - **Cross-platform**: Use relative paths `$(pwd)` instead of hardcoded absolute paths
 - **Timeout configuration**: Set appropriate timeouts (CI: 180s, local: 60s)
+- **Network requests**: Avoid global fetch mocking in test setup - breaks HTTP clients
+- **Integration tests**: Use real network requests, mock only specific external dependencies
+- **Service dependencies**: Check external service health before running integration tests
+
+## Meilisearch Local Testing
+- **Setup**: Binary installation preferred for dev, Docker for CI
+- **Environment**: Use environment variable fallbacks for API keys
+- **Debug approach**: Systematic API → Client → Test Environment troubleshooting
+- **Test types**: Unit (mocked), Integration (real HTTP), E2E (full stack)
 
 ## Commit Message Guidelines
 
