@@ -350,7 +350,31 @@ Add data directory to package.json files field and improve path
 resolution logic to support proper data file loading in packaged
 environments.
 
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
 Fixes #123
+```
+
+### Auto-Commit Template
+When Claude Code makes automatic commits, always include:
+- Clear conventional commit message
+- Optional body explaining the change  
+- Standard footer with Claude Code signature
+- Optional issue reference
+
+Template format:
+```
+<type>[optional scope]: <description>
+
+[optional body explaining the change]
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+
+[optional footer like "Fixes #123"]
 ```
 
 ## Important Technical Notes

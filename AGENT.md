@@ -39,6 +39,50 @@
 - **Cross-platform**: Use relative paths `$(pwd)` instead of hardcoded absolute paths
 - **Timeout configuration**: Set appropriate timeouts (CI: 180s, local: 60s)
 
+## Commit Message Guidelines
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/) specification:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Types
+- `feat`: New feature
+- `fix`: Bug fix  
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `perf`: Performance improvements
+- `test`: Adding or fixing tests
+- `build`: Build system or dependency changes
+- `ci`: CI configuration changes
+- `chore`: Other changes that don't modify src or test files
+
+### Auto-Commit Template
+When Claude Code makes automatic commits, always include:
+- Clear conventional commit message
+- Optional body explaining the change
+- Standard footer with Claude Code signature
+
+Example:
+```
+fix(ci): Add pnpm installation step to GitHub Actions workflow
+
+Fix "pnpm: command not found" error by installing pnpm globally
+before running pnpm install in all workflow jobs.
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
 ## Common Issues & Solutions
 - **Interface naming**: Use `IClassName` for interfaces to avoid class/interface conflicts
 - **Path portability**: Replace `/Users/username/...` with `$(pwd)/...` in scripts
