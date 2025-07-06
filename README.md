@@ -89,7 +89,10 @@ Search for MCP servers with natural language processing capabilities
 - [User Guide](docs/USER_GUIDE.md) - How to use MCP Advisor
 - [Architecture Documentation](docs/ARCHITECTURE.md) - System architecture details
 - [Technical Details](docs/TECHNICAL_DETAILS.md) - Advanced technical features
+<<<<<<< HEAD
 - [Testing Guide](docs/TESTING.md) - Comprehensive testing documentation
+=======
+>>>>>>> @{-1}
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Search Providers](docs/SEARCH_PROVIDERS.md) - Search provider details
 - [Roadmap](ROADMAP.md) - Future development plans
