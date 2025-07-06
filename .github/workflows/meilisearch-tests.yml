@@ -130,14 +130,14 @@ jobs:
           TEST_MEILISEARCH_HOST: http://localhost:7700
           TEST_MEILISEARCH_KEY: test-key-for-ci-only
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
           
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
