@@ -4,17 +4,23 @@ Follow these steps for comprehensive PR review and fixing:
 
 # PLAN
 
-1. Use `gh pr view $PR_NUMBER` to get the PR details and description
-2. Use `gh pr view $PR_NUMBER --json reviews,comments` to get review comments and feedback
-3. Use `gh api repos/:owner/:repo/pulls/$PR_NUMBER/comments` to get detailed code review comments
-4. Understand all the feedback and suggestions from reviewers
-5. Ask clarifying questions if any feedback is unclear
-6. Analyze the codebase context:
+1. **Switch to PR branch first**:
+   ```bash
+   gh pr checkout $PR_NUMBER
+   ```
+   This ensures you're working on the correct branch for the PR.
+
+2. Use `gh pr view $PR_NUMBER` to get the PR details and description
+3. Use `gh pr view $PR_NUMBER --json reviews,comments` to get review comments and feedback
+4. Use `gh api repos/:owner/:repo/pulls/$PR_NUMBER/comments` to get detailed code review comments
+5. Understand all the feedback and suggestions from reviewers
+6. Ask clarifying questions if any feedback is unclear
+7. Analyze the codebase context:
    - Search for related files mentioned in the review
    - Understand the code patterns and conventions
    - Check existing tests that might be affected
-7. Break down all review feedback into manageable tasks using TodoWrite tool
-8. Prioritize fixes: Critical > Major > Minor issues
+8. Break down all review feedback into manageable tasks using TodoWrite tool
+9. Prioritize fixes: Critical > Major > Minor issues
 
 # PRE-TEST VALIDATION
 
