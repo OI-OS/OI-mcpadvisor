@@ -445,4 +445,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] Docker configurations use required environment variables, not weak defaults
 
 ## Development Memories
-- Always add the necessary files
+- Always add the necessary files to package.json and project structure
+- Use proper path resolution for cross-platform compatibility
+- Ensure configuration files and dependencies are included in builds
