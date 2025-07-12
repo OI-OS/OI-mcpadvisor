@@ -358,6 +358,54 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/) specificatio
 - `ci`: CI configuration changes
 - `chore`: Other changes that don't modify src or test files
 
+### Commit Message Format Requirements
+
+**IMPORTANT**: The project has commitlint pre-commit hooks that enforce commit message standards:
+
+- **Subject line format**: `<type>[optional scope]: <Description>` (note capitalization)
+- **Type**: Must be a valid conventional commit type
+- **Description**: Must start with capital letter (sentence-case)
+- **Length**: Subject line must not exceed 72 characters
+
+**Common mistakes to avoid**:
+```bash
+# ❌ Wrong - lowercase description
+feat: add new search functionality
+
+# ✅ Correct - capitalized description  
+feat: Add new search functionality
+
+# ❌ Wrong - invalid type
+feature: Add new functionality
+
+# ✅ Correct - valid type
+feat: Add new functionality
+```
+
+### Pre-commit Hook Troubleshooting
+
+If your commit is rejected by pre-commit hooks:
+
+1. **Type checking failure**:
+   ```bash
+   pnpm run check
+   pnpm run build
+   git commit -m "fix: Resolve type errors"
+   ```
+
+2. **Linting failure**:
+   ```bash
+   pnpm run lint:fix
+   git add .
+   git commit -m "style: Fix linting issues"
+   ```
+
+3. **Commit message format error**:
+   ```bash
+   # Fix the commit message format
+   git commit --amend -m "feat: Add proper commit message"
+   ```
+
 ### Example
 ```
 fix(data): ensure mcp_server_list.json is included in npm package

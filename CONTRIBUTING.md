@@ -340,10 +340,29 @@ async function loadData(): Promise<Data[]> {
 - `ci`: CI 配置变更
 - `chore`: 其他不修改 src 或 test 文件的变更
 
+### 提交消息格式要求
+
+**重要**: 项目配置了 commitlint 预提交钩子，确保提交消息符合规范：
+
+- **主题行格式**: `<type>[optional scope]: <Description>` (注意首字母大写)
+- **类型**: 必须是有效的 conventional commit 类型
+- **描述**: 首字母必须大写，使用句子格式 (sentence-case)
+- **长度**: 主题行不超过 72 个字符
+
 ### 提交示例
 
 ```bash
+# ✅ 正确格式
+feat(search): Add vector similarity search with Meilisearch
+
+# ❌ 错误格式 - 描述首字母未大写
 feat(search): add vector similarity search with Meilisearch
+
+# ❌ 错误格式 - 无效类型
+feature(search): Add vector similarity search
+
+# ✅ 完整示例
+feat(search): Add vector similarity search with Meilisearch
 
 Add new vector search provider that integrates with Meilisearch
 for semantic similarity matching. Includes proper error handling
@@ -355,6 +374,28 @@ and fallback mechanisms.
 - Update documentation
 
 Closes #123
+```
+
+### Pre-commit 钩子
+
+项目配置了以下 pre-commit 检查：
+
+1. **TypeScript 类型检查**: 确保代码无类型错误
+2. **ESLint 检查**: 确保代码风格符合规范
+3. **Commitlint 检查**: 验证提交消息格式
+
+如果遇到提交被拦截的情况：
+
+```bash
+# 如果类型检查失败
+pnpm run check
+pnpm run build
+
+# 如果 lint 检查失败
+pnpm run lint:fix
+
+# 如果提交消息格式错误，修正后重新提交
+git commit --amend -m "feat: Add new feature description"
 ```
 
 ## PR 流程

@@ -320,6 +320,125 @@
    CONFIG_FILE=./custom-config.json npm start
    ```
 
+## 开发和提交问题
+
+### Pre-commit 钩子失败
+
+**症状**: Git 提交被 pre-commit 钩子拦截。
+
+**可能原因**:
+1. TypeScript 类型错误
+2. ESLint 代码风格问题
+3. 提交消息格式不符合规范
+
+**解决方案**:
+
+1. **TypeScript 类型检查失败**:
+   ```bash
+   # 运行类型检查
+   pnpm run check
+   
+   # 修复类型错误后重新构建
+   pnpm run build
+   
+   # 重新提交
+   git commit -m "fix: Fix type errors"
+   ```
+
+2. **ESLint 检查失败**:
+   ```bash
+   # 自动修复 lint 问题
+   pnpm run lint:fix
+   
+   # 手动检查剩余问题
+   pnpm run lint
+   
+   # 重新提交
+   git add .
+   git commit -m "style: Fix linting issues"
+   ```
+
+3. **提交消息格式错误**:
+   ```bash
+   # 错误示例 (小写开头)
+   git commit -m "feat: add new feature"
+   # ❌ 错误: subject must be sentence-case [subject-case]
+   
+   # 正确格式 (大写开头)
+   git commit -m "feat: Add new feature"
+   # ✅ 正确
+   
+   # 如果已经提交但被拦截，修改最后一次提交消息
+   git commit --amend -m "feat: Add new feature with proper case"
+   ```
+
+4. **完全跳过预提交钩子** (不推荐):
+   ```bash
+   # 仅在紧急情况下使用
+   git commit --no-verify -m "feat: Emergency commit"
+   ```
+
+### 常见提交消息错误
+
+**错误类型及修复**:
+
+1. **句子格式错误**:
+   ```bash
+   # ❌ 错误
+   feat: add vector search functionality
+   
+   # ✅ 正确
+   feat: Add vector search functionality
+   ```
+
+2. **类型错误**:
+   ```bash
+   # ❌ 错误
+   feature: Add new search provider
+   
+   # ✅ 正确
+   feat: Add new search provider
+   ```
+
+3. **过长的主题行**:
+   ```bash
+   # ❌ 错误 (超过 72 个字符)
+   feat: Add comprehensive vector similarity search functionality with Meilisearch integration and fallback mechanisms
+   
+   # ✅ 正确
+   feat: Add vector similarity search with Meilisearch
+   
+   Add comprehensive search functionality with proper fallback
+   mechanisms and error handling.
+   ```
+
+### 开发环境问题
+
+**Node.js 版本不兼容**:
+```bash
+# 检查当前 Node.js 版本
+node --version
+
+# 使用 nvm 切换到推荐版本
+nvm use 18
+
+# 或安装推荐版本
+nvm install 18
+nvm alias default 18
+```
+
+**依赖安装问题**:
+```bash
+# 清理依赖缓存
+pnpm store prune
+
+# 删除 node_modules 和 lockfile
+rm -rf node_modules pnpm-lock.yaml
+
+# 重新安装
+pnpm install
+```
+
 ## 日志和调试
 
 ### 启用详细日志
