@@ -45,6 +45,9 @@ data.ms/
 dumps/
 meilisearch
 
+# Claude configuration
+.claude/
+
 # Optional: package manager locks
 # Uncomment if you want to ignore these
 package-lock.json
