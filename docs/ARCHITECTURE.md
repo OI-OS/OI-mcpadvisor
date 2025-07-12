@@ -286,3 +286,10 @@ function prioritizeResults(results: SearchResult[]): SearchResult[] {
 ## 总结
 
 MCP Advisor 的架构设计注重模块化、可扩展性和性能。通过结合多种搜索策略和智能结果处理，系统能够提供高质量的 MCP 服务器推荐，同时保持良好的响应时间和用户体验。
+
+---
+
+有关更多技术实现细节和搜索提供者配置，请参阅：
+- [技术参考手册](./TECHNICAL_REFERENCE.md) - 详细的技术实现和搜索提供者
+- [快速开始指南](./GETTING_STARTED.md) - 安装配置和基本使用
+- [贡献指南](../CONTRIBUTING.md) - 开发环境设置和代码贡献

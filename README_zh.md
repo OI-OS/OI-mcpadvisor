@@ -42,14 +42,11 @@ https://github.com/user-attachments/assets/7a536315-e316-4978-8e5a-e8f417169eb1
 
 ## 文档导航
 
-- [安装指南](docs/INSTALLATION.md) - 详细的安装和配置说明
-- [用户指南](docs/USER_GUIDE.md) - 如何使用 MCP Advisor
+- [快速开始指南](docs/GETTING_STARTED.md) - 安装、配置和基本使用
+- [技术参考手册](docs/TECHNICAL_REFERENCE.md) - 高级功能和搜索提供者
+- [贡献指南](CONTRIBUTING.md) - 开发设置和贡献准则
 - [架构文档](docs/ARCHITECTURE.md) - 系统架构详解
-- [技术细节](docs/TECHNICAL_DETAILS.md) - 高级技术特性
-- [开发者指南](docs/DEVELOPER_GUIDE.md) - 开发环境设置和代码贡献
-- [最佳实践](docs/BEST_PRACTICES.md) - 编码规范和贡献者最佳实践
 - [故障排除](docs/TROUBLESHOOTING.md) - 常见问题和解决方案
-- [搜索提供者](docs/SEARCH_PROVIDERS.md) - 搜索提供者详情
 - [发展路线图](ROADMAP.md) - 未来发展计划
 
 ## 2025年重构更新 🚀
@@ -86,7 +83,6 @@ src/
 │   └── e2e/                    # 端到端测试
 └── scripts/                    # 自动化脚本
 ```
-- [API 参考](docs/API_REFERENCE.md) - API 文档
 - [路线图](ROADMAP.md) - 项目未来发展计划
 - [贡献指南](CONTRIBUTING.md) - 如何贡献代码
 
@@ -112,7 +108,7 @@ src/
 - MacOS/Linux: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Windows: `%AppData%\Claude\claude_desktop_config.json`
 
-更多安装方法请参阅 [安装指南](docs/INSTALLATION.md)。
+更多安装方法和详细配置请参阅 [快速开始指南](docs/GETTING_STARTED.md)。
 
 
 
@@ -172,7 +168,7 @@ graph TD
    - SSE（Web 集成）
    - REST API 端点
 
-更详细的架构文档请参阅 [ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+更详细的架构文档请参阅 [架构文档](docs/ARCHITECTURE.md)。
 
 ## 技术亮点
 
@@ -206,7 +202,7 @@ MCP Advisor 实现了强大的错误处理和日志系统：
    - 部分结果处理
    - 关键失败的默认响应
 
-更多技术细节请参阅 [TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md)。
+更多技术细节请参阅 [技术参考手册](docs/TECHNICAL_REFERENCE.md)。
 
 ## 开发者快速上手
 
@@ -221,7 +217,7 @@ MCP Advisor 实现了强大的错误处理和日志系统：
    ```bash
    pnpm run build
    ```
-4. 配置环境变量（参见 [INSTALLATION.md](docs/INSTALLATION.md)）
+4. 配置环境变量（参见 [快速开始指南](docs/GETTING_STARTED.md)）
 
 ### 测试
 
@@ -293,7 +289,7 @@ MCP Advisor 支持多种传输方式：
 2. **SSE 传输** - 适用于 Web 集成
 3. **REST 传输** - 提供 REST API 端点
 
-更多开发详情请参阅 [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)。
+更多开发详情请参阅 [贡献指南](CONTRIBUTING.md)。
 
 ## 贡献指南
 
@@ -371,7 +367,7 @@ MCP Advisor 支持多种传输方式：
 ]
 ```
 
-更多示例请参阅 [EXAMPLES.md](docs/EXAMPLES.md)。
+更多示例和高级用法请参阅 [技术参考手册](docs/TECHNICAL_REFERENCE.md)。
 
 ## 故障排除
 
@@ -399,11 +395,11 @@ MCP Advisor 支持多个可同时使用的搜索提供者：
 2. **GetMCP 搜索提供者**：使用 GetMCP API 和向量搜索进行语义匹配
 3. **Meilisearch 搜索提供者**：使用 Meilisearch 进行快速、容错的文本搜索
 
-有关搜索提供者的详细信息，请参阅 [SEARCH_PROVIDERS.md](docs/SEARCH_PROVIDERS.md)。
+有关搜索提供者的详细信息，请参阅 [技术参考手册](docs/TECHNICAL_REFERENCE.md)。
 
 ## API 文档
 
-有关 API 的详细文档，请参阅 [API_REFERENCE.md](docs/API_REFERENCE.md)。
+更多技术细节和 API 信息请参阅 [技术参考手册](docs/TECHNICAL_REFERENCE.md)。
 
 ## 路线图
 
@@ -416,7 +412,7 @@ MCP Advisor 正在从简单的推荐系统发展为智能代理编排平台。�
    - 打磨推荐效果
    - 引入更多索引
 
-详细的路线图请参阅 [ROADMAP.md](docs/ROADMAP.md)。
+详细的路线图请参阅 [发展路线图](ROADMAP.md)。
 
 ## 测试
 

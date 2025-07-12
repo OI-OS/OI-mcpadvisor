@@ -36,10 +36,10 @@ Follow these steps for comprehensive issue resolution:
    - Determine which `docs/` files need updates
    - Plan new documentation if implementing features
    - Consider updating:
-     - `docs/USER_GUIDE.md` for user-facing features
-     - `docs/DEVELOPER_GUIDE.md` for development changes
+     - `docs/GETTING_STARTED.md` for user-facing features
+     - `CONTRIBUTING.md` for development changes
      - `docs/ARCHITECTURE.md` for architectural changes
-     - `docs/TECHNICAL_DETAILS.md` for technical implementations
+     - `docs/TECHNICAL_REFERENCE.md` for technical implementations
      - Create issue-specific docs in `docs/` with appropriate categorization
 
 # PRE-TEST VALIDATION
@@ -115,10 +115,10 @@ Follow these steps for comprehensive issue resolution:
 
 ## Required Documentation:
 - **Bug fixes**: Update `docs/TROUBLESHOOTING.md` if applicable
-- **New features**: Update `docs/USER_GUIDE.md` with usage examples
-- **API changes**: Update `docs/TECHNICAL_DETAILS.md`
+- **New features**: Update `docs/GETTING_STARTED.md` with usage examples
+- **API changes**: Update `docs/TECHNICAL_REFERENCE.md`
 - **Architecture changes**: Update `docs/ARCHITECTURE.md`
-- **Developer workflow changes**: Update `docs/DEVELOPER_GUIDE.md`
+- **Developer workflow changes**: Update `CONTRIBUTING.md`
 
 ## Create Issue-Specific Documentation:
 Based on issue type, create detailed documentation:
@@ -134,7 +134,7 @@ Based on issue type, create detailed documentation:
 
 ### For Integrations:
 - Create guide in `docs/guides/[integration-name].md`
-- Update `docs/SEARCH_PROVIDERS.md` for search-related integrations
+- Update `docs/TECHNICAL_REFERENCE.md` for search-related integrations
 
 ## Documentation Template:
 ```markdown

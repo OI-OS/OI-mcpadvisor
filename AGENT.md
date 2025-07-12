@@ -17,7 +17,7 @@
 - **E2E Tests**: Test complete workflows with Playwright (`tests/e2e/`)
 - **Smart Automation**: `./scripts/run-meilisearch-e2e.sh` auto-starts all services
 - **Quality Gate**: All tests must pass before merging
-- **Documentation**: See [docs/TESTING.md](docs/TESTING.md) for comprehensive testing guide
+- **Documentation**: See [Quick Start Guide](docs/GETTING_STARTED.md) and [Technical Reference](docs/TECHNICAL_REFERENCE.md) for comprehensive guides
 
 ## Architecture
 - **Main**: ESM TypeScript project with Node.js MCP server

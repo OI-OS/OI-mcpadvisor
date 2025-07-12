@@ -477,3 +477,11 @@ memwatch.on('leak', (info) => {
    - 完整错误消息
    - 重现步骤
    - 日志片段
+
+---
+
+相关文档：
+- [快速开始指南](./GETTING_STARTED.md) - 安装配置和基本使用
+- [技术参考手册](./TECHNICAL_REFERENCE.md) - 高级技术特性和配置
+- [架构文档](./ARCHITECTURE.md) - 系统架构和组件详解
+- [贡献指南](../CONTRIBUTING.md) - 开发环境设置和代码贡献

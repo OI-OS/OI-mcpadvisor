@@ -51,16 +51,12 @@ Search for MCP servers with natural language processing capabilities
 
 ## Documentation Navigation
 
-- [Installation Guide](docs/INSTALLATION.md) - Detailed installation and configuration instructions
-- [User Guide](docs/USER_GUIDE.md) - How to use MCP Advisor
+- [Quick Start Guide](docs/GETTING_STARTED.md) - Installation, configuration, and basic usage
+- [Technical Reference](docs/TECHNICAL_REFERENCE.md) - Advanced features and search providers
+- [Contributing Guide](CONTRIBUTING.md) - Development setup and contribution guidelines
 - [Architecture Documentation](docs/ARCHITECTURE.md) - System architecture details
-- [Technical Details](docs/TECHNICAL_DETAILS.md) - Advanced technical features
-- [Testing Guide](docs/TESTING.md) - Comprehensive testing documentation
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
-- [Search Providers](docs/SEARCH_PROVIDERS.md) - Search provider details
 - [Roadmap](ROADMAP.md) - Future development plans
-- [Developer Guide](docs/DEVELOPER_GUIDE.md) - Development environment setup and code contribution
-- [Best Practices](docs/BEST_PRACTICES.md) - Coding standards and best practices for contributors
 
 ## Quick Start
 
@@ -92,7 +88,7 @@ To install Advisor for Claude Desktop automatically via [Smithery](https://smith
 npx -y @smithery/cli install @istarwyh/mcpadvisor --client claude
 ```
 
-For more installation methods, see the [Installation Guide](docs/INSTALLATION.md).
+For more installation methods and detailed configuration, see the [Quick Start Guide](docs/GETTING_STARTED.md).
 
 ## Developer Guide
 
@@ -195,13 +191,15 @@ For more detailed architecture documentation, see [ARCHITECTURE.md](docs/ARCHITE
    ```bash
    pnpm run build
    ```
-4. Configure environment variables (see [INSTALLATION.md](docs/INSTALLATION.md))
+4. Configure environment variables (see [Quick Start Guide](docs/GETTING_STARTED.md))
 
 ### Testing
 
-MCP Advisor includes comprehensive testing suites to ensure code quality and functionality. For detailed testing information including unit tests, integration tests, end-to-end testing, and manual testing procedures, see the [Testing Guide](docs/TESTING.md).
+MCP Advisor includes comprehensive testing suites to ensure code quality and functionality. For detailed testing information including unit tests, integration tests, end-to-end testing, and manual testing procedures, see the [Technical Reference](docs/TECHNICAL_REFERENCE.md).
 
-#### Quick Test Commands
+#### Testing
+
+Run comprehensive tests:
 ```bash
 # Run all tests
 pnpm run check && pnpm run test && pnpm run test:e2e
@@ -209,6 +207,8 @@ pnpm run check && pnpm run test && pnpm run test:e2e
 # Automated E2E testing script
 ./scripts/run-e2e-test.sh
 ```
+
+For detailed testing information, see [Technical Reference](docs/TECHNICAL_REFERENCE.md).
 
 ### Library Usage
 
@@ -231,7 +231,7 @@ MCP Advisor supports multiple transport methods:
 2. **SSE Transport** - Suitable for web integration
 3. **REST Transport** - Provides REST API endpoints
 
-For more development details, see [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md).
+For more development details, see [Contributing Guide](CONTRIBUTING.md).
 
 ## Contribution Guidelines
 
@@ -267,7 +267,7 @@ Here are some example queries you can use with MCP Advisor:
 ]
 ```
 
-For more examples, see [EXAMPLES.md](docs/EXAMPLES.md).
+For more examples and advanced usage, see [Technical Reference](docs/TECHNICAL_REFERENCE.md).
 
 ## Troubleshooting
 
@@ -295,7 +295,7 @@ MCP Advisor supports multiple search providers that can be used simultaneously:
 2. **GetMCP Search Provider**: Uses the GetMCP API and vector search for semantic matching
 3. **Meilisearch Search Provider**: Uses Meilisearch for fast, fault-tolerant text search
 
-For detailed information about search providers, see [SEARCH_PROVIDERS.md](docs/SEARCH_PROVIDERS.md).
+For detailed information about search providers, see [Technical Reference](docs/TECHNICAL_REFERENCE.md).
 
 ## Roadmap
 
