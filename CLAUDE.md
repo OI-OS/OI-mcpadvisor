@@ -443,3 +443,6 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] Interface and class names don't conflict (use `IClassName` pattern)
 - [ ] CI timeouts are appropriate for container operations (180s recommended)
 - [ ] Docker configurations use required environment variables, not weak defaults
+
+## Development Memories
+- Always add the necessary files
