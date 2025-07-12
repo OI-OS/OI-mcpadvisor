@@ -46,7 +46,6 @@ dumps/
 meilisearch
 
 # 忽略Claude生成的临时配置文件和缓存目录
-.claude/
 
 # Optional: package manager locks
 # Uncomment if you want to ignore these

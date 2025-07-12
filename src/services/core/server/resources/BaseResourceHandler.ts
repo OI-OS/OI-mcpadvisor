@@ -1,4 +1,4 @@
-import { Resource, ResourceContents } from '@modelcontextprotocol/sdk/types.js';
+import { Resource, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Abstract base class for MCP resource handlers
@@ -14,14 +14,14 @@ export abstract class BaseResourceHandler {
   /**
    * Read the content of a specific resource by URI
    * @param uri The resource URI to read
-   * @returns Promise<any> The resource content
+   * @returns Promise<ReadResourceResult> The resource content in MCP format
    */
-  abstract readResource(uri: string): Promise<any>;
+  abstract readResource(uri: string): Promise<ReadResourceResult>;
 
   /**
    * Validate if a URI is supported by this handler
    * @param uri The URI to validate
-   * @returns boolean True if the URI is supported
+   * @returns boolean|Promise<boolean> True if the URI is supported
    */
-  abstract supportsUri(uri: string): boolean;
+  abstract supportsUri(uri: string): boolean | Promise<boolean>;
 }

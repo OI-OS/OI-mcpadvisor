@@ -60,19 +60,30 @@ export class RequestHandlerFactory {
 
       try {
         // Find a handler that supports this URI
-        const handler = resourceHandlers.find(h => h.supportsUri(uri));
+        let supportingHandler = null;
+        for (const handler of resourceHandlers) {
+          const supports = typeof handler.supportsUri === 'function' 
+            ? await handler.supportsUri(uri)
+            : handler.supportsUri(uri);
+          if (supports) {
+            supportingHandler = handler;
+            break;
+          }
+        }
         
-        if (!handler) {
-          throw new Error(`No handler found for URI: ${uri}`);
+        if (!supportingHandler) {
+          const errorMessage = `No handler found for URI: ${uri}`;
+          logger.error(errorMessage);
+          return RequestHandlerFactory.createErrorResponse(errorMessage);
         }
 
-        const content = await handler.readResource(uri);
+        const content = await supportingHandler.readResource(uri);
         logger.info(`Successfully read resource: ${uri}`);
         return content;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        logger.error(`Error reading resource: ${message}`);
-        throw error; // Re-throw to let MCP handle the error response
+        logger.error(`Error reading resource: ${message}`, 'RequestHandlerFactory', { error, uri });
+        return RequestHandlerFactory.createErrorResponse(message);
       }
     };
   }

@@ -1,7 +1,8 @@
-import { Resource, ResourceContents } from '@modelcontextprotocol/sdk/types.js';
+import { Resource, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import { BaseResourceHandler } from './BaseResourceHandler.js';
 import fs from 'fs/promises';
 import path from 'path';
+import { pathToFileURL, fileURLToPath } from 'url';
 import logger from '../../../../utils/logger.js';
 
 /**
@@ -11,13 +12,16 @@ import logger from '../../../../utils/logger.js';
 export class LogResourceHandler extends BaseResourceHandler {
   private logDirectories: string[];
   private supportedExtensions: string[] = ['.log', '.txt'];
+  private resourceCache: { resources: Resource[]; lastUpdate: number } | null = null;
+  private readonly CACHE_TTL_MS = parseInt(process.env.RESOURCE_CACHE_TTL || '30000'); // 30 seconds default
 
   constructor() {
     super();
     this.logDirectories = this.getLogDirectories();
     logger.info('LogResourceHandler initialized', 'LogResourceHandler', {
       directories: this.logDirectories,
-      extensions: this.supportedExtensions
+      extensions: this.supportedExtensions,
+      cacheTtl: this.CACHE_TTL_MS
     });
   }
 
@@ -45,9 +49,19 @@ export class LogResourceHandler extends BaseResourceHandler {
   }
 
   /**
-   * List all available log files as resources
+   * List all available log files as resources with caching
    */
   async listResources(): Promise<Resource[]> {
+    // Check if we have a valid cache
+    if (this.resourceCache && (Date.now() - this.resourceCache.lastUpdate) < this.CACHE_TTL_MS) {
+      logger.debug('Returning cached resources', 'LogResourceHandler', {
+        count: this.resourceCache.resources.length
+      });
+      return this.resourceCache.resources;
+    }
+
+    // Cache is invalid or doesn't exist, scan directories
+    logger.debug('Cache expired or invalid, scanning directories', 'LogResourceHandler');
     const resources: Resource[] = [];
 
     for (const directory of this.logDirectories) {
@@ -58,6 +72,12 @@ export class LogResourceHandler extends BaseResourceHandler {
         // Continue with other directories
       }
     }
+
+    // Update cache
+    this.resourceCache = {
+      resources,
+      lastUpdate: Date.now()
+    };
 
     logger.info(`Found ${resources.length} log resources`, 'LogResourceHandler');
     return resources;
@@ -115,29 +135,35 @@ export class LogResourceHandler extends BaseResourceHandler {
   }
 
   /**
-   * Create a file URI from a file path
+   * Create a file URI from a file path using Node.js URL utilities
    */
   private createFileUri(filePath: string): string {
-    // Normalize path and encode URI components
-    const normalizedPath = path.resolve(filePath);
-    // Convert to URI format with proper encoding
-    const encodedPath = normalizedPath.split(path.sep).map(encodeURIComponent).join('/');
-    return `file:///${encodedPath.replace(/^\//, '')}`;
+    // Use Node.js built-in pathToFileURL for proper cross-platform URI generation
+    const absolutePath = path.resolve(filePath);
+    return pathToFileURL(absolutePath).href;
   }
 
   /**
    * Read the content of a resource by URI
    */
-  async readResource(uri: string): Promise<any> {
+  async readResource(uri: string): Promise<ReadResourceResult> {
     logger.info(`Reading resource: ${uri}`, 'LogResourceHandler');
 
     // Validate and parse URI
     const filePath = this.parseFileUri(uri);
     
     // Security check - ensure file is within allowed directories
-    this.validateFilePath(filePath);
+    await this.validateFilePath(filePath);
 
     try {
+      // Check file size before reading
+      const stat = await fs.stat(filePath);
+      const maxSize = parseInt(process.env.MAX_LOG_SIZE || '10485760'); // 10MB default
+      
+      if (stat.size > maxSize) {
+        throw new Error(`File too large: ${stat.size} bytes exceeds limit of ${maxSize} bytes`);
+      }
+
       const content = await fs.readFile(filePath, 'utf-8');
       
       logger.info(`Successfully read resource: ${uri}`, 'LogResourceHandler', {
@@ -173,55 +199,70 @@ export class LogResourceHandler extends BaseResourceHandler {
   }
 
   /**
-   * Parse a file URI to get the local file path
+   * Parse a file URI to get the local file path using Node.js URL utilities
    */
   private parseFileUri(uri: string): string {
-    if (!uri.startsWith('file://')) {
-      throw new Error(`Invalid URI format: ${uri}`);
+    try {
+      // Use Node.js built-in fileURLToPath for proper cross-platform URI parsing
+      return fileURLToPath(uri);
+    } catch (error) {
+      throw new Error(`Invalid file URI format: ${uri}`);
     }
-
-    // Remove 'file://' prefix and decode URI components
-    const pathPart = uri.substring(7); // Remove 'file://'
-    const decodedPath = decodeURIComponent(pathPart);
-    
-    // Ensure it starts with '/' for absolute path
-    return decodedPath.startsWith('/') ? decodedPath : `/${decodedPath}`;
   }
 
   /**
    * Validate that the file path is within allowed directories
+   * Uses fs.realpath to resolve symlinks and prevent directory traversal attacks
    */
-  private validateFilePath(filePath: string): void {
-    const resolvedPath = path.resolve(filePath);
-    
-    // Check if the path is within any of the allowed log directories
-    const isInAllowedDirectory = this.logDirectories.some(dir => {
-      const resolvedDir = path.resolve(dir);
-      return resolvedPath.startsWith(resolvedDir);
-    });
+  private async validateFilePath(filePath: string): Promise<void> {
+    try {
+      // Resolve the real path to handle symlinks and normalize the path
+      const realPath = await fs.realpath(filePath);
+      
+      // Check if the real path is within any of the allowed log directories
+      const isInAllowedDirectory = await Promise.all(
+        this.logDirectories.map(async (dir) => {
+          try {
+            const realDir = await fs.realpath(dir);
+            return realPath.startsWith(realDir + path.sep) || realPath === realDir;
+          } catch {
+            // If directory doesn't exist or can't be resolved, it's not allowed
+            return false;
+          }
+        })
+      ).then(results => results.some(Boolean));
 
-    if (!isInAllowedDirectory) {
-      throw new Error(`Invalid file path: ${filePath} is not within allowed log directories`);
-    }
-
-    // Additional security check for path traversal
-    if (resolvedPath.includes('..')) {
-      throw new Error(`Invalid file path: ${filePath} contains path traversal`);
+      if (!isInAllowedDirectory) {
+        throw new Error(`Invalid file path: ${filePath} is not within allowed log directories`);
+      }
+    } catch (error) {
+      if ((error as any).code === 'ENOENT') {
+        throw new Error(`File not found: ${filePath}`);
+      }
+      throw error;
     }
   }
 
   /**
    * Check if this handler supports a given URI
    */
-  supportsUri(uri: string): boolean {
+  async supportsUri(uri: string): Promise<boolean> {
     try {
       const filePath = this.parseFileUri(uri);
-      this.validateFilePath(filePath);
+      await this.validateFilePath(filePath);
       
       const filename = path.basename(filePath);
       return this.isSupportedFile(filename);
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Invalidate the resource cache to force a fresh scan on next request
+   */
+  public invalidateCache(): void {
+    this.resourceCache = null;
+    logger.debug('Resource cache invalidated', 'LogResourceHandler');
   }
 }

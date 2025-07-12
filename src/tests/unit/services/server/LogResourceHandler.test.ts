@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BaseResourceHandler } from '../../../../services/core/server/resources/BaseResourceHandler.js';
 import { LogResourceHandler } from '../../../../services/core/server/resources/LogResourceHandler.js';
-import { Resource, ResourceContents } from '@modelcontextprotocol/sdk/types.js';
+import { Resource, ReadResourceResult } from '@modelcontextprotocol/sdk/types.js';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -30,6 +30,22 @@ describe('MCP Resources', () => {
     
     // Reset all mocks
     vi.clearAllMocks();
+    
+    // Mock fs.realpath to return normalized paths for security validation
+    mockFs.realpath = vi.fn().mockImplementation((filePath: string) => {
+      // Return the path as-is for testing (simulating real path resolution)
+      if (filePath.startsWith('/test/logs')) {
+        return Promise.resolve(filePath);
+      }
+      // For directory validation, return the directory
+      if (filePath === mockLogDir) {
+        return Promise.resolve(mockLogDir);
+      }
+      return Promise.resolve(filePath);
+    });
+    
+    // Mock fs.stat for file size checking
+    mockFs.stat = vi.fn().mockResolvedValue({ size: 1024 });
     
     // Create handler instance
     logResourceHandler = new LogResourceHandler();
@@ -160,7 +176,15 @@ describe('MCP Resources', () => {
       test('should handle file not found errors', async () => {
         const testUri = 'file:///test/logs/nonexistent.log';
         
-        mockFs.readFile.mockRejectedValue(new Error('ENOENT: no such file or directory'));
+        // Mock realpath to throw ENOENT for non-existent file
+        mockFs.realpath.mockImplementation((filePath: string) => {
+          if (filePath.includes('nonexistent.log')) {
+            const error = new Error('ENOENT: no such file or directory');
+            (error as any).code = 'ENOENT';
+            return Promise.reject(error);
+          }
+          return Promise.resolve(filePath);
+        });
         
         await expect(logResourceHandler.readResource(testUri))
           .rejects
@@ -172,7 +196,7 @@ describe('MCP Resources', () => {
         
         await expect(logResourceHandler.readResource(invalidUri))
           .rejects
-          .toThrow('Invalid URI format');
+          .toThrow('Invalid file URI format');
       });
 
       test('should validate file path security', async () => {
@@ -185,13 +209,13 @@ describe('MCP Resources', () => {
 
       test('should handle large files gracefully', async () => {
         const testUri = 'file:///test/logs/large.log';
-        const largeContent = 'x'.repeat(1024 * 1024); // 1MB
         
-        mockFs.readFile.mockResolvedValue(largeContent);
+        // Mock stat to return a large file size that exceeds the limit
+        mockFs.stat.mockResolvedValue({ size: 20 * 1024 * 1024 }); // 20MB
         
-        const result = await logResourceHandler.readResource(testUri);
-        
-        expect((result.contents as any[])[0].text).toBe(largeContent);
+        await expect(logResourceHandler.readResource(testUri))
+          .rejects
+          .toThrow('File too large');
       });
     });
 
@@ -251,6 +275,7 @@ describe('MCP Resources', () => {
     test('should handle file read permission errors', async () => {
       const testUri = 'file:///test/logs/protected.log';
       
+      // The file should exist for realpath but reading should fail
       mockFs.readFile.mockRejectedValue(new Error('EACCES: permission denied'));
       
       await expect(logResourceHandler.readResource(testUri))
