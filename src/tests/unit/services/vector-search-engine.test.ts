@@ -23,7 +23,7 @@ class MockVectorSearchEngine implements IVectorSearchEngine {
       const similarity = this.calculateSimilarity(queryVector, item.vector);
       return {
         ...item.data,
-        similarity: similarity // 更新相似度字段
+        similarity // 更新相似度字段
       };
     })
     .sort((a, b) => b.similarity - a.similarity)
@@ -53,7 +53,7 @@ class MockVectorSearchEngine implements IVectorSearchEngine {
   addMockData(id: string, vector: number[], metadata: Record<string, any>): void {
     // 创建一个简单的 MCPServerResponse 对象
     const data: MCPServerResponse = {
-      id: id,
+      id,
       title: metadata.name || `MCP Server ${id}`,
       description: metadata.description || `Description for ${id}`,
       sourceUrl: metadata.github_url || `https://github.com/example/${id}`,

@@ -320,6 +320,240 @@
    CONFIG_FILE=./custom-config.json npm start
    ```
 
+## 测试问题
+
+### 端到端测试端口冲突
+
+**症状**: 运行 E2E 测试时出现 "Proxy Server PORT IS IN USE" 错误。
+
+**可能原因**:
+1. 之前的测试进程未正确清理
+2. MCP Inspector 进程仍在运行
+3. 端口 6274 和 6277 被其他进程占用
+
+**解决方案**:
+
+1. **检查端口占用**:
+   ```bash
+   # 检查 MCP Inspector 端口
+   lsof -i :6274
+   lsof -i :6277
+   ```
+
+2. **清理占用进程**:
+   ```bash
+   # 方法1: 杀掉特定进程
+   kill -9 <PID>
+   
+   # 方法2: 批量清理相关进程
+   pkill -f "inspector"
+   
+   # 方法3: 使用测试脚本的清理功能
+   ./scripts/run-e2e-test.sh # 脚本会自动清理端口
+   ```
+
+3. **验证端口已释放**:
+   ```bash
+   # 应该没有输出，表示端口已释放
+   lsof -i :6274 -i :6277
+   ```
+
+4. **重新运行测试**:
+   ```bash
+   pnpm run test:e2e
+   ```
+
+### E2E 测试超时问题
+
+**症状**: 测试运行时间过长或超时。
+
+**解决方案**:
+
+1. **调整超时配置**:
+   ```typescript
+   // playwright.config.ts 中已优化的超时设置
+   timeout: 45000,        // 总体测试超时
+   actionTimeout: 8000,   // 单个动作超时
+   navigationTimeout: 20000, // 导航超时
+   ```
+
+2. **使用智能等待**:
+   ```typescript
+   // 使用 waitForLoadState 而非固定 setTimeout
+   await page.waitForLoadState('networkidle');
+   
+   // 使用条件等待
+   await page.waitForFunction(() => {
+     return document.body.textContent?.includes('expected_text');
+   });
+   ```
+
+3. **减少并发测试数量**:
+   ```bash
+   # 限制 worker 数量
+   npx playwright test --workers=1
+   ```
+
+### 测试环境清理问题
+
+**症状**: 测试之间相互影响，环境变量污染。
+
+**解决方案**:
+
+1. **环境变量隔离**:
+   ```typescript
+   // 在 beforeEach 中保存环境变量
+   let originalEnvVars: Record<string, string | undefined> = {};
+   
+   beforeEach(() => {
+     originalEnvVars = {
+       MEILISEARCH_INSTANCE: process.env.MEILISEARCH_INSTANCE,
+       // ... 其他环境变量
+     };
+   });
+   
+   // 在 afterEach 中恢复
+   afterEach(() => {
+     Object.entries(originalEnvVars).forEach(([key, value]) => {
+       if (value === undefined) {
+         delete process.env[key];
+       } else {
+         process.env[key] = value;
+       }
+     });
+   });
+   ```
+
+2. **使用测试工具类**:
+   ```typescript
+   // 使用新的测试辅助工具
+   import { EnvironmentManager } from '../helpers/test-helpers.js';
+   
+   const envManager = new EnvironmentManager();
+   envManager.saveEnvironment();
+   // ... 测试代码
+   envManager.restoreEnvironment();
+   ```
+
+## 开发和提交问题
+
+### Pre-commit 钩子失败
+
+**症状**: Git 提交被 pre-commit 钩子拦截。
+
+**可能原因**:
+1. TypeScript 类型错误
+2. ESLint 代码风格问题
+3. 提交消息格式不符合规范
+
+**解决方案**:
+
+1. **TypeScript 类型检查失败**:
+   ```bash
+   # 运行类型检查
+   pnpm run check
+   
+   # 修复类型错误后重新构建
+   pnpm run build
+   
+   # 重新提交
+   git commit -m "fix: Fix type errors"
+   ```
+
+2. **ESLint 检查失败**:
+   ```bash
+   # 自动修复 lint 问题
+   pnpm run lint:fix
+   
+   # 手动检查剩余问题
+   pnpm run lint
+   
+   # 重新提交
+   git add .
+   git commit -m "style: Fix linting issues"
+   ```
+
+3. **提交消息格式错误**:
+   ```bash
+   # 错误示例 (小写开头)
+   git commit -m "feat: add new feature"
+   # ❌ 错误: subject must be sentence-case [subject-case]
+   
+   # 正确格式 (大写开头)
+   git commit -m "feat: Add new feature"
+   # ✅ 正确
+   
+   # 如果已经提交但被拦截，修改最后一次提交消息
+   git commit --amend -m "feat: Add new feature with proper case"
+   ```
+
+4. **完全跳过预提交钩子** (不推荐):
+   ```bash
+   # 仅在紧急情况下使用
+   git commit --no-verify -m "feat: Emergency commit"
+   ```
+
+### 常见提交消息错误
+
+**错误类型及修复**:
+
+1. **句子格式错误**:
+   ```bash
+   # ❌ 错误
+   feat: add vector search functionality
+   
+   # ✅ 正确
+   feat: Add vector search functionality
+   ```
+
+2. **类型错误**:
+   ```bash
+   # ❌ 错误
+   feature: Add new search provider
+   
+   # ✅ 正确
+   feat: Add new search provider
+   ```
+
+3. **过长的主题行**:
+   ```bash
+   # ❌ 错误 (超过 72 个字符)
+   feat: Add comprehensive vector similarity search functionality with Meilisearch integration and fallback mechanisms
+   
+   # ✅ 正确
+   feat: Add vector similarity search with Meilisearch
+   
+   Add comprehensive search functionality with proper fallback
+   mechanisms and error handling.
+   ```
+
+### 开发环境问题
+
+**Node.js 版本不兼容**:
+```bash
+# 检查当前 Node.js 版本
+node --version
+
+# 使用 nvm 切换到推荐版本
+nvm use 18
+
+# 或安装推荐版本
+nvm install 18
+nvm alias default 18
+```
+
+**依赖安装问题**:
+```bash
+# 清理依赖缓存
+pnpm store prune
+
+# 删除 node_modules 和 lockfile
+rm -rf node_modules pnpm-lock.yaml
+
+# 重新安装
+pnpm install
+```
+
 ## 日志和调试
 
 ### 启用详细日志

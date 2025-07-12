@@ -846,6 +846,52 @@ class LazyLoadedProvider implements SearchProvider {
 }
 ```
 
+## 端到端测试框架
+
+### 端口管理
+
+在端到端测试中增加了对 MCP Inspector 和代理端口的自动清理机制，确保端口冲突不会影响测试运行。
+
+**端口清理机制**:
+```bash
+# 清理端口占用
+cleanup_ports() {
+    local ports=(6274 6277)
+    for port in "${ports[@]}"; do
+        local pids=$(lsof -ti :$port 2>/dev/null || true)
+        if [[ -n "$pids" ]]; then
+            kill -9 $pids 2>/dev/null || true
+        fi
+    done
+    pkill -f "inspector" 2>/dev/null || true
+}
+```
+
+### 测试辅助工具
+
+新增了模块化的测试辅助工具类，提供了更好的测试环境管理：
+
+**测试工具类**:
+- `EnvironmentManager`: 环境变量保存和恢复
+- `SmartWaiter`: 智能等待机制
+- `MCPConnectionManager`: MCP 连接管理
+- `SearchOperations`: 搜索操作封装
+- `ScreenshotManager`: 截图管理
+- `TestValidator`: 测试结果验证
+
+```typescript
+// 使用示例
+const envManager = new EnvironmentManager();
+envManager.saveEnvironment();
+envManager.setMeilisearchConfig({
+  instance: 'local',
+  host: 'http://localhost:7700'
+});
+// ... 测试代码
+envManager.restoreEnvironment();
+```
+
+
 ## 系统配置
 
 ### 提供者配置

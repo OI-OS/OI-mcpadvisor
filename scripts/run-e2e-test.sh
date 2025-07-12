@@ -16,7 +16,25 @@ cleanup() {
         kill $MCP_INSPECTOR_PID 2>/dev/null || true
         echo "✅ MCP Inspector 进程已终止"
     fi
+    
+    # 额外清理可能占用端口的进程
+    cleanup_ports
     exit 0
+}
+
+# 清理端口占用
+cleanup_ports() {
+    local ports=(6274 6277)
+    for port in "${ports[@]}"; do
+        local pids=$(lsof -ti :$port 2>/dev/null || true)
+        if [[ -n "$pids" ]]; then
+            echo "🧹 清理端口 $port 上的进程: $pids"
+            kill -9 $pids 2>/dev/null || true
+        fi
+    done
+    # 额外清理 inspector 相关进程
+    pkill -f "inspector" 2>/dev/null || true
+    sleep 2
 }
 
 # 设置信号处理
@@ -36,6 +54,11 @@ echo "✅ 构建完成"
 # 第二步：启动 MCP Inspector
 echo ""
 echo "🔄 启动 MCP Inspector..."
+
+# 先清理可能占用的端口
+echo "🧹 清理现有端口占用..."
+cleanup_ports
+
 ENABLE_FILE_LOGGING=true mcp-inspector node "$(pwd)/build/index.js" > mcp-inspector.log 2>&1 &
 MCP_INSPECTOR_PID=$!
 
@@ -105,19 +128,19 @@ TEST_MODE=${1:-"headed"}
 case $TEST_MODE in
     "headless")
         echo "🔧 运行无头模式测试..."
-        pnpm run test:e2e
+        NODE_OPTIONS='--no-deprecation' npx playwright test
         ;;
     "debug")
         echo "🐛 运行调试模式测试..."
-        pnpm run test:e2e:debug
+        NODE_OPTIONS='--no-deprecation' npx playwright test --debug
         ;;
     "ui")
         echo "🎨 运行 UI 模式测试..."
-        pnpm run test:e2e:ui
+        NODE_OPTIONS='--no-deprecation' npx playwright test --ui
         ;;
     *)
         echo "👀 运行有头模式测试..."
-        pnpm run test:e2e:headed
+        NODE_OPTIONS='--no-deprecation' npx playwright test --headed
         ;;
 esac
 

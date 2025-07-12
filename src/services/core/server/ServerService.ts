@@ -146,11 +146,11 @@ export class ServerService {
     this.expressServer = await this.setupExpressServer(config);
     await this.expressServer.start(port, host);
     
-    console.log('\n' + '='.repeat(70));
+    console.log(`\n${  '='.repeat(70)}`);
     console.log(`🚀 Server is running on ${baseUrl}`);
     console.log(`🔌 SSE endpoint: ${sseUrl}`);
     console.log(`📨 Messages endpoint: ${messagesUrl}`);
-    console.log('='.repeat(70) + '\n');
+    console.log(`${'='.repeat(70)  }\n`);
     
     logger.info(`${SERVER_NAME} Server running on ${baseUrl}`);
   }

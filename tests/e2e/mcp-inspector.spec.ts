@@ -1,11 +1,10 @@
 import { test, expect } from '@playwright/test';
-
-// 测试配置
-const TEST_CONFIG = {
-  baseUrl: process.env.MCP_INSPECTOR_URL || 'http://localhost:6274',
-  authToken: process.env.MCP_AUTH_TOKEN,
-  timeout: 30000
-};
+import {
+  TEST_CONFIG,
+  SmartWaiter,
+  MCPConnectionManager,
+  ScreenshotManager
+} from '../helpers/test-helpers.js';
 
 // 测试用例数据
 const TEST_CASES = {
@@ -38,32 +37,23 @@ const TEST_CASES = {
 };
 
 test.describe('MCPAdvisor 完整功能测试', () => {
-  let fullUrl: string;
+  let waiter: SmartWaiter;
+  let mcpConnection: MCPConnectionManager;
+  let screenshotManager: ScreenshotManager;
 
   test.beforeEach(async ({ page }) => {
-    // 构建完整URL
+    // Skip E2E tests in CI if MCP_AUTH_TOKEN is not available
     if (!TEST_CONFIG.authToken) {
-      throw new Error('MCP_AUTH_TOKEN 环境变量未设置');
+      test.skip(true, 'Skipping E2E tests: MCP_AUTH_TOKEN environment variable not set');
     }
     
-    fullUrl = `${TEST_CONFIG.baseUrl}/?MCP_PROXY_AUTH_TOKEN=${TEST_CONFIG.authToken}`;
+    // Initialize helpers
+    waiter = new SmartWaiter(page);
+    mcpConnection = new MCPConnectionManager(page, waiter);
+    screenshotManager = new ScreenshotManager(page);
     
-    console.log(`🌐 访问: ${fullUrl}`);
-    
-    // 访问页面
-    await page.goto(fullUrl);
-    
-    // 连接到MCP服务器
-    await page.getByRole('button', { name: 'Connect' }).click();
-    
-    // 等待连接完成
-    await page.waitForTimeout(2000);
-    
-    // 列出可用工具
-    await page.getByRole('button', { name: 'List Tools' }).click();
-    
-    // 等待工具列表加载
-    await page.waitForTimeout(1000);
+    // Connect to MCP using the helper
+    await mcpConnection.connectToMCP();
   });
 
   test.describe('推荐MCP服务器功能测试', () => {
@@ -100,10 +90,7 @@ test.describe('MCPAdvisor 完整功能测试', () => {
         }
         
         // 截图保存结果
-        await page.screenshot({ 
-          path: `test-results/recommend-${testCase.name.replace(/\s+/g, '-')}.png`,
-          fullPage: true 
-        });
+        await screenshotManager.takeScreenshot(`recommend-${testCase.name.replace(/\s+/g, '-')}.png`);
       });
     }
   });
@@ -159,10 +146,7 @@ test.describe('MCPAdvisor 完整功能测试', () => {
         }
         
         // 截图保存结果
-        await page.screenshot({ 
-          path: `test-results/install-${testCase.name.replace(/\s+/g, '-')}.png`,
-          fullPage: true 
-        });
+        await screenshotManager.takeScreenshot(`install-${testCase.name.replace(/\s+/g, '-')}.png`);
       });
     }
   });
@@ -190,10 +174,7 @@ test.describe('MCPAdvisor 完整功能测试', () => {
       console.log('⚠️ 错误处理: 可能需要改进错误提示');
     }
     
-    await page.screenshot({ 
-      path: 'test-results/error-handling.png',
-      fullPage: true 
-    });
+    await screenshotManager.takeScreenshot('error-handling.png');
   });
 
   test('性能测试', async ({ page }) => {
@@ -214,9 +195,6 @@ test.describe('MCPAdvisor 完整功能测试', () => {
     // 期望响应时间在合理范围内（小于30秒）
     expect(responseTime).toBeLessThan(30000);
     
-    await page.screenshot({ 
-      path: 'test-results/performance-test.png',
-      fullPage: true 
-    });
+    await screenshotManager.takeScreenshot('performance-test.png');
   });
 });

@@ -529,8 +529,8 @@ run_tests() {
     verbose_log "运行模式: $MODE"
     verbose_log "Playwright 参数: $playwright_args"
     
-    # 运行测试
-    local test_command="pnpm exec playwright test tests/e2e/meilisearch-local-e2e.spec.ts $playwright_args"
+    # 运行测试（抑制 punycode 弃用警告）
+    local test_command="NODE_OPTIONS='--no-deprecation' pnpm exec playwright test tests/e2e/meilisearch-local-e2e.spec.ts $playwright_args"
     
     if [[ "$VERBOSE" == "true" ]]; then
         log_info "执行: $test_command"

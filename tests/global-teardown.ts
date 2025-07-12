@@ -3,8 +3,33 @@ import { FullConfig } from '@playwright/test';
 async function globalTeardown(config: FullConfig) {
   console.log('\n🧹 开始全局测试清理...');
   
-  // 这里可以添加清理逻辑
-  // 例如：关闭测试数据库、清理临时文件等
+  // Clean up any temporary files or test artifacts
+  try {
+    // Clean up any temporary test data
+    if (process.env.PLAYWRIGHT_PERFORMANCE_MONITORING) {
+      console.log('📊 性能监控数据已收集');
+    }
+    
+    // Log test execution summary
+    const resultDir = 'test-results';
+    const fs = await import('fs');
+    if (fs.existsSync(resultDir)) {
+      const files = fs.readdirSync(resultDir);
+      const screenshots = files.filter(f => f.endsWith('.png')).length;
+      const videos = files.filter(f => f.endsWith('.webm')).length;
+      
+      if (screenshots > 0 || videos > 0) {
+        console.log(`📸 生成了 ${screenshots} 个截图和 ${videos} 个视频`);
+        console.log(`📁 测试结果保存在: ${resultDir}`);
+      }
+    }
+    
+    // Environment cleanup
+    delete process.env.PLAYWRIGHT_PERFORMANCE_MONITORING;
+    
+  } catch (error: any) {
+    console.log('⚠️ 清理过程中出现警告:', error.message);
+  }
   
   console.log('✅ 全局清理完成');
 }

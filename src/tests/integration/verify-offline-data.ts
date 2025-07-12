@@ -51,7 +51,7 @@ async function testOfflineDataLoading() {
     console.log(engineResults.slice(0, 2).map(r => ({ 
       title: r.title, 
       similarity: r.similarity,
-      description: r.description?.substring(0, 50) + '...'
+      description: `${r.description?.substring(0, 50)  }...`
     })));
   }
   
@@ -68,7 +68,7 @@ async function testOfflineDataLoading() {
     console.log(searchResults.slice(0, 3).map(r => ({ 
       title: r.title, 
       similarity: r.similarity,
-      description: r.description?.substring(0, 50) + '...'
+      description: `${r.description?.substring(0, 50)  }...`
     })));
   }
 }
