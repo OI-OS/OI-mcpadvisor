@@ -9,6 +9,23 @@ Follow these steps for comprehensive PR review and fixing:
    gh pr checkout $PR_NUMBER
    ```
    This ensures you're working on the correct branch for the PR.
+   
+   **Important Branch Management**:
+   - The PR branch should already be based on main when created
+   - If you need to sync with latest main (e.g., for conflicts or outdated base):
+   ```bash
+   # Update your local main first
+   git checkout main
+   git pull origin main
+   
+   # Switch back to PR branch and rebase on main
+   gh pr checkout $PR_NUMBER
+   git rebase main
+   
+   # If there are conflicts, resolve them and continue:
+   # git add .
+   # git rebase --continue
+   ```
 
 2. Use `gh pr view $PR_NUMBER` to get the PR details and description
 3. Use `gh pr view $PR_NUMBER --json reviews,comments` to get review comments and feedback

@@ -44,10 +44,17 @@ Follow these steps for comprehensive issue resolution:
 
 # PRE-TEST VALIDATION
 
-- **Create new branch** for the issue:
+- **Switch to main branch and create new branch** for the issue:
   ```bash
+  # Ensure you're starting from the latest main branch
+  git checkout main
+  git pull origin main
+  
+  # Create and switch to new feature branch
   git checkout -b issue-$ISSUE_NUMBER-brief-description
   ```
+  
+  **Important**: Always start from main to ensure your changes are based on the latest codebase and avoid merge conflicts.
 
 - **Run the full test suite** to ensure clean environment:
   ```bash
