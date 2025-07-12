@@ -184,16 +184,16 @@ export class OfflineDataLoader {
     }[]
   > {
     try {
-      logger.info(`[DEBUG] 开始加载兜底数据并生成嵌入向量`);
+      logger.info(`开始加载兜底数据并生成嵌入向量`);
       const serverResponses = await this.loadFallbackData();
-      logger.info(`[DEBUG] 加载了 ${serverResponses.length} 个原始服务器数据`);
+      logger.info(`加载了 ${serverResponses.length} 个原始服务器数据`);
       
       // 检查是否包含小红书相关服务器
       const redNoteServers = serverResponses.filter(server => 
         server.id === 'rednote-mcp' || server.id === 'mcp-hotnews-server'
       );
       
-      logger.info(`[DEBUG] 原始数据中包含 ${redNoteServers.length} 个小红书相关服务器:`, 
+      logger.info(`原始数据中包含 ${redNoteServers.length} 个小红书相关服务器:`, 
         redNoteServers.map(s => ({ id: s.id, title: s.title }))
       );
       
@@ -201,11 +201,11 @@ export class OfflineDataLoader {
 
       // 如果没有服务器数据，直接返回空结果
       if (serverResponses.length === 0) {
-        logger.info(`[DEBUG] 没有服务器数据可用，返回空结果`);
+        logger.info(`没有服务器数据可用，返回空结果`);
         return [];
       }
 
-      logger.info(`[DEBUG] 开始为 ${serverResponses.length} 个服务器生成嵌入向量`);
+      logger.info(`开始为 ${serverResponses.length} 个服务器生成嵌入向量`);
       for (const server of serverResponses) {
         try {
           // 生成文本用于嵌入
@@ -214,7 +214,7 @@ export class OfflineDataLoader {
           }. ${Array.isArray(server.tags) ? server.tags.join(', ') : ''}`;
 
           // 获取嵌入向量
-          logger.debug(`[DEBUG] 为服务器 ${server.id || server.title} 生成嵌入向量`);
+          logger.debug(`为服务器 ${server.id || server.title} 生成嵌入向量`);
           const vector = await getTextEmbedding(textForEmbedding);
 
           // 归一化向量
@@ -230,7 +230,7 @@ export class OfflineDataLoader {
           });
           
         } catch (embeddingError) {
-          logger.error(`[DEBUG] 为服务器 ${server.id || server.title} 生成嵌入向量失败:`, embeddingError);
+          logger.error(`为服务器 ${server.id || server.title} 生成嵌入向量失败:`, embeddingError);
           logger.error(
             `Error generating embedding for server ${server.title}`,
             {

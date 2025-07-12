@@ -89,10 +89,7 @@ Search for MCP servers with natural language processing capabilities
 - [User Guide](docs/USER_GUIDE.md) - How to use MCP Advisor
 - [Architecture Documentation](docs/ARCHITECTURE.md) - System architecture details
 - [Technical Details](docs/TECHNICAL_DETAILS.md) - Advanced technical features
-<<<<<<< HEAD
 - [Testing Guide](docs/TESTING.md) - Comprehensive testing documentation
-=======
->>>>>>> @{-1}
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Search Providers](docs/SEARCH_PROVIDERS.md) - Search provider details
 - [Roadmap](ROADMAP.md) - Future development plans
@@ -305,45 +302,7 @@ For more development details, see [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md).
 
 ## Contribution Guidelines
 
-We welcome contributions to MCP Advisor! The project has been recently refactored to improve code organization and maintainability.
-
-### Development Workflow
-
-1. **Fork and Clone**: Fork the repository and clone your fork
-2. **Setup Environment**: Follow the development environment setup above
-3. **Create Branch**: Create a feature branch from `main`
-4. **Make Changes**: Implement your changes following our coding standards
-5. **Test**: Run all tests to ensure your changes don't break existing functionality:
-   ```bash
-   pnpm run check          # Lint and format check
-   pnpm run test           # Unit tests
-   pnpm run test:e2e       # End-to-end tests
-   ```
-6. **Commit**: Follow conventional commit message format:
-   ```
-   feat: add new search provider integration
-   fix: resolve vector search performance issue
-   docs: update installation guide
-   test: add e2e tests for recommendation workflow
-   refactor: reorganize services directory structure
-   ```
-7. **Pull Request**: Submit a PR with clear description of changes
-
-### Code Quality Standards
-
-- **TypeScript**: Use strict typing, avoid `any`
-- **Testing**: Maintain test coverage above 80%
-- **Documentation**: Update docs for new features
-- **Architecture**: Follow clean architecture principles
-- **Performance**: Consider performance implications
-
-### Recent Improvements (2025)
-
-- ✅ **Directory restructuring** for better maintainability
-- ✅ **Comprehensive test suites** with unit, integration, and E2E tests
-- ✅ **Automated testing workflows** using Playwright
-- ✅ **Improved error handling** and logging
-- ✅ **Clean architecture** implementation
+We welcome contributions to MCP Advisor! 
 
 ## Usage Examples
 
@@ -353,10 +312,6 @@ Here are some example queries you can use with MCP Advisor:
 
 ```
 "Find MCP servers for natural language processing"
-"MCP servers for financial data analysis"
-"E-commerce recommendation engine MCP servers"
-"MCP servers with image recognition capabilities"
-"Weather data processing MCP servers"
 "Document summarization MCP servers"
 ```
 

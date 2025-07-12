@@ -1,7 +1,12 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { RestServerTransport } from '@chatmcp/sdk/server/rest.js';
-import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { 
+  ListToolsRequestSchema, 
+  CallToolRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema
+} from '@modelcontextprotocol/sdk/types.js';
 
 import { SERVER_NAME, SERVER_VERSION } from '../../../config/constants.js';
 import { SearchService } from '../../searchService.js';
@@ -9,6 +14,8 @@ import { TransportType, TransportConfig } from './types.js';
 import { BaseToolHandler } from './tools/BaseToolHandler.js';
 import { RecommendMcpServerToolHandler } from './tools/RecommendMcpServerToolHandler.js';
 import { InstallMcpServerToolHandler } from './tools/InstallMcpServerToolHandler.js';
+import { BaseResourceHandler } from './resources/BaseResourceHandler.js';
+import { LogResourceHandler } from './resources/LogResourceHandler.js';
 import express from 'express';
 import { ExpressServer } from './transports/ExpressServer.js';
 import { SourcesEndpoint } from './endpoints/SourcesEndpoint.js';
@@ -20,6 +27,7 @@ export class ServerService {
   private server: Server;
   private searchService: SearchService;
   private toolHandlers: BaseToolHandler[] = [];
+  private resourceHandlers: BaseResourceHandler[] = [];
   private expressServer?: ExpressServer;
 
 
@@ -33,6 +41,7 @@ export class ServerService {
     try {
       this.server = this.initializeServer();
       this.initializeToolHandlers();
+      this.initializeResourceHandlers();
       this.registerHandlers();
       logger.info('ServerService initialized successfully');
     } catch (error) {
@@ -50,7 +59,7 @@ export class ServerService {
 
     return new Server(
       { name: SERVER_NAME, version: SERVER_VERSION },
-      { capabilities: { tools: {} } },
+      { capabilities: { tools: {}, resources: {} } },
     );
   }
 
@@ -58,6 +67,12 @@ export class ServerService {
     this.toolHandlers = [
       new RecommendMcpServerToolHandler(this.searchService),
       new InstallMcpServerToolHandler(),
+    ];
+  }
+
+  private initializeResourceHandlers(): void {
+    this.resourceHandlers = [
+      new LogResourceHandler(),
     ];
   }
 
@@ -73,6 +88,18 @@ export class ServerService {
       this.server.setRequestHandler(
         CallToolRequestSchema,
         RequestHandlerFactory.createCallToolHandler(this.toolHandlers)
+      );
+
+      // Register listResources handler
+      this.server.setRequestHandler(
+        ListResourcesRequestSchema,
+        RequestHandlerFactory.createListResourcesHandler(this.resourceHandlers)
+      );
+      
+      // Register readResource handler
+      this.server.setRequestHandler(
+        ReadResourceRequestSchema,
+        RequestHandlerFactory.createReadResourceHandler(this.resourceHandlers)
       );
       
       logger.debug('Successfully registered all request handlers');
