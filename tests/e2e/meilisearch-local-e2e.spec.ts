@@ -58,12 +58,15 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
       await page.getByRole('button', { name: 'Connect' }).click({ timeout: 5000 });
       await page.waitForTimeout(3000);
       
-      // 检查是否连接成功 - 查找 "List Tools" 按钮或连接错误
+      const listResourcesButton = page.getByRole('button', { name: 'List Resources' });
+      const toolsTab = page.getByRole('tab', { name: 'Tools' });
       const listToolsButton = page.getByRole('button', { name: 'List Tools' });
       const connectionError = page.getByText('Connection Error');
       
       // 等待任一元素出现
       await Promise.race([
+        listResourcesButton.waitFor({ timeout: 10000 }),
+        toolsTab.waitFor({ timeout: 10000 }),
         listToolsButton.waitFor({ timeout: 10000 }),
         connectionError.waitFor({ timeout: 10000 })
       ]);
@@ -74,8 +77,18 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
         throw new Error(`MCP connection failed: ${errorText}`);
       }
       
+      // 检查是否需要先点击 Tools 按钮
+      const isListToolsButtonVisible = await listToolsButton.isVisible().catch(() => false);
+      if (!isListToolsButtonVisible) {
+        // 如果 List Tools 按钮不可见，先点击 Tools 按钮
+        await toolsTab.click();
+        await page.waitForTimeout(1000);
+        // 等待 List Tools 按钮出现
+        await page.getByRole('button', { name: 'List Tools' }).waitFor({ timeout: 5000 });
+      }
+      
       // 列出可用工具
-      await listToolsButton.click();
+      await page.getByRole('button', { name: 'List Tools' }).click();
       await page.waitForTimeout(1000);
       
     } catch (error) {

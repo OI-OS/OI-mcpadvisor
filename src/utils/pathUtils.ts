@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
+import logger from './logger.js';
 
 /**
  * 检测当前是否在 Jest 测试环境中
@@ -107,20 +108,20 @@ export function getDataDirPath(metaUrl: string | null = null): string {
     
     // 检查硬编码路径是否存在
     if (fs.existsSync(hardcodedDataPath)) {
-      console.log(`[DEBUG] 使用硬编码项目数据路径: ${hardcodedDataPath}`);
+      logger.info(`使用硬编码项目数据路径: ${hardcodedDataPath}`);
       return hardcodedDataPath;
     }
-    console.log(`[DEBUG] 硬编码数据路径不存在: ${hardcodedDataPath}`);
+    logger.info(`硬编码数据路径不存在: ${hardcodedDataPath}`);
     
     // 2. 尝试从当前工作目录查找
     const cwdPath = process.cwd();
     const cwdDataPath = path.join(cwdPath, 'data');
     
     if (fs.existsSync(cwdDataPath)) {
-      console.log(`[DEBUG] 使用当前工作目录数据路径: ${cwdDataPath}`);
+      logger.info(`使用当前工作目录数据路径: ${cwdDataPath}`);
       return cwdDataPath;
     }
-    console.log(`[DEBUG] 当前工作目录数据路径不存在: ${cwdDataPath}`);
+    logger.info(`当前工作目录数据路径不存在: ${cwdDataPath}`);
     
     // 3. 尝试从当前工作目录向上查找
     let searchDir = cwdPath;
@@ -129,13 +130,13 @@ export function getDataDirPath(metaUrl: string | null = null): string {
       const potentialDataPath = path.join(searchDir, 'data');
       
       if (fs.existsSync(potentialDataPath)) {
-        console.log(`[DEBUG] 在上级目录找到数据路径: ${potentialDataPath}`);
+        logger.info(`在上级目录找到数据路径: ${potentialDataPath}`);
         return potentialDataPath;
       }
     }
     
     // 4. 如果都找不到，记录警告并返回默认路径
-    console.log(`[WARN] 无法找到有效的数据目录，使用默认路径: ${hardcodedDataPath}`);
+    logger.warn(`无法找到有效的数据目录，使用默认路径: ${hardcodedDataPath}`);
     return hardcodedDataPath; // 即使不存在也返回这个路径，让调用方处理文件不存在的情况
   }
 
@@ -144,8 +145,7 @@ export function getDataDirPath(metaUrl: string | null = null): string {
   const projectRoot = path.resolve(srcDir, '../../');
   const dataPath = path.join(projectRoot, 'data');
   
-  // 添加日志以便调试
-  console.log(`[DEBUG] 非测试环境，使用项目数据路径: ${dataPath}`);
+  logger.info(`非测试环境，使用项目数据路径: ${dataPath}`);
   return dataPath;
 }
 
