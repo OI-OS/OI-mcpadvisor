@@ -44,16 +44,17 @@ export default defineConfig({
     
     /* Global timeout for navigation */
     navigationTimeout: 20000,
-    
-    /* Force headless mode in CI environment */
-    headless: process.env.CI ? true : undefined,
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        /* Force headless mode in CI environment */
+        headless: process.env.CI ? true : undefined,
+      },
     },
 
     // 注释掉其他浏览器以保持测试简洁和稳定

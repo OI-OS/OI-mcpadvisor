@@ -103,7 +103,12 @@ VERBOSE=false
 FORCE=false
 NO_BUILD=false
 NO_CLEANUP=false
+# 在CI环境中默认使用headless模式，否则使用headed模式
 MODE="headed"
+if [[ -n "${CI:-}" ]]; then
+    MODE="headless"
+    VERBOSE=true  # CI中启用详细日志
+fi
 
 while [[ $# -gt 0 ]]; do
     case $1 in
