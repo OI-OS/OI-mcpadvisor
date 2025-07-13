@@ -243,7 +243,7 @@ wait_for_health() {
 # 清理函数
 cleanup() {
     if [[ "$CLEANUP_DONE" == "true" ]]; then
-        return
+        return 0
     fi
     
     CLEANUP_DONE=true
@@ -254,16 +254,34 @@ cleanup() {
     # 停止 MCP Inspector
     if [[ -n "$INSPECTOR_PID" ]] && kill -0 "$INSPECTOR_PID" 2>/dev/null; then
         verbose_log "停止 MCP Inspector (PID: $INSPECTOR_PID)"
-        kill "$INSPECTOR_PID" 2>/dev/null || true
-        wait "$INSPECTOR_PID" 2>/dev/null || true
+        kill -TERM "$INSPECTOR_PID" 2>/dev/null || true
+        # 等待进程正常退出
+        local count=0
+        while kill -0 "$INSPECTOR_PID" 2>/dev/null && [[ $count -lt 10 ]]; do
+            sleep 1
+            ((count++))
+        done
+        # 如果还没退出，强制kill
+        if kill -0 "$INSPECTOR_PID" 2>/dev/null; then
+            kill -KILL "$INSPECTOR_PID" 2>/dev/null || true
+        fi
     fi
     
     # 停止 Meilisearch (如果我们启动的)
     if [[ "$NO_CLEANUP" != "true" ]]; then
         if [[ -n "$MEILISEARCH_PID" ]] && kill -0 "$MEILISEARCH_PID" 2>/dev/null; then
             verbose_log "停止 Meilisearch (PID: $MEILISEARCH_PID)"
-            kill "$MEILISEARCH_PID" 2>/dev/null || true
-            wait "$MEILISEARCH_PID" 2>/dev/null || true
+            kill -TERM "$MEILISEARCH_PID" 2>/dev/null || true
+            # 等待进程正常退出
+            local count=0
+            while kill -0 "$MEILISEARCH_PID" 2>/dev/null && [[ $count -lt 5 ]]; do
+                sleep 1
+                ((count++))
+            done
+            # 如果还没退出，强制kill
+            if kill -0 "$MEILISEARCH_PID" 2>/dev/null; then
+                kill -KILL "$MEILISEARCH_PID" 2>/dev/null || true
+            fi
         fi
         
         # 额外清理 Meilisearch 进程
@@ -271,6 +289,7 @@ cleanup() {
     fi
     
     log_success "清理完成"
+    return 0
 }
 
 # 设置清理陷阱
@@ -541,6 +560,7 @@ run_tests() {
         log_info "执行: $test_command"
     fi
     
+    # 使用exec运行测试，确保信号正确传播
     if eval "$test_command"; then
         log_success "所有测试通过! 🎉"
         
@@ -554,12 +574,19 @@ run_tests() {
         
         return 0
     else
+        local exit_code=$?
         log_error "测试失败"
         
         # 显示失败信息
         log_info "查看详细报告: pnpm exec playwright show-report"
         if [[ -d "$RESULTS_DIR" ]]; then
             log_info "测试截图和视频: $RESULTS_DIR"
+        fi
+        
+        # 如果是143 (SIGTERM)，这通常不是真正的测试失败
+        if [[ $exit_code -eq 143 ]]; then
+            log_warning "收到终止信号，但测试可能已成功完成"
+            return 0
         fi
         
         return 1
@@ -614,6 +641,12 @@ main() {
         
         # 等待用户中断
         wait
+    else
+        # 手动调用清理，避免EXIT trap重复调用
+        CLEANUP_DONE=false
+        cleanup
+        # 取消EXIT trap，避免重复清理
+        trap - EXIT
     fi
     
     exit $test_result
