@@ -36,7 +36,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: ['./tsconfig.json', './tsconfig.jest.json'],
+        project: ['./tsconfig.json', './tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
       globals,
@@ -104,6 +104,8 @@ export default [
       'build/**',
       'node_modules/**',
       'coverage/**',
+      'playwright-report/**',
+      'test-results/**',
       '*.log',
       'jest.config.js',
       'commitlint.config.js',
