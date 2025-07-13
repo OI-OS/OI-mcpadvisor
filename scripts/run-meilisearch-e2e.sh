@@ -642,11 +642,18 @@ main() {
         # 等待用户中断
         wait
     else
-        # 手动调用清理，避免EXIT trap重复调用
-        CLEANUP_DONE=false
-        cleanup
-        # 取消EXIT trap，避免重复清理
-        trap - EXIT
+        # 在CI环境中，让容器自动清理以避免信号处理问题
+        if [[ -n "${CI:-}" ]]; then
+            log_info "CI环境：让容器自动清理资源"
+            # 取消EXIT trap，避免清理冲突
+            trap - EXIT INT TERM
+        else
+            # 手动调用清理，避免EXIT trap重复调用
+            CLEANUP_DONE=false
+            cleanup
+            # 取消EXIT trap，避免重复清理
+            trap - EXIT
+        fi
     fi
     
     exit $test_result
