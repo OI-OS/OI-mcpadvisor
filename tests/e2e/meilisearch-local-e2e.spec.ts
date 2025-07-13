@@ -1,162 +1,93 @@
-import { test, expect } from '@playwright/test';
-
-// 测试配置
-const TEST_CONFIG = {
-  baseUrl: process.env.MCP_INSPECTOR_URL || 'http://localhost:6274',
-  authToken: process.env.MCP_AUTH_TOKEN,
-  timeout: 30000
-};
-
-// 辅助函数：从页面内容中提取结果标题
-function extractResultTitles(content: string): string[] {
-  const titleRegex = /Title:\s*([^\n]+)/g;
-  const titles = [];
-  let match;
-  
-  while ((match = titleRegex.exec(content)) !== null) {
-    titles.push(match[1].trim());
-  }
-  
-  return titles;
-}
+import { test } from '@playwright/test';
+import {
+  TEST_CONFIG,
+  EnvironmentManager,
+  SmartWaiter,
+  MCPConnectionManager,
+  SearchOperations,
+  ScreenshotManager,
+  TestValidator,
+  ConfigurationTester
+} from '../helpers/test-helpers.js';
 
 test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
-  let fullUrl: string;
-  let originalEnvVars: Record<string, string | undefined> = {};
+  let envManager: EnvironmentManager;
+  let waiter: SmartWaiter;
+  let mcpConnection: MCPConnectionManager;
+  let searchOps: SearchOperations;
+  let screenshotManager: ScreenshotManager;
+  let configTester: ConfigurationTester;
   
   test.beforeEach(async ({ page }) => {
+    // Initialize helpers first
+    envManager = new EnvironmentManager();
+    waiter = new SmartWaiter(page);
+    mcpConnection = new MCPConnectionManager(page, waiter);
+    searchOps = new SearchOperations(page, waiter);
+    screenshotManager = new ScreenshotManager(page);
+    configTester = new ConfigurationTester(envManager, searchOps, TestValidator, screenshotManager);
+    
     // Skip E2E tests in CI if MCP_AUTH_TOKEN is not available
     if (!TEST_CONFIG.authToken) {
       test.skip(true, 'Skipping E2E tests: MCP_AUTH_TOKEN environment variable not set');
     }
     
-    // 保存原始环境变量
-    originalEnvVars = {
-      MEILISEARCH_INSTANCE: process.env.MEILISEARCH_INSTANCE,
-      MEILISEARCH_LOCAL_HOST: process.env.MEILISEARCH_LOCAL_HOST,
-      MEILISEARCH_MASTER_KEY: process.env.MEILISEARCH_MASTER_KEY,
-      MEILISEARCH_INDEX_NAME: process.env.MEILISEARCH_INDEX_NAME
-    };
+    // Save and setup environment
+    envManager.saveEnvironment();
+    envManager.setMeilisearchConfig({
+      instance: 'local',
+      host: process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700',
+      key: process.env.TEST_MEILISEARCH_KEY || 'testkey'
+    });
     
-    // 设置环境变量启用本地 Meilisearch
-    process.env.MEILISEARCH_INSTANCE = 'local';
-    process.env.MEILISEARCH_LOCAL_HOST = process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700';
-    process.env.MEILISEARCH_MASTER_KEY = process.env.TEST_MEILISEARCH_KEY || 'testkey';
-    
-    fullUrl = `${TEST_CONFIG.baseUrl}/?MCP_PROXY_AUTH_TOKEN=${TEST_CONFIG.authToken}`;
-    
-    console.log(`🌐 访问: ${fullUrl} (使用本地 Meilisearch)`);
-    
-    // 访问页面
-    await page.goto(fullUrl);
-    
-    // 等待页面加载
-    await page.waitForLoadState('networkidle');
-    
-    // 连接到MCP服务器，增加重试机制
-    try {
-      await page.getByRole('button', { name: 'Connect' }).click({ timeout: 5000 });
-      await page.waitForTimeout(3000);
-      
-      const listResourcesButton = page.getByRole('button', { name: 'List Resources' });
-      const toolsTab = page.getByRole('tab', { name: 'Tools' });
-      const listToolsButton = page.getByRole('button', { name: 'List Tools' });
-      const connectionError = page.getByText('Connection Error');
-      
-      // 等待任一元素出现
-      await Promise.race([
-        listResourcesButton.waitFor({ timeout: 10000 }),
-        toolsTab.waitFor({ timeout: 10000 }),
-        listToolsButton.waitFor({ timeout: 10000 }),
-        connectionError.waitFor({ timeout: 10000 })
-      ]);
-      
-      // 如果出现连接错误，抛出错误而不是跳过测试
-      if (await connectionError.isVisible()) {
-        const errorText = await connectionError.textContent();
-        throw new Error(`MCP connection failed: ${errorText}`);
-      }
-      
-      // 检查是否需要先点击 Tools 按钮
-      const isListToolsButtonVisible = await listToolsButton.isVisible().catch(() => false);
-      if (!isListToolsButtonVisible) {
-        // 如果 List Tools 按钮不可见，先点击 Tools 按钮
-        await toolsTab.click();
-        await page.waitForTimeout(1000);
-        // 等待 List Tools 按钮出现
-        await page.getByRole('button', { name: 'List Tools' }).waitFor({ timeout: 5000 });
-      }
-      
-      // 列出可用工具
-      await page.getByRole('button', { name: 'List Tools' }).click();
-      await page.waitForTimeout(1000);
-      
-    } catch (error) {
-      console.error('连接失败:', error);
-      // 不要跳过测试，让它失败以暴露问题
-      throw error;
-    }
+    // Connect to MCP
+    await mcpConnection.connectToMCP();
   });
   
   test.afterEach(async () => {
-    // 恢复原始环境变量
-    Object.entries(originalEnvVars).forEach(([key, value]) => {
-      if (value === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = value;
-      }
-    });
+    // Restore environment only if envManager was initialized
+    if (envManager) {
+      envManager.restoreEnvironment();
+    }
   });
   
   test('本地 Meilisearch 搜索功能验证', async ({ page }) => {
-    // 使用推荐工具测试本地搜索
-    await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
+    // Perform search with smart waiting
+    await searchOps.performSearch('本地文件管理和数据处理工具');
     
-    await page.getByRole('textbox', { name: 'taskDescription' })
-      .fill('本地文件管理和数据处理工具');
+    // Validate results
+    const results = await searchOps.getSearchResults();
+    TestValidator.validateSearchResults(results);
     
-    await page.getByRole('button', { name: 'Run Tool' }).click();
-    await page.waitForTimeout(8000);
-    
-    // 验证返回结果
-    const pageContent = await page.content();
-    expect(pageContent).toContain('Title:');
-    
-    // 截图保存结果（带本地标识）
-    await page.screenshot({ 
-      path: 'test-results/meilisearch-local-search.png',
-      fullPage: true 
-    });
+    // Take screenshot
+    await screenshotManager.takeScreenshot('meilisearch-local-search.png');
     
     console.log('✅ 本地 Meilisearch 搜索测试完成');
   });
   
   test('本地 Meilisearch 故障转移测试', async ({ page }) => {
     // 模拟本地实例不可用，测试 fallback 到云端
-    process.env.MEILISEARCH_LOCAL_HOST = 'http://localhost:9999'; // 无效端口
+    envManager.setMeilisearchConfig({ host: 'http://localhost:9999' }); // 无效端口
     
-    await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
-    await page.getByRole('textbox', { name: 'taskDescription' })
-      .fill('测试故障转移机制');
-    
-    await page.getByRole('button', { name: 'Run Tool' }).click();
-    await page.waitForTimeout(10000);
+    await searchOps.performSearch('测试故障转移机制');
     
     // 应该仍然能获得结果（来自 fallback）
+    const results = await searchOps.getSearchResults();
     const pageContent = await page.content();
-    const hasResults = pageContent.includes('Title:') || pageContent.includes('results');
     
-    if (hasResults) {
-      console.log('✅ 故障转移成功：从云端获得结果');
+    // Check for indicators of fallback to cloud service
+    const hasFallbackIndicators = pageContent.includes('fallback') || 
+                                  pageContent.includes('cloud') ||
+                                  pageContent.includes('备用') ||
+                                  results.length > 0; // At minimum, should have results
+    
+    if (hasFallbackIndicators && results.length > 0) {
+      console.log('✅ 故障转移成功：检测到fallback机制并获得结果');
     } else {
-      console.log('⚠️ 故障转移可能未按预期工作');
+      console.log('⚠️ 故障转移未按预期工作：未检测到有效的fallback结果');
     }
     
-    await page.screenshot({ 
-      path: 'test-results/meilisearch-fallback-test.png',
-      fullPage: true 
-    });
+    await screenshotManager.takeScreenshot('meilisearch-fallback-test.png');
   });
   
   test('性能对比测试：本地 vs 云端', async ({ page }) => {
@@ -169,45 +100,26 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
       { 
         instance: 'cloud', 
         description: '云端实例性能测试',
-        host: 'https://edge.meilisearch.com'
+        host: process.env.MEILISEARCH_CLOUD_HOST || 'https://edge.meilisearch.com',
+        key: process.env.MEILISEARCH_CLOUD_KEY || process.env.MEILISEARCH_MASTER_KEY
       }
     ];
     
-    const results = [];
+    const results: Array<{ instance: string; responseTime: number }> = [];
     
     for (const testCase of testCases) {
       // 更新环境变量
-      process.env.MEILISEARCH_INSTANCE = testCase.instance;
-      if (testCase.instance === 'local') {
-        process.env.MEILISEARCH_LOCAL_HOST = testCase.host;
-      }
+      envManager.setMeilisearchConfig({
+        instance: testCase.instance,
+        host: testCase.host,
+        key: testCase.key
+      });
       
-      console.log(`🔄 测试 ${testCase.description}`);
+      const responseTime = await searchOps.performSearch('文件系统操作和数据分析', testCase.description);
       
-      await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
-      await page.getByRole('textbox', { name: 'taskDescription' })
-        .fill('文件系统操作和数据分析');
-      
-      const startTime = Date.now();
-      await page.getByRole('button', { name: 'Run Tool' }).click();
-      
-      // 等待结果出现而不是固定超时
-      await page.waitForFunction(() => {
-        const content = document.body.textContent || '';
-        return content.includes('Title:') || content.includes('error') || content.includes('failed');
-      }, { timeout: 15000 });
-      
-      const endTime = Date.now();
-      
-      const responseTime = endTime - startTime;
       results.push({ instance: testCase.instance, responseTime });
       
-      console.log(`⏱️ ${testCase.description}: ${responseTime}ms`);
-      
-      await page.screenshot({ 
-        path: `test-results/performance-${testCase.instance}.png`,
-        fullPage: true 
-      });
+      await screenshotManager.takeScreenshot(`performance-${testCase.instance}.png`);
     }
     
     // 比较性能结果
@@ -217,18 +129,20 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     console.log(`📊 性能对比 - 本地: ${localTime}ms, 云端: ${cloudTime}ms`);
     
     // 验证响应时间都在合理范围内
-    expect(localTime).toBeLessThan(15000);
-    expect(cloudTime).toBeLessThan(15000);
+    TestValidator.validateResponseTime(localTime);
+    TestValidator.validateResponseTime(cloudTime);
   });
   
-  test('本地 Meilisearch 环境变量配置测试', async ({ page }) => {
+  test('本地 Meilisearch 环境变量配置测试', async () => {
     // 测试不同的环境变量配置
     const configTests = [
       {
         name: '默认本地配置',
         env: {
-          MEILISEARCH_INSTANCE: 'local'
-          // 使用默认值
+          MEILISEARCH_INSTANCE: 'local',
+          MEILISEARCH_LOCAL_HOST: 'http://localhost:7700',
+          MEILISEARCH_MASTER_KEY: 'developmentKey123',
+          MEILISEARCH_INDEX_NAME: 'mcp_servers_test'
         }
       },
       {
@@ -243,33 +157,11 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     ];
     
     for (const configTest of configTests) {
-      console.log(`🧪 测试配置: ${configTest.name}`);
-      
-      // 设置环境变量
-      Object.entries(configTest.env).forEach(([key, value]) => {
-        process.env[key] = value;
-      });
-      
-      await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
-      await page.getByRole('textbox', { name: 'taskDescription' })
-        .fill(`配置测试: ${configTest.name}`);
-      
-      await page.getByRole('button', { name: 'Run Tool' }).click();
-      await page.waitForTimeout(6000);
-      
-      // 验证配置生效（通过检查是否有响应）
-      const pageContent = await page.content();
-      const hasResponse = pageContent.includes('Title:') || 
-                         pageContent.includes('error') || 
-                         pageContent.includes('results');
-      
-      expect(hasResponse).toBe(true);
-      
-      console.log(`✅ 配置测试完成: ${configTest.name}`);
+      await configTester.testConfiguration(configTest.name, configTest.env);
     }
   });
   
-  test('本地 Meilisearch 错误处理测试', async ({ page }) => {
+  test('本地 Meilisearch 错误处理测试', async () => {
     // 测试各种错误情况
     const errorTests = [
       {
@@ -289,119 +181,54 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     ];
     
     for (const errorTest of errorTests) {
-      console.log(`🚨 测试错误情况: ${errorTest.name}`);
-      
-      // 设置错误配置
-      Object.entries(errorTest.env).forEach(([key, value]) => {
-        process.env[key] = value;
-      });
-      
-      await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
-      await page.getByRole('textbox', { name: 'taskDescription' })
-        .fill(`错误处理测试: ${errorTest.name}`);
-      
-      await page.getByRole('button', { name: 'Run Tool' }).click();
-      await page.waitForTimeout(8000);
-      
-      // 验证错误处理（应该 fallback 或显示适当错误）
-      const pageContent = await page.content();
-      const hasErrorHandling = pageContent.includes('Title:') || // fallback 成功
-                              pageContent.includes('error') || 
-                              pageContent.includes('failed');
-      
-      expect(hasErrorHandling).toBe(true);
-      
-      await page.screenshot({ 
-        path: `test-results/error-handling-${errorTest.name.replace(/\s+/g, '-')}.png`,
-        fullPage: true 
-      });
-      
-      console.log(`✅ 错误处理测试完成: ${errorTest.name}`);
+      await configTester.testErrorHandling(errorTest.name, errorTest.env);
     }
   });
   
   test('数据一致性验证测试', async ({ page }) => {
     // 测试本地和云端搜索结果的一致性
     const testQuery = '数据处理和分析工具';
-    const results = {};
+    const results: Record<string, string[]> = {};
     
     // 测试云端搜索
-    process.env.MEILISEARCH_INSTANCE = 'cloud';
-    await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
-    await page.getByRole('textbox', { name: 'taskDescription' }).fill(testQuery);
-    await page.getByRole('button', { name: 'Run Tool' }).click();
-    await page.waitForTimeout(6000);
-    
-    const cloudContent = await page.content();
-    const cloudResults = extractResultTitles(cloudContent);
-    results.cloud = cloudResults;
+    envManager.setMeilisearchConfig({ instance: 'cloud' });
+    await searchOps.performSearch(testQuery);
+    results.cloud = await searchOps.getSearchResults();
     
     // 测试本地搜索
-    process.env.MEILISEARCH_INSTANCE = 'local';
-    process.env.MEILISEARCH_LOCAL_HOST = process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700';
-    
-    await page.getByRole('tabpanel', { name: 'Tools' }).getByText('此工具用于寻找合适且专业MCP').first().click();
-    await page.getByRole('textbox', { name: 'taskDescription' }).fill(testQuery);
-    await page.getByRole('button', { name: 'Run Tool' }).click();
-    await page.waitForTimeout(6000);
-    
-    const localContent = await page.content();
-    const localResults = extractResultTitles(localContent);
-    results.local = localResults;
+    envManager.setMeilisearchConfig({
+      instance: 'local',
+      host: process.env.TEST_MEILISEARCH_HOST || 'http://localhost:7700'
+    });
+    await searchOps.performSearch(testQuery);
+    results.local = await searchOps.getSearchResults();
     
     // 比较结果
     console.log('🔍 数据一致性分析:');
-    console.log(`云端结果数量: ${cloudResults.length}`);
-    console.log(`本地结果数量: ${localResults.length}`);
+    console.log(`云端结果数量: ${results.cloud.length}, 本地结果数量: ${results.local.length}`);
     
     // 验证两者都有结果
-    expect(cloudResults.length).toBeGreaterThan(0);
-    expect(localResults.length).toBeGreaterThan(0);
+    TestValidator.validateSearchResults(results.cloud);
+    TestValidator.validateSearchResults(results.local);
     
-    // 验证结果内容的相关性（至少有一些共同的关键词）
-    const hasRelevantResults = cloudResults.some(title => 
-      title.toLowerCase().includes('data') || 
-      title.toLowerCase().includes('file') || 
-      title.toLowerCase().includes('analysis') ||
-      title.toLowerCase().includes('数据') || 
-      title.toLowerCase().includes('文件') || 
-      title.toLowerCase().includes('分析') ||
-      title.toLowerCase().includes('处理')
-    ) && localResults.some(title => 
-      title.toLowerCase().includes('data') || 
-      title.toLowerCase().includes('file') || 
-      title.toLowerCase().includes('analysis') ||
-      title.toLowerCase().includes('数据') || 
-      title.toLowerCase().includes('文件') || 
-      title.toLowerCase().includes('分析') ||
-      title.toLowerCase().includes('处理')
-    );
+    // 验证结果数量在合理范围内（差异不应过大）
+    const quantityDiff = Math.abs(results.cloud.length - results.local.length);
+    const maxAllowedDiff = Math.max(3, Math.max(results.cloud.length, results.local.length) * 0.2); // 允许20%的差异或最多3个
     
-    // 如果没有找到预期的关键词，记录实际结果但不失败
-    if (!hasRelevantResults) {
-      console.log('⚠️ 未找到预期关键词，但测试继续');
-      console.log('云端结果:', cloudResults);
-      console.log('本地结果:', localResults);
+    if (quantityDiff > maxAllowedDiff) {
+      console.warn(`⚠️ 警告：结果数量差异过大 (${quantityDiff} > ${maxAllowedDiff})`);
+    } else {
+      console.log(`✅ 结果数量差异在合理范围内 (${quantityDiff})`);
     }
     
-    // 只要有结果就认为测试通过
-    expect(cloudResults.length > 0 && localResults.length > 0).toBe(true);
+    // 验证结果内容的相关性
+    const relevantKeywords = ['data', 'file', 'analysis', '数据', '文件', '分析', '处理'];
+    TestValidator.validateResultRelevance(results.cloud, relevantKeywords);
+    TestValidator.validateResultRelevance(results.local, relevantKeywords);
     
     // 检查是否有重复的结果（表明数据同步正确）
-    const commonResults = cloudResults.filter(cloudTitle => 
-      localResults.some(localTitle => localTitle === cloudTitle)
-    );
+    TestValidator.compareResults(results.local, results.cloud);
     
-    console.log(`共同结果数量: ${commonResults.length}`);
-    if (commonResults.length > 0) {
-      console.log('✅ 发现相同结果，数据同步正常');
-    } else {
-      console.log('⚠️  没有发现完全相同的结果，可能存在数据同步问题');
-    }
-    
-    await page.screenshot({ 
-      path: 'test-results/data-consistency-test.png',
-      fullPage: true 
-    });
+    await screenshotManager.takeScreenshot('data-consistency-test.png');
   });
 });

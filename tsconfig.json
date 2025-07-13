@@ -12,5 +12,12 @@
       "isolatedModules": true
     },
     "include": ["src/**/*"],
-    "exclude": ["node_modules"]
+    "exclude": [
+      "node_modules", 
+      "build", 
+      "tests", 
+      "src/tests/**/*",
+      "**/*.test.ts",
+      "**/*.spec.ts"
+    ]
   }

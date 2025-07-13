@@ -9,14 +9,14 @@ export default defineConfig({
   /* Run tests in files in parallel */
   fullyParallel: true,
   
+  /* Reduce workers to prevent resource contention during E2E tests */
+  workers: process.env.CI ? 1 : 2,
+  
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   
   /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1,
   
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
@@ -40,17 +40,21 @@ export default defineConfig({
     video: 'retain-on-failure',
     
     /* Global timeout for each action */
-    actionTimeout: 10000,
+    actionTimeout: 8000,
     
     /* Global timeout for navigation */
-    navigationTimeout: 30000,
+    navigationTimeout: 20000,
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        /* Force headless mode in CI environment */
+        headless: process.env.CI ? true : undefined,
+      },
     },
 
     // 注释掉其他浏览器以保持测试简洁和稳定
@@ -80,11 +84,11 @@ export default defineConfig({
   /* Output directory for test results */
   outputDir: 'test-results/',
   
-  /* Test timeout */
-  timeout: 60000,
+  /* Test timeout - reduced for faster feedback */
+  timeout: 45000,
   
-  /* Expect timeout */
+  /* Expect timeout - reduced for faster failure detection */
   expect: {
-    timeout: 10000,
+    timeout: 8000,
   },
 });

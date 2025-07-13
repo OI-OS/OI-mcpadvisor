@@ -199,7 +199,7 @@ export class NacosHttpClient {
               [server.name]: {
                 name: server.name,
                 description: server.description,
-                url: url
+                url
               }
             }
           };

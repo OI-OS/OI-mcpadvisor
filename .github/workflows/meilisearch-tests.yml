@@ -18,14 +18,18 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+          run_install: false
           
       - name: Install dependencies
         run: pnpm install
@@ -43,8 +47,8 @@ jobs:
       meilisearch:
         image: getmeili/meilisearch:v1.15
         env:
-          # Use GitHub Secret if available, otherwise fallback to test key for CI
-          MEILI_MASTER_KEY: test-key-for-ci-only
+          # Use GitHub Secret for better security
+          MEILI_MASTER_KEY: ${{ secrets.MEILI_MASTER_KEY || 'test-key-for-ci-only' }}
           MEILI_ENV: development
         ports:
           - 7700:7700
@@ -55,14 +59,18 @@ jobs:
           --health-retries 5
           
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+          run_install: false
           
       - name: Install dependencies
         run: pnpm install
@@ -79,7 +87,7 @@ jobs:
         timeout-minutes: 10
         env:
           TEST_MEILISEARCH_HOST: http://localhost:7700
-          TEST_MEILISEARCH_KEY: test-key-for-ci-only
+          TEST_MEILISEARCH_KEY: ${{ secrets.MEILI_MASTER_KEY || 'test-key-for-ci-only' }}
           
   e2e-tests:
     runs-on: ubuntu-latest
@@ -87,8 +95,8 @@ jobs:
       meilisearch:
         image: getmeili/meilisearch:v1.15
         env:
-          # Use GitHub Secret if available, otherwise fallback to test key for CI
-          MEILI_MASTER_KEY: test-key-for-ci-only
+          # Use GitHub Secret for better security
+          MEILI_MASTER_KEY: ${{ secrets.MEILI_MASTER_KEY || 'test-key-for-ci-only' }}
           MEILI_ENV: development
         ports:
           - 7700:7700
@@ -99,14 +107,18 @@ jobs:
           --health-retries 5
           
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
-      - uses: actions/setup-node@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           
-      - name: Install pnpm
-        run: npm install -g pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9.15.0
+          run_install: false
           
       - name: Install dependencies
         run: pnpm install
@@ -128,7 +140,7 @@ jobs:
           MCP_INSPECTOR_URL: ${{ secrets.MCP_INSPECTOR_URL }}
           MCP_AUTH_TOKEN: ${{ secrets.MCP_AUTH_TOKEN }}
           TEST_MEILISEARCH_HOST: http://localhost:7700
-          TEST_MEILISEARCH_KEY: test-key-for-ci-only
+          TEST_MEILISEARCH_KEY: ${{ secrets.MEILI_MASTER_KEY || 'test-key-for-ci-only' }}
           
       - uses: actions/upload-artifact@v4
         if: always()

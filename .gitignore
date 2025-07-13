@@ -45,9 +45,10 @@ data.ms/
 dumps/
 meilisearch
 
-# 忽略Claude生成的临时配置文件和缓存目录
 
 # Optional: package manager locks
 # Uncomment if you want to ignore these
 package-lock.json
 # yarn.lock
+
+.reference
