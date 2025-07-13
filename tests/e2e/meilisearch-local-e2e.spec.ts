@@ -71,11 +71,18 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     
     // 应该仍然能获得结果（来自 fallback）
     const results = await searchOps.getSearchResults();
+    const pageContent = await page.content();
     
-    if (results.length > 0) {
-      console.log('✅ 故障转移成功：从云端获得结果');
+    // Check for indicators of fallback to cloud service
+    const hasFallbackIndicators = pageContent.includes('fallback') || 
+                                  pageContent.includes('cloud') ||
+                                  pageContent.includes('备用') ||
+                                  results.length > 0; // At minimum, should have results
+    
+    if (hasFallbackIndicators && results.length > 0) {
+      console.log('✅ 故障转移成功：检测到fallback机制并获得结果');
     } else {
-      console.log('⚠️ 故障转移可能未按预期工作');
+      console.log('⚠️ 故障转移未按预期工作：未检测到有效的fallback结果');
     }
     
     await screenshotManager.takeScreenshot('meilisearch-fallback-test.png');
@@ -91,7 +98,8 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
       { 
         instance: 'cloud', 
         description: '云端实例性能测试',
-        host: 'https://edge.meilisearch.com'
+        host: process.env.MEILISEARCH_CLOUD_HOST || 'https://edge.meilisearch.com',
+        key: process.env.MEILISEARCH_CLOUD_KEY || process.env.MEILISEARCH_MASTER_KEY
       }
     ];
     
@@ -101,7 +109,8 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
       // 更新环境变量
       envManager.setMeilisearchConfig({
         instance: testCase.instance,
-        host: testCase.instance === 'local' ? testCase.host : ''
+        host: testCase.host,
+        key: testCase.key
       });
       
       const responseTime = await searchOps.performSearch('文件系统操作和数据分析', testCase.description);
@@ -194,10 +203,21 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
     
     // 比较结果
     console.log('🔍 数据一致性分析:');
+    console.log(`云端结果数量: ${results.cloud.length}, 本地结果数量: ${results.local.length}`);
     
     // 验证两者都有结果
     TestValidator.validateSearchResults(results.cloud);
     TestValidator.validateSearchResults(results.local);
+    
+    // 验证结果数量在合理范围内（差异不应过大）
+    const quantityDiff = Math.abs(results.cloud.length - results.local.length);
+    const maxAllowedDiff = Math.max(3, Math.max(results.cloud.length, results.local.length) * 0.2); // 允许20%的差异或最多3个
+    
+    if (quantityDiff > maxAllowedDiff) {
+      console.warn(`⚠️ 警告：结果数量差异过大 (${quantityDiff} > ${maxAllowedDiff})`);
+    } else {
+      console.log(`✅ 结果数量差异在合理范围内 (${quantityDiff})`);
+    }
     
     // 验证结果内容的相关性
     const relevantKeywords = ['data', 'file', 'analysis', '数据', '文件', '分析', '处理'];

@@ -861,6 +861,8 @@ cleanup_ports() {
         local pids=$(lsof -ti :$port 2>/dev/null || true)
         if [[ -n "$pids" ]]; then
             kill -9 $pids 2>/dev/null || true
+        else
+            echo "No process found on port $port"
         fi
     done
     pkill -f "inspector" 2>/dev/null || true

@@ -12,16 +12,21 @@ async function globalTeardown(config: FullConfig) {
     
     // Log test execution summary
     const resultDir = 'test-results';
-    const fs = await import('fs');
-    if (fs.existsSync(resultDir)) {
-      const files = fs.readdirSync(resultDir);
-      const screenshots = files.filter(f => f.endsWith('.png')).length;
-      const videos = files.filter(f => f.endsWith('.webm')).length;
-      
-      if (screenshots > 0 || videos > 0) {
-        console.log(`📸 生成了 ${screenshots} 个截图和 ${videos} 个视频`);
-        console.log(`📁 测试结果保存在: ${resultDir}`);
+    const fs = await import('fs/promises');
+    try {
+      const stats = await fs.stat(resultDir);
+      if (stats.isDirectory()) {
+        const files = await fs.readdir(resultDir);
+        const screenshots = files.filter(f => f.endsWith('.png')).length;
+        const videos = files.filter(f => f.endsWith('.webm')).length;
+        
+        if (screenshots > 0 || videos > 0) {
+          console.log(`📸 生成了 ${screenshots} 个截图和 ${videos} 个视频`);
+          console.log(`📁 测试结果保存在: ${resultDir}`);
+        }
       }
+    } catch (error) {
+      // Directory doesn't exist or other error, skip reporting
     }
     
     // Environment cleanup

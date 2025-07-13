@@ -54,10 +54,11 @@ async function globalSetup(config: FullConfig) {
   const services: ServiceStatus[] = [];
   
   // Check MCP Inspector
-  const inspectorResult = await checkServiceHealth('http://localhost:6274/health');
+  const inspectorUrl = process.env.MCP_INSPECTOR_URL || 'http://localhost:6274';
+  const inspectorResult = await checkServiceHealth(`${inspectorUrl}/health`);
   services.push({
     name: 'MCP Inspector',
-    url: 'http://localhost:6274',
+    url: inspectorUrl,
     ...inspectorResult
   });
   

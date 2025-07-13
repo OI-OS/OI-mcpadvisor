@@ -84,7 +84,8 @@ export class MCPConnectionManager {
   constructor(private page: Page, private waiter: SmartWaiter) {}
 
   async connectToMCP(retries = 3) {
-    console.log(`🌐 访问: ${TEST_CONFIG.baseUrl}/?MCP_PROXY_AUTH_TOKEN=${TEST_CONFIG.authToken}`);
+    const maskedToken = TEST_CONFIG.authToken ? `${TEST_CONFIG.authToken.substring(0, 4)}****` : 'undefined';
+    console.log(`🌐 访问: ${TEST_CONFIG.baseUrl}/?MCP_PROXY_AUTH_TOKEN=${maskedToken}`);
     
     const fullUrl = `${TEST_CONFIG.baseUrl}/?MCP_PROXY_AUTH_TOKEN=${TEST_CONFIG.authToken}`;
     
@@ -304,6 +305,12 @@ export class ConfigurationTester {
   async testConfiguration(configName: string, config: Record<string, string>) {
     console.log(`🧪 测试配置: ${configName}`);
     
+    // Save current environment state to prevent pollution
+    const originalEnv: Record<string, string | undefined> = {};
+    Object.keys(config).forEach(key => {
+      originalEnv[key] = process.env[key];
+    });
+    
     try {
       // Set environment variables
       Object.entries(config).forEach(([key, value]) => {
@@ -333,6 +340,48 @@ export class ConfigurationTester {
       
       // Re-throw to fail the test
       throw new Error(`Configuration test failed for "${configName}": ${error.message}`);
+    } finally {
+      // Always restore original environment variables to prevent pollution
+      Object.entries(originalEnv).forEach(([key, value]) => {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      });
+    }
+  }
+
+  async recoverFromFailure(failureType: string, waiter: SmartWaiter, context?: any) {
+    console.log(`🔧 开始故障恢复: ${failureType}`);
+    
+    try {
+      switch (failureType) {
+        case 'connection':
+          // Try to reconnect or refresh the page
+          await this.searchOps.currentPage.reload();
+          await waiter.waitForPageLoad();
+          break;
+          
+        case 'search':
+          // Clear search state and retry
+          await this.searchOps.currentPage.getByRole('textbox', { name: 'taskDescription' }).clear();
+          break;
+          
+        case 'environment':
+          // Restore environment using the environment manager
+          this.envManager.restoreEnvironment();
+          break;
+          
+        default:
+          console.warn(`⚠️ 未知的故障类型: ${failureType}`);
+      }
+      
+      console.log(`✅ 故障恢复完成: ${failureType}`);
+      
+    } catch (error: any) {
+      console.error(`❌ 故障恢复失败: ${failureType} - ${error.message}`);
+      throw new Error(`Recovery failed for "${failureType}": ${error.message}`);
     }
   }
 

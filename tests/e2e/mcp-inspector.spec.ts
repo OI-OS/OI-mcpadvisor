@@ -159,7 +159,7 @@ test.describe('MCPAdvisor 完整功能测试', () => {
     await page.getByRole('button', { name: 'Run Tool' }).click();
     
     // 等待响应
-    await page.waitForTimeout(3000);
+    await waiter.waitForSearchResults();
     
     // 检查是否有适当的错误处理
     const pageContent = await page.content();
@@ -186,7 +186,7 @@ test.describe('MCPAdvisor 完整功能测试', () => {
     await page.getByRole('button', { name: 'Run Tool' }).click();
     
     // 等待结果出现
-    await page.waitForTimeout(10000);
+    await waiter.waitForSearchResults();
     const endTime = Date.now();
     
     const responseTime = endTime - startTime;
