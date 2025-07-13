@@ -19,18 +19,18 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
   let configTester: ConfigurationTester;
   
   test.beforeEach(async ({ page }) => {
-    // Skip E2E tests in CI if MCP_AUTH_TOKEN is not available
-    if (!TEST_CONFIG.authToken) {
-      test.skip(true, 'Skipping E2E tests: MCP_AUTH_TOKEN environment variable not set');
-    }
-    
-    // Initialize helpers
+    // Initialize helpers first
     envManager = new EnvironmentManager();
     waiter = new SmartWaiter(page);
     mcpConnection = new MCPConnectionManager(page, waiter);
     searchOps = new SearchOperations(page, waiter);
     screenshotManager = new ScreenshotManager(page);
     configTester = new ConfigurationTester(envManager, searchOps, TestValidator, screenshotManager);
+    
+    // Skip E2E tests in CI if MCP_AUTH_TOKEN is not available
+    if (!TEST_CONFIG.authToken) {
+      test.skip(true, 'Skipping E2E tests: MCP_AUTH_TOKEN environment variable not set');
+    }
     
     // Save and setup environment
     envManager.saveEnvironment();
@@ -45,8 +45,10 @@ test.describe('MCPAdvisor 本地 Meilisearch 功能测试', () => {
   });
   
   test.afterEach(async () => {
-    // Restore environment
-    envManager.restoreEnvironment();
+    // Restore environment only if envManager was initialized
+    if (envManager) {
+      envManager.restoreEnvironment();
+    }
   });
   
   test('本地 Meilisearch 搜索功能验证', async ({ page }) => {

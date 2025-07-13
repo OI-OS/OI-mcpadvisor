@@ -44,6 +44,9 @@ export default defineConfig({
     
     /* Global timeout for navigation */
     navigationTimeout: 20000,
+    
+    /* Force headless mode in CI environment */
+    headless: process.env.CI ? true : undefined,
   },
 
   /* Configure projects for major browsers */
