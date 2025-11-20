@@ -1,0 +1,75 @@
+{
+  "server_name": "OI-mcpadvisor",
+  "version": "1.0.0",
+  "intents": [
+    {
+      "keyword": "recommend mcp server",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "find mcp server",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "search mcp server",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "mcp server recommendation",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "recommend mcp",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "find mcp",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "search mcp",
+      "tool_name": "recommend-mcp-servers",
+      "priority": 10
+    },
+    {
+      "keyword": "install mcp server",
+      "tool_name": "install-mcp-server",
+      "priority": 10
+    },
+    {
+      "keyword": "install mcp",
+      "tool_name": "install-mcp-server",
+      "priority": 10
+    },
+    {
+      "keyword": "mcp installation guide",
+      "tool_name": "install-mcp-server",
+      "priority": 10
+    },
+    {
+      "keyword": "mcp setup guide",
+      "tool_name": "install-mcp-server",
+      "priority": 10
+    }
+  ],
+  "parameter_extractors": {
+    "recommend-mcp-servers": {
+      "OI-mcpadvisor::recommend-mcp-servers.taskDescription": "template:{{query}}",
+      "OI-mcpadvisor::recommend-mcp-servers.keywords": "regex:(?:keywords?|key[\\s_-]?words?)[\\s:]+([^,]+(?:,[^,]+)*)",
+      "OI-mcpadvisor::recommend-mcp-servers.capabilities": "regex:(?:capabilities?|features?|functions?)[\\s:]+([^,]+(?:,[^,]+)*)"
+    },
+    "install-mcp-server": {
+      "OI-mcpadvisor::install-mcp-server.mcpName": "regex:(?:mcp[\\s_-]?name|name|server[\\s_-]?name)[\\s:]+([a-zA-Z0-9_-]+)",
+      "OI-mcpadvisor::install-mcp-server.sourceUrl": "regex:(?:source[\\s_-]?url|url|github[\\s_-]?url|repo[\\s_-]?url)[\\s:]+(https?://[^\\s]+|[a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+)",
+      "OI-mcpadvisor::install-mcp-server.mcpClient": "regex:(?:client|mcp[\\s_-]?client)[\\s:]+([a-zA-Z0-9_-]+)"
+    }
+  },
+  "reminder_message": "MCP Advisor helps find and install MCP servers. Requires pnpm (not npm) for installation. Optional environment variables enable additional search providers (Meilisearch, Nacos). Searches multiple registries in parallel for comprehensive results."
+}
+
